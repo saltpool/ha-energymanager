@@ -44,8 +44,8 @@ def get_release():
         raise ValueError('Invalid GitHub commit SHA')
     latest = repository_bytes(sha, 'latest.txt').decode('utf-8').strip()
     manifest = json.loads(repository_bytes(sha, 'manifest/manifest.json'))
-    if not VERSION_RE.fullmatch(latest) or tuple(map(int, latest.split('.'))) < (2, 0, 0):
-        raise ValueError('GitHub 2.0.0 release is not ready')
+    if not VERSION_RE.fullmatch(latest) or tuple(map(int, latest.split('.'))) < (1, 3, 0):
+        raise ValueError('GitHub 1.3.0 release is not ready')
     if manifest.get('version') != latest:
         raise ValueError('GitHub manifest does not match latest.txt')
     for path in FILES:
