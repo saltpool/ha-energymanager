@@ -85,8 +85,8 @@ def reconcile(manifest, repair=False):
             newly_installed = not current or not current.get('version')
             if newly_installed:
                 print(f'[EM Apps] Installing missing {slug}', flush=True)
-                prefix = slug.split('_', 1)[0]
-                ensure_repository(prefix)
+                #prefix = slug.split('_', 1)[0]
+                #ensure_repository(prefix)
                 try:
                     request('POST', f'/store/addons/{slug}/install', {}, timeout=15)
                 
