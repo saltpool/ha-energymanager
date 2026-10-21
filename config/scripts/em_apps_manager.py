@@ -45,13 +45,17 @@ def info(slug):
 def ensure_repository(prefix):
     if prefix not in REPOSITORIES:
         return
-    try:
-        request('POST', '/store/repositories', {'repository': REPOSITORIES[prefix]})
-    except urllib.error.HTTPError as error:
-        if error.code != 400:
-            raise
-    request('POST', '/store/reload', {})
 
+    repository_url = REPOSITORIES[prefix]
+    repositories = request('GET', '/store/repositories')
+
+    for repo in repositories:
+        if repo.get('slug') == prefix or repo.get('source', '').rstrip('/') == repository_url.rstrip('/'):
+            return
+
+    print(f'[EM Apps] Adding missing repository: {repository_url}', flush=True)
+    request('POST', '/store/repositories', {'repository': repository_url}, timeout=60)
+    print(f'[EM Apps] Repository added: {repository_url}', flush=True)
 
 def wait_for(slug, predicate, seconds=360):
     deadline = time.monotonic() + seconds
@@ -84,6 +88,8 @@ def reconcile(manifest, repair=False):
             newly_installed = not current or not current.get('version')
             if newly_installed:
                 print(f'[EM Apps] Installing missing {slug}', flush=True)
+                prefix = slug.split('_', 1)[0]
+                ensure_repository(prefix)
                 try:
                     request('POST', f'/store/addons/{slug}/install', {}, timeout=15)              
                 except TimeoutError:
