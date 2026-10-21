@@ -118,7 +118,7 @@ views:
       - type: conditional
         conditions:
           - condition: screen
-            media_query: "(max-width: 899px"
+            media_query: "(max-width: 899px)"
           - condition: or
             conditions:
               - entity: input_select.electricity_provider
