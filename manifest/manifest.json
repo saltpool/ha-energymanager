@@ -457,12 +457,12 @@
     "new_in_version": "1.3.0"
   },
 "apps": [
-  {"slug":"a0d7b954_ssh", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"zsh":true,"share_sessions":false,"packages":[],"init_commands":[]}},
-  {"slug":"a0d7b954_vscode", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"packages":[],"init_commands":[]}},
-  {"slug":"core_mosquitto", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"log_dest":[],"log_type":[],"require_certificate":false, "certfile":"fullchain.pem","keyfile":"privkey.pem", "customize":{"active":false,"folder":"mosquitto"}}},
-  {"slug":"a0d7b954_nodered", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"theme":"default","ssl":false,"certfile":"","keyfile":"", "system_packages":[],"npm_packages":[],"init_commands":[]}},
-  {"slug":"1bd4a9fb_victoria_metrics", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"retention":"60d","additionalArguments":"","enableHTTPAuth":false, "enablePrometheusScrape":true,"prometheusScrapeHTTPS":false, "prometheusScrapeInterval":"15s","prometheusScrapeTimeout":"10s", "homeassistantUrl":"homeassistant:8123"}},
-  {"slug":"a0d7b954_grafana", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"plugins":["victoriametrics-metrics-datasource"],"custom_plugins":[], "env_vars":[{"name":"GF_SECURITY_ALLOW_EMBEDDING","value":"true"}, {"name":"GF_PATHS_PROVISIONING","value":"/share/grafana/provisioning"}], "ssl":true,"certfile":"fullchain.pem","keyfile":"privkey.pem"}}
+  {"slug":"a0d7b954_ssh", "version":"24.1.7", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"zsh":true,"share_sessions":false,"packages":[],"init_commands":[]}},
+  {"slug":"a0d7b954_vscode", "version":"7.2.0", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"packages":[],"init_commands":[]}},
+  {"slug":"core_mosquitto", "version":"7.1.2", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"log_dest":[],"log_type":[],"require_certificate":false, "certfile":"fullchain.pem","keyfile":"privkey.pem", "customize":{"active":false,"folder":"mosquitto"}}},
+  {"slug":"a0d7b954_nodered", "version":"22.1.0", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"theme":"default","ssl":false,"certfile":"","keyfile":"", "system_packages":[],"npm_packages":[],"init_commands":[]}},
+  {"slug":"1bd4a9fb_victoria_metrics", "version":"1.153.0", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"retention":"60d","additionalArguments":"","enableHTTPAuth":false, "enablePrometheusScrape":true,"prometheusScrapeHTTPS":false, "prometheusScrapeInterval":"15s","prometheusScrapeTimeout":"10s", "homeassistantUrl":"homeassistant:8123"}},
+  {"slug":"a0d7b954_grafana", "version":"1.153.0", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"plugins":["victoriametrics-metrics-datasource"],"custom_plugins":[], "env_vars":[{"name":"GF_SECURITY_ALLOW_EMBEDDING","value":"true"}, {"name":"GF_PATHS_PROVISIONING","value":"/share/grafana/provisioning"}], "ssl":true,"certfile":"fullchain.pem","keyfile":"privkey.pem"}}
 ],
   "hacs_components": [
     {
