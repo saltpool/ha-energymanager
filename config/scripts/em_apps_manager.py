@@ -128,6 +128,12 @@ def reconcile(manifest, repair=False):
                     payload,
                     timeout=60
                 )
+            except urllib.error.HTTPError as exc:
+                body = exc.read().decode('utf-8', errors='replace')
+                raise RuntimeError(
+                    f'Configuration rejected (HTTP {exc.code}): {body}'
+                ) from exc
+            
             except (TimeoutError, urllib.error.URLError) as exc:
                 print(
                     f'[EM Apps] {slug}: configuration request timed out '
