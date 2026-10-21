@@ -1292,6 +1292,16 @@ try:
         except Exception as e:
             print(f"❌ Node-RED restart error: {e}")
             print("Please restart Node-RED manually")
+
+    if success and manifest.get('apps'):
+        print("Reconciling Supervisor Apps...")
+        update_dashboard_status("Reconciling Supervisor Apps...", "info")
+        try:
+            from em_apps_manager import reconcile
+            reconcile(manifest, repair=args.force_reinstall)
+        except Exception as e:
+            print(f"❌ App reconciliation failed: {e}")
+            success = False
     
     if success:
         print("Processing HACS dependencies...")
