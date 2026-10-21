@@ -173,7 +173,22 @@ def reconcile(manifest, repair=False):
             if (newly_installed or repair) and current and current.get('state') != 'started':
                 request('POST', f'/addons/{slug}/start', {}, timeout=15)
             if newly_installed or repair:
-                wait_for(slug, lambda state: state.get('state') == 'started', seconds=180)
+                print(
+                    f'[EM Apps] {slug}: waiting for App to start...',
+                    flush=True
+                )
+                current = wait_for(
+                    slug,
+                    lambda state: (
+                        print(
+                            f'[EM Apps] {slug}: current state = '
+                            f'{state.get("state")!r}',
+                            flush=True
+                        ) or state.get('state') == 'started'
+                    ),
+                    seconds=180
+                )
+                print(f'[EM Apps] {slug}: startup verified', flush=True)
             print(f'[EM Apps] {slug}: checked', flush=True)
         except Exception as exc:
             errors.append(f'{slug}: {exc}')
