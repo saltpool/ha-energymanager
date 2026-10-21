@@ -119,7 +119,10 @@ def reconcile(manifest, repair=False):
             if (newly_installed or repair) and (changed_options or changed_settings):
                 print(f'[EM Apps] Configuring {slug}: '
                       f'{list(changed_options)} + {list(changed_settings)}', flush=True)
-            payload = {**changed_options, **changed_settings}
+            payload = dict(changed_settings)
+            
+            if changed_options:
+                payload['options'] = {**existing_options, **changed_options}
             
             try:
                 request(
@@ -128,12 +131,7 @@ def reconcile(manifest, repair=False):
                     payload,
                     timeout=60
                 )
-            except urllib.error.HTTPError as exc:
-                body = exc.read().decode('utf-8', errors='replace')
-                raise RuntimeError(
-                    f'Configuration rejected (HTTP {exc.code}): {body}'
-                ) from exc
-            
+           
             except (TimeoutError, urllib.error.URLError) as exc:
                 print(
                     f'[EM Apps] {slug}: configuration request timed out '
