@@ -171,7 +171,15 @@ def reconcile(manifest, repair=False):
 
             current = info(slug)
             if (newly_installed or repair) and current and current.get('state') != 'started':
-                request('POST', f'/addons/{slug}/start', {}, timeout=15)
+                print(f'[EM Apps] {slug}: requesting startup...', flush=True)
+                try:
+                    request('POST', f'/addons/{slug}/start', {}, timeout=60)
+                except (TimeoutError, urllib.error.URLError) as exc:
+                    print(
+                        f'[EM Apps] {slug}: startup request timed out ({exc}); '
+                        f'checking actual state...',
+                        flush=True
+                    )
             if newly_installed or repair:
                 print(
                     f'[EM Apps] {slug}: waiting for App to start...',
