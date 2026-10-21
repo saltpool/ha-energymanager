@@ -64,7 +64,6 @@ def wait_for(slug, predicate, seconds=360):
 
 
 def ensure_key_for_new_ssh():
-    """Only generate on an installation with no private/public key."""
     pub = Path(str(KEY) + '.pub')
     if KEY.exists() and pub.exists():
         return pub.read_text(encoding='utf-8').strip()
@@ -85,20 +84,8 @@ def reconcile(manifest, repair=False):
             newly_installed = not current or not current.get('version')
             if newly_installed:
                 print(f'[EM Apps] Installing missing {slug}', flush=True)
-                #prefix = slug.split('_', 1)[0]
-                #ensure_repository(prefix)
                 try:
-                    request('POST', f'/store/addons/{slug}/install', {}, timeout=15)
-                
-                except urllib.error.HTTPError as e:
-                    body = e.read().decode('utf-8', errors='replace')
-                    print(
-                        f'[EM Apps] Install failed: HTTP {e.code}\n'
-                        f'[EM Apps] Supervisor response: {body}',
-                        flush=True
-                    )
-                    raise
-                
+                    request('POST', f'/store/addons/{slug}/install', {}, timeout=15)              
                 except TimeoutError:
                     pass
                 current = wait_for(slug, lambda state: bool(state.get('version')))
@@ -112,7 +99,6 @@ def reconcile(manifest, repair=False):
                     ssh = dict(existing_options.get('ssh') or {})
                     pub = ensure_key_for_new_ssh()
                     ssh['authorized_keys'] = [pub]
-                    # Retain the App's existing username/password and all other SSH settings.
                     desired['ssh'] = ssh
 
             changed_options = {key: value for key, value in desired.items()
@@ -171,32 +157,16 @@ def reconcile(manifest, repair=False):
 
             current = info(slug)
             if (newly_installed or repair) and current and current.get('state') != 'started':
-                print(f'[EM Apps] {slug}: requesting startup...', flush=True)
                 try:
                     request('POST', f'/addons/{slug}/start', {}, timeout=60)
                 except (TimeoutError, urllib.error.URLError) as exc:
                     print(
-                        f'[EM Apps] {slug}: startup request timed out ({exc}); '
-                        f'checking actual state...',
+                        f'[EM Apps] {slug}: startup request did not complete '
+                        f'({exc}); verifying startup...',
                         flush=True
                     )
             if newly_installed or repair:
-                print(
-                    f'[EM Apps] {slug}: waiting for App to start...',
-                    flush=True
-                )
-                current = wait_for(
-                    slug,
-                    lambda state: (
-                        print(
-                            f'[EM Apps] {slug}: current state = '
-                            f'{state.get("state")!r}',
-                            flush=True
-                        ) or state.get('state') == 'started'
-                    ),
-                    seconds=180
-                )
-                print(f'[EM Apps] {slug}: startup verified', flush=True)
+                wait_for(slug, lambda state: state.get('state') == 'started', seconds=180)
             print(f'[EM Apps] {slug}: checked', flush=True)
         except Exception as exc:
             errors.append(f'{slug}: {exc}')
