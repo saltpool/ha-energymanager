@@ -84,17 +84,79 @@ def reconcile(manifest, repair=False):
     for app in manifest.get('apps', []):
         slug = app['slug']
         try:
+            target_version = str(app.get('version', 'latest')).strip()
+            if not target_version:
+                raise ValueError('App version must not be empty')
             current = info(slug)
             newly_installed = not current or not current.get('version')
             if newly_installed:
                 print(f'[EM Apps] Installing missing {slug}', flush=True)
                 prefix = slug.split('_', 1)[0]
                 ensure_repository(prefix)
+                
+                if target_version != 'latest':
+                    available = request('GET', f'/store/addons/{slug}')
+                    available_version = (
+                        available.get('version')
+                        or available.get('version_latest')
+                    )
+                    if available_version != target_version:
+                        raise RuntimeError(
+                            f'Requires version {target_version}, but '
+                            f'Supervisor offers {available_version or "unknown"}. '
+                            f'Exact-version installation is not supported.'
+                        )
+               
                 try:
                     request('POST', f'/store/addons/{slug}/install', {}, timeout=15)              
                 except TimeoutError:
                     pass
                 current = wait_for(slug, lambda state: bool(state.get('version')))
+
+            installed_version = current.get('version')
+
+            if target_version != 'latest':
+                if installed_version != target_version:
+                    raise RuntimeError(
+                        f'Version mismatch: installed {installed_version}, '
+                        f'required {target_version}. Supervisor does not '
+                        f'support installing arbitrary historical versions.'
+                    )
+                print(
+                    f'[EM Apps] {slug}: pinned version '
+                    f'{target_version} verified',
+                    flush=True
+                )
+            else:
+                latest_version = current.get('version_latest')
+                if latest_version and installed_version != latest_version:
+                    print(
+                        f'[EM Apps] {slug}: updating '
+                        f'{installed_version} -> {latest_version}',
+                        flush=True
+                    )
+                    try:
+                        request(
+                            'POST',
+                            f'/store/addons/{slug}/update',
+                            {},
+                            timeout=60
+                        )
+                    except (TimeoutError, urllib.error.URLError):
+                        print(
+                            f'[EM Apps] {slug}: update request did not '
+                            f'complete; verifying version...',
+                            flush=True
+                        )
+                    current = wait_for(
+                        slug,
+                        lambda state: state.get('version') == latest_version,
+                        seconds=360
+                    )
+                    print(
+                        f'[EM Apps] {slug}: updated to {latest_version}',
+                        flush=True
+                    )          
 
             existing_options = dict(current.get('options') or {})
             desired = dict(app.get('options') or {})
