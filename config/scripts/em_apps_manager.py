@@ -87,10 +87,20 @@ def reconcile(manifest, repair=False):
                 print(f'[EM Apps] Installing missing {slug}', flush=True)
                 prefix = slug.split('_', 1)[0]
                 ensure_repository(prefix)
-                try:
-                    request('POST', f'/store/addons/{slug}/install', {}, timeout=15)
-                except TimeoutError:
-                    pass  # installation may continue as a Supervisor job
+        try:
+            request('POST', f'/store/addons/{slug}/install', {}, timeout=15)
+        
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', errors='replace')
+            print(
+                f'[EM Apps] Install failed: HTTP {e.code}\n'
+                f'[EM Apps] Supervisor response: {body}',
+                flush=True
+            )
+            raise
+        
+        except TimeoutError:
+            pass
                 current = wait_for(slug, lambda state: bool(state.get('version')))
 
             existing_options = dict(current.get('options') or {})
