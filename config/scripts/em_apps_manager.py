@@ -117,10 +117,45 @@ def reconcile(manifest, repair=False):
             if (newly_installed or repair) and (changed_options or changed_settings):
                 print(f'[EM Apps] Configuring {slug}: '
                       f'{list(changed_options)} + {list(changed_settings)}', flush=True)
-                request('POST', f'/addons/{slug}/options',
-                        {**changed_options, **changed_settings})
-                if current.get('state') == 'started':
-                    request('POST', f'/addons/{slug}/restart', {}, timeout=15)
+            payload = {**changed_options, **changed_settings}
+            
+            try:
+                request(
+                    'POST',
+                    f'/addons/{slug}/options',
+                    payload,
+                    timeout=60
+                )
+            except (TimeoutError, urllib.error.URLError) as exc:
+                print(
+                    f'[EM Apps] {slug}: configuration request timed out '
+                    f'or failed ({exc}); checking actual state...',
+                    flush=True
+                )
+            
+            def settings_applied(state):
+                actual_options = state.get('options') or {}
+            
+                return (
+                    all(
+                        actual_options.get(key) == value
+                        for key, value in changed_options.items()
+                    )
+                    and all(
+                        state.get(key) == value
+                        for key, value in changed_settings.items()
+                    )
+                )
+            
+            wait_for(slug, settings_applied, seconds=90)
+            
+            print(
+                f'[EM Apps] {slug}: configuration verified',
+                flush=True
+            )
+            
+            if changed_options and current.get('state') == 'started':
+                request('POST', f'/addons/{slug}/restart', {}, timeout=15)
             elif repair:
                 print(f'[EM Apps] {slug}: configured correctly', flush=True)
 
