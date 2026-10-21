@@ -1,0 +1,159 @@
+# grafana_energymanager.yaml v1.3.0
+title: Grafana
+views:
+  - title: Energy Manager
+    path: energy-manager
+    type: custom:grid-layout
+    card_mod:
+      style: |
+        :host {
+          overflow: hidden !important;
+          height: 100vh !important;
+        }
+        #view {
+          overflow: hidden !important;
+        }
+        hui-view {
+          overflow: hidden !important;
+        }
+        .grid-layout {
+          overflow: hidden !important;
+          height: 100vh !important;
+        }
+    layout:
+      grid-template-columns: 100%
+      grid-template-rows: 100vh
+      grid-template-areas: |
+        "main"
+
+    cards:
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(min-width: 900px)"
+          - condition: or
+            conditions:
+              - entity: input_select.electricity_provider
+                state: "Amber Electric"
+              - entity: input_select.electricity_provider
+                state: "LocalVolts"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga/fdv5swis884cga?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(min-width: 900px)"
+          - entity: input_select.electricity_provider
+            state: "Flow Power"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-flow/fdv5swis884cga-flow?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(max-width: 899px)"
+          - entity: input_select.electricity_provider
+            state: "Flow Power"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-flow-mobile/fdv5swis884cga-flow-mobile?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(min-width: 900px)"
+          - entity: input_select.electricity_provider
+            state: "Globird"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-globird/fdv5swis884cga-globird?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(max-width: 899px)"
+          - entity: input_select.electricity_provider
+            state: "Globird"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-globird-mobile/fdv5swis884cga-globird-mobile?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(min-width: 900px)"
+          - entity: input_select.electricity_provider
+            state: "Other"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-other/fdv5swis884cga-other?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(max-width: 899px)"
+          - entity: input_select.electricity_provider
+            state: "Other"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-other-mobile/fdv5swis884cga-other-mobile?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+
+      - type: conditional
+        conditions:
+          - condition: screen
+            media_query: "(max-width: 899px"
+          - condition: or
+            conditions:
+              - entity: input_select.electricity_provider
+                state: "Amber Electric"
+              - entity: input_select.electricity_provider
+                state: "LocalVolts"
+        view_layout:
+          grid-area: main
+        card:
+          type: custom:addon-iframe-card
+          url: a0d7b954_grafana/d/fdv5swis884cga-mobile/fdv5swis884cga-mobile?orgId=1&kiosk&keepTime=1&includeVars=1&refresh=10s
+          card_mod:
+            style: |
+              ha-card {
+                height: 100vh !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none;
+                box-shadow: none;
+                border-radius: 0;
+                overflow: visible !important;
+              }
+              ha-card > div,
+              ha-card iframe {
+                height: 100% !important;
+                width: 100% !important;
+                display: block;
+              }
+
+              @media (max-width: 700px) {
+                ha-card > div {
+                  transform: scale(0.9);
+                  transform-origin: 0 0;
+                  width: calc(100% / 0.9);
+                  height: calc(100% / 0.9);
+                }
+              }
+

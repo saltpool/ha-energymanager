@@ -1,0 +1,738 @@
+# solaredge_modbus.yaml v2.0.0
+- name: "solaredge_inverter"
+  type: tcp
+  host: !secret modbus_host_ip
+  port: !secret modbus_port
+  timeout: 5
+  message_wait_milliseconds: 50
+
+  sensors:
+    - name: solaredge_inverter_status
+      device_address: !secret modbus_slave
+      address: 40107                    # I_Status
+      input_type: holding
+      data_type: uint16
+      scan_interval: 5
+      #1 Off
+      #2 Sleeping
+      #3 Starting
+      #4 Running
+      #5 Throttled
+      #6 Shutting down
+      #7 Fault
+      #8 Standby
+
+    - name: solaredge_inverter_vendor_status
+      device_address: !secret modbus_slave
+      address: 40108                    # I_Status_Vendor
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: solaredge_inverter_vendor_status4
+      device_address: !secret modbus_slave
+      address: 40119                    # I_Status_Vendor4 (uint32)
+      input_type: holding
+      data_type: uint32
+      swap: word
+      scan_interval: 30
+
+    - name: solaredge_device_model
+      device_address: !secret modbus_slave
+      address: 40020  # was 40115
+      input_type: holding
+      data_type: string
+      count: 16
+      scan_interval: 3600
+
+    - name: solaredge_firmware_version
+      device_address: !secret modbus_slave
+      address: 40044
+      input_type: holding
+      data_type: string
+      count: 8
+      scan_interval: 3600
+
+    - name: solaredge_inverter_serial_number
+      device_address: !secret modbus_slave
+      address: 40052
+      input_type: holding
+      data_type: string
+      count: 16
+      scan_interval: 3600
+
+    - name: solaredge_firmware
+      device_address: !secret modbus_slave
+      address: 40044  # was 40131
+      input_type: holding
+      data_type: string
+      count: 16
+      scan_interval: 3600
+
+    # ---------------
+    # AC voltage L-L
+    # ---------------
+    - name: solaredge_voltage_ab
+      device_address: !secret modbus_slave
+      address: 40077                    # I_AC_VoltageAB
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_voltage_bc
+      device_address: !secret modbus_slave
+      address: 40078                    # I_AC_VoltageBC
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_voltage_ca
+      device_address: !secret modbus_slave
+      address: 40079                    # I_AC_VoltageCA
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    # ----------------
+    # AC voltage L-N
+    # ----------------
+    - name: solaredge_voltage_an
+      device_address: !secret modbus_slave
+      address: 40080                    # I_AC_VoltageAN
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_voltage_bn
+      device_address: !secret modbus_slave
+      address: 40081                    # I_AC_VoltageBN
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_voltage_cn
+      device_address: !secret modbus_slave
+      address: 40082                    # I_AC_VoltageCN
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_voltage_sf"
+      device_address: !secret modbus_slave
+      address: 40082                      # I_AC_Voltage_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # -----------
+    # AC power / VA / VAR / PF / Freq
+    # -----------
+    - name: solaredge_inv_active_power
+      device_address: !secret modbus_slave
+      address: 40083                    # I_AC_Power
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_inv_active_power_sf
+      device_address: !secret modbus_slave
+      address: 40084                    # I_AC_Power_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_inv_frequency
+      device_address: !secret modbus_slave
+      address: 40085                    # I_AC_Frequency
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "Hz"
+      precision: 2
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_inv_frequency_sf"
+      device_address: !secret modbus_slave
+      address: 40086                      # I_AC_Frequency_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_inv_apparent_power
+      device_address: !secret modbus_slave
+      address: 40087                    # I_AC_VA
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "VA"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_inv_apparent_power_sf"
+      device_address: !secret modbus_slave
+      address: 40088                      # I_AC_VA_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+  
+    - name: solaredge_inv_reactive_power
+      device_address: !secret modbus_slave
+      address: 40089                    # I_AC_VAR
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "var"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_inv_reactive_power_sf"
+      device_address: !secret modbus_slave
+      address: 40090                      # I_AC_VAR_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+  
+    - name: solaredge_inv_power_factor
+      device_address: !secret modbus_slave
+      address: 40091                    # I_AC_PF
+      input_type: holding
+      data_type: int16
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_inv_power_factor_sf"
+      device_address: !secret modbus_slave
+      address: 40092                      #  I_AC_PF_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # -------------
+    # Lifetime energy
+    # -------------
+    - name: solaredge_total_pv_energy
+      device_address: !secret modbus_slave
+      address: 40093                    # I_AC_Energy_WH (acc32)
+      input_type: holding
+      data_type: uint32
+      swap: word
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "solaredge_energy_sf"
+      device_address: !secret modbus_slave
+      address: 40095                      #  I_AC_Energy_WH_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # ----
+    # DC
+    # ----
+    - name: solaredge_dc_current
+      device_address: !secret modbus_slave
+      address: 40096                    # I_DC_Current
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "A"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_dc_current_sf"
+      device_address: !secret modbus_slave
+      address: 40097                      #  I_DC_Current_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_dc_voltage
+      device_address: !secret modbus_slave
+      address: 40098                    # I_DC_Voltage
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_dc_voltage_sf
+      device_address: !secret modbus_slave
+      address: 40099                    # _DC_Voltage_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_pv_power
+      device_address: !secret modbus_slave
+      address: 40100                    # I_DC_Power
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_pv_power_sf
+      device_address: !secret modbus_slave
+      address: 40101                    # I_DC_Voltage_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # -------------
+    # Temperatures
+    # -------------
+    - name: solaredge_heatsink_temperature
+      device_address: !secret modbus_slave
+      address: 40103                    # I_Temp_Sink
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 30
+
+    - name: solaredge_heatsink_temperature_sf
+      device_address: !secret modbus_slave
+      address: 40106                    # I_Temp_Sink_Scale
+      input_type: holding
+      data_type: int16
+      state_class: measurement
+      scan_interval: 10
+
+    # =====================
+    # METER (SolarEdge meter)
+    # =====================
+    - name: solaredge_meter_frequency
+      device_address: !secret modbus_slave
+      address: 40204                    # M_AC_Freq
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "Hz"
+      state_class: measurement
+      precision: 2
+      scan_interval: 15
+
+    - name: solaredge_meter_frequency_sf
+      device_address: !secret modbus_slave
+      address: 40205                    # M_AC_Freq_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_meter_power
+      device_address: !secret modbus_slave
+      address: 40206                    # M_AC_Power (total)
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_meter_power_a
+      device_address: !secret modbus_slave
+      address: 40207                    # M_AC_Power_A
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: solaredge_meter_power_b
+      device_address: !secret modbus_slave
+      address: 40208                    # M_AC_Power_B
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: solaredge_meter_power_c
+      device_address: !secret modbus_slave
+      address: 40209                    # M_AC_Power_C
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: solaredge_meter_power_sf
+      device_address: !secret modbus_slave
+      address: 40210                    # M_AC_Power_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: solaredge_meter_va_total
+      device_address: !secret modbus_slave
+      address: 40211                    # M_AC_VA
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "VA"
+      scan_interval: 15
+
+    - name: solaredge_meter_var
+      device_address: !secret modbus_slave
+      address: 40216                    # M_AC_VAR
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "var"
+      scan_interval: 15
+
+    - name: solaredge_meter_pf
+      device_address: !secret modbus_slave
+      address: 40221                    # M_AC_PF
+      input_type: holding
+      data_type: int16
+      scan_interval: 30
+
+    - name: solaredge_meter_exported
+      device_address: !secret modbus_slave
+      address: 40226                    # M_Exported
+      input_type: holding
+      data_type: uint32
+      swap: word
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 120
+
+    - name: solaredge_meter_imported
+      device_address: !secret modbus_slave
+      address: 40234                    # M_Imported
+      input_type: holding
+      data_type: uint32
+      swap: word
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 120
+
+    - name: solaredge_meter_energy_sf
+      device_address: !secret modbus_slave
+      address: 40242                    #  M_Energy_W_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 30
+
+    # ===========================================
+    # StorEdge (EMS) Global Control & Remote Cmd
+    # ===========================================
+    - name: solaredge_storage_control_mode
+      device_address: !secret modbus_slave
+      address: 57348                    # 0xE004  Storage Control Mode
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: solaredge_storage_ac_charge_policy
+      device_address: !secret modbus_slave
+      address: 57349                    # 0xE005  AC Charge Policy
+      input_type: holding
+      data_type: uint16
+      scan_interval: 30
+
+    - name: solaredge_storage_ac_charge_limit
+      device_address: !secret modbus_slave
+      address: 57350                    # 0xE006  AC Charge Limit (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      scan_interval: 60
+
+    - name: solaredge_reserved_soc
+      device_address: !secret modbus_slave
+      address: 57352                    # 0xE008  Backup Reserved (%)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 60
+
+    - name: solaredge_storage_default_mode
+      device_address: !secret modbus_slave
+      address: 57354                    # 0xE00A  Default Charge/Discharge Mode
+      input_type: holding
+      data_type: uint16
+      scan_interval: 15
+
+    - name: solaredge_storage_cmd_timeout
+      device_address: !secret modbus_slave
+      address: 57355                    # 0xE00B  Command Timeout (Uint32)
+      input_type: holding
+      data_type: uint32
+      swap: word
+      unit_of_measurement: "s"
+      scan_interval: 15
+
+    - name: solaredge_charge_discharge_command
+      device_address: !secret modbus_slave
+      address: 57357                    # 0xE00D  Command Mode (charge/discharge/etc.)
+      input_type: holding				# 0=Idle, 3=Charge, 4=Discharge, 5=Discharge-to-load, 7=Self-consumption
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_storage_charge_limit
+      device_address: !secret modbus_slave
+      address: 57358                    # 0xE00E  Charge Limit (W, Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_storage_discharge_limit
+      device_address: !secret modbus_slave
+      address: 57360                    # 0xE010  Discharge Limit (W, Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_export_power_limit
+      device_address: !secret modbus_slave
+      address: 57346                    # 0xE002
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "W"
+      swap: word
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "solaredge_export_power_limit_enabled"
+      device_address: !secret modbus_slave
+      address: 57345          # 0xE001 Command Mode
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 10
+      # 1 = export limit enforced, 0 = not enforced
+
+    # ==============================
+    # BATTERY 1 Status & Info (E100)
+    # ==============================
+    - name: solaredge_battery_avg_temp
+      device_address: !secret modbus_slave
+      address: 57676                    # 0xE16C  Avg Temperature (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 30
+
+    - name: solaredge_battery_max_temp
+      device_address: !secret modbus_slave
+      address: 57678                    # 0xE16E  Max Temperature
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    - name: solaredge_battery_voltage
+      device_address: !secret modbus_slave
+      address: 57712                    # 0xE170  Instantaneous Voltage
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "V"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_battery_current
+      device_address: !secret modbus_slave
+      address: 57714                    # 0xE172  Instantaneous Current
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "A"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: solaredge_battery_power
+      device_address: !secret modbus_slave
+      address: 57716                    # 0xE174  Instantaneous Power
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 5
+
+    - name: solaredge_battery_lifetime_export
+      device_address: !secret modbus_slave
+      address: 57718                    # 0xE176  Lifetime Export (Uint64)
+      input_type: holding
+      data_type: uint64
+      swap: word
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 300
+
+    - name: solaredge_battery_lifetime_import
+      device_address: !secret modbus_slave
+      address: 57722                    # 0xE17A  Lifetime Import (Uint64)
+      input_type: holding
+      data_type: uint64
+      swap: word
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 300
+
+    - name: solaredge_battery_max_energy
+      device_address: !secret modbus_slave
+      address: 57726                    # 0xE17E  Max Energy (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "Wh"
+      state_class: measurement
+      scan_interval: 120
+
+    - name: solaredge_battery_available_energy
+      device_address: !secret modbus_slave
+      address: 57728                    # 0xE180  Available Energy (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "Wh"
+      state_class: measurement
+      scan_interval: 30
+
+    - name: solaredge_battery_soh
+      device_address: !secret modbus_slave
+      address: 57730                    # 0xE182  SOH (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 300
+
+    - name: solaredge_battery_soe
+      device_address: !secret modbus_slave
+      address: 57732                    # 0xE184  SOE (Float32)
+      input_type: holding
+      data_type: float32
+      swap: word
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 30
+
+    - name: solaredge_ems_mode
+      device_address: !secret modbus_slave
+      address: 57990  #57734                    # 0xE186  Status (0 Off,1 Standby,2 Init,3 Charge,4 Discharge,5 Fault,7 Idle)
+      input_type: holding
+      data_type: uint32
+      scan_interval: 5
+
+    - name: solaredge_battery_status_internal
+      device_address: !secret modbus_slave
+      address: 57736                    # 0xE188  Vendor-specific
+      input_type: holding
+      data_type: uint32
+      scan_interval: 60
+
+    - name: solaredge_export_control_mode
+      device_address: !secret modbus_slave
+      address: 57344                    # 0xE000  Export Control Mode
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 300
+
+    - name: solaredge_export_control_limit_mode
+      device_address: !secret modbus_slave
+      address: 57345                    # 0xE000  Export Control Mode
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 300
+
+    - name: se_e002_word0
+      device_address: !secret modbus_slave
+      address: 57346
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: se_e002_word1
+      device_address: !secret modbus_slave
+      address: 57347
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: se_63232
+      device_address: !secret modbus_slave
+      address: 63232
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: se_63234_word0
+      device_address: !secret modbus_slave
+      address: 63234
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: se_63235_word1
+      device_address: !secret modbus_slave
+      address: 63235
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: se_61696
+      device_address: !secret modbus_slave
+      address: 61696
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+  numbers:
+    - name: "solaredge_charge_power"
+      slave: !secret modbus_slave
+      address: 57358
+      input_type: holding
+      data_type: float32
+      swap: word
+      min_value: 0
+      max_value: 30000
+
+    - name: "solaredge_discharge_power"
+      slave: !secret modbus_slave
+      address: 57360
+      input_type: holding
+      data_type: float32
+      swap: word
+      min_value: 0
+      max_value: 30000

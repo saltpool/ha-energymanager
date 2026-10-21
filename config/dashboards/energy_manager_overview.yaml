@@ -1,0 +1,1852 @@
+#energy_manager_overview.yaml v1.3.0
+views:
+  - type: custom:layout-card
+    layout_type: grid
+    layout:
+      grid-template-columns: 1fr 1fr 1fr
+      grid-gap: 8px
+    cards:
+    - type: custom:layout-card
+      view_layout:
+        grid_column: 1
+      layout_type: grid
+      layout:
+        grid-template-columns: repeat(1, 1fr)
+        grid-gap: 8px
+      cards:
+        - type: vertical-stack
+          cards:
+            - type: conditional
+              conditions:
+                - entity: input_select.electricity_provider
+                  state: "Flow Power"
+              card:
+                type: markdown
+                content: >-
+                  {% set state = states('input_text.price_signal') %}
+                  {% set region = states('input_text.aemo_region') %}
+                  {% set msg = {
+                    'Extreme': 'It is not a good time to import from the grid.<br>You will most likely severely impact your PEA score.<br>Use your battery instead.',
+                    'Very High': 'It is NOT a good time to import from the grid. You will very likely impact your PEA score.<br>Use your battery instead.',
+                    'High': 'It is NOT a good time to import from the grid. You are likely to impact your PEA score.<br>Use your battery instead.',
+                    'Average': 'Try not to import from the grid at the moment.',
+                    'Low': 'Probably a good time to use energy from the grid. Prices are relatively cheap.',
+                    'Very Low': 'This is most likely a great time to use energy from the grid.',
+                    'Negative': 'It is a great time to use energy from the grid.',
+                    'Unknown': 'Current price is unknown. Proceed with caution.'
+                  } %}
+                  {% set icon = {
+                    'Extreme': '<img src="/local/icons/chev_down_3_circle_white.svg" width="64">',
+                    'Very High': '<img src="/local/icons/chev_down_2_circle_white.svg" width="64">',
+                    'High': '<img src="/local/icons/chev_down_1_circle_white.svg" width="64">',
+                    'Average': '<img src="/local/icons/line_circle_white.svg" width="64">',
+                    'Low': '<img src="/local/icons/chev_up_1_circle_white.svg" width="64">',
+                    'Very Low': '<img src="/local/icons/chev_up_2_circle_white.svg" width="64">',
+                    'Negative': '<img src="/local/icons/chev_up_3_circle_white.svg" width="64">',
+                    'Unknown': '<img src="/local/icons/question_circle.svg" width="64">'
+                  } %}
+                    # {{ region }} PEA Watch
+                    {{ icon.get(state, 'Unknown') }}
+                    {{ msg.get(state, 'Unknown') }}
+                card_mod:
+                  style: |
+                    ha-card {
+                      min-height: 195px;
+                      {% set state = states('input_text.price_signal') %}
+                      {% set colors = {
+                        'Extreme': "#b11122",
+                        'Very High': "#b11122",
+                        'High': "#b11122",
+                        'Average': "#ff5100ff",
+                        'Low': "#008000",
+                        'Very Low': "#008000",
+                        'Negative': "#05ffffff"
+                      } %}
+                      background-color: {{ colors.get(state, 'grey') }};
+                      color: white;
+                      text-align: center;
+                    }
+            - type: conditional
+              conditions:
+                - entity: input_select.electricity_provider
+                  state_not: "Flow Power"
+              card:
+                graph: line
+                type: sensor
+                entity: sensor.grid_buy_price
+                detail: 1
+                hours_to_show: 4
+                icon: mdi:currency-usd
+                name: Buy Price
+                layout_options:
+                  grid_columns: 4
+                  grid_rows: 2
+        - type: custom:mod-card
+          card_mod:
+            style: |
+              ha-card {
+                display: {% if states('input_select.electricity_provider') in ['Flow Power','Globird','Other'] %} none {% else %} block {% endif %};
+              }
+          card:
+            type: custom:apexcharts-card
+            update_delay: 3s
+            update_interval: 15s
+            graph_span: 4h
+            span:
+              start: minute
+            show:
+              last_updated: false
+            header:
+              show: true
+              title: Energy Price Forecast (4hrs)
+              show_states: false
+            apex_config:
+              chart:
+                height: 335px
+              tooltip:
+                enabled: true
+                x:
+                  show: true
+                  format: HH:mm
+            yaxis:
+              - id: dollars
+                decimals: 2
+                min: ~0
+                max: ~0.25
+                apex_config:
+                  forceNiceScale: true
+                  title:
+                    text: $/kWh
+                    rotate: 0
+            all_series_config:
+              type: area
+              curve: stepline
+              stroke_width: 2
+              extend_to: false
+              yaxis_id: dollars
+              float_precision: 2
+              unit: $
+              show:
+                legend_value: false
+                extremas: false
+                in_header: true
+            series:
+              - entity: sensor.nodered_forecast
+                name: Buy Price
+                color: firebrick
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentBuyPrice];
+                  })
+                show:
+                  extremas: min+time
+              - entity: sensor.nodered_forecast
+                name: Sell Price
+                color: forestgreen
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentSellPrice];
+                  })
+                show:
+                  extremas: max+time
+        - type: custom:mod-card
+          card_mod:
+            style: |
+              ha-card {
+                display: {% if is_state('input_select.electricity_provider','Flow Power') %} block {% else %} none {% endif %};
+              }
+          card:
+            type: custom:apexcharts-card
+            update_delay: 3s
+            update_interval: 15s
+            graph_span: 4h
+            span:
+              start: minute
+            show:
+              last_updated: false
+            header:
+              show: true
+              title: AEMO Energy Price Forecast (4hrs)
+              show_states: false
+            apex_config:
+              chart:
+                height: 335px
+                redrawOnParentResize: true
+                redrawOnWindowResize: true
+              tooltip:
+                enabled: true
+                x:
+                  show: true
+                  format: HH:mm
+            yaxis:
+              - id: dollars
+                decimals: 2
+                min: ~0
+                max: ~0.2
+                apex_config:
+                  forceNiceScale: true
+                  title:
+                    text: $/kWh
+                    rotate: 0
+            all_series_config:
+              type: area
+              curve: stepline
+              stroke_width: 2
+              extend_to: false
+              yaxis_id: dollars
+              float_precision: 2
+              unit: $
+              show:
+                legend_value: false
+                extremas: false
+                in_header: true
+            series:
+              - entity: sensor.nodered_forecast
+                name: Buy Price
+                color: lightblue
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentBuyPrice];
+                  })
+                show:
+                  extremas: min+time
+        - daily_forecast_layout: vertical
+          entity_extended: sensor.home_short_text_0
+          entity_extended_1: sensor.home_extended_text_1
+          entity_fire_danger: sensor.home_fire_danger_0
+          entity_fire_danger_1: sensor.home_fire_danger_1
+          entity_forecast_icon: weather.home
+          entity_forecast_icon_1: sensor.home_icon_descriptor_1
+          entity_forecast_max: sensor.home_temp_max_0
+          entity_forecast_max_1: sensor.home_temp_max_1
+          entity_forecast_min: sensor.home_temp_min_0
+          entity_forecast_min_1: sensor.home_temp_min_1
+          entity_humidity: sensor.home_humidity
+          entity_pop: sensor.home_rain_chance_0
+          entity_pop_1: sensor.home_rain_chance_1
+          entity_pos: sensor.home_rain_amount_max_0
+          entity_pos_1: sensor.home_rain_amount_max_1
+          entity_summary: sensor.home_short_text_0
+          entity_summary_1: sensor.home_short_text_1
+          entity_sun: sun.sun
+          entity_temperature: sensor.home_temp
+          entity_todays_fire_danger: sensor.home_fire_danger_0
+          entity_todays_uv_forecast: sensor.home_uv_forecast_0
+          entity_uv_alert_summary: sensor.home_uv_category_0
+          entity_wind_bearing: sensor.home_wind_direction
+          entity_wind_gust: sensor.home_gust_speed_kilometre
+          entity_wind_speed: sensor.home_wind_speed_kilometre
+          extended_use_attr: false
+          option_color_fire_danger: true
+          option_daily_color_fire_danger: true
+          option_show_overview_decimals: false
+          option_show_overview_separator: true
+          option_static_icons: false
+          option_today_rainfall_decimals: false
+          option_today_temperature_decimals: false
+          overview_layout: complete
+          section_order:
+            - overview
+            - extended
+            - slots
+            - daily_forecast
+          show_section_daily_forecast: false
+          show_section_extended: true
+          show_section_overview: true
+          show_section_slots: true
+          slot_l1: forecast_max
+          slot_l2: forecast_min
+          slot_l3: wind
+          slot_l4: remove
+          slot_l5: remove
+          slot_l6: remove
+          slot_l7: remove
+          slot_l8: remove
+          slot_r1: popforecast
+          slot_r2: sun_next
+          slot_r3: remove
+          slot_r4: remove
+          slot_r5: remove
+          slot_r6: remove
+          slot_r7: remove
+          slot_r8: remove
+          type: custom:platinum-weather-card-plus-charts
+          update_time_name_attr: issue_time
+          update_time_use_attr: true
+        - daily_forecast_days: 4
+          daily_forecast_layout: vertical
+          entity_extended: sensor.home_extended_text_0
+          entity_extended_1: sensor.home_extended_text_1
+          entity_fire_danger: sensor.home_fire_danger_0
+          entity_fire_danger_1: sensor.home_fire_danger_1
+          entity_forecast_icon: sensor.home_mdi_icon_0
+          entity_forecast_icon_1: sensor.home_icon_descriptor_1
+          entity_forecast_max: sensor.home_temp_max_0
+          entity_forecast_max_1: sensor.home_temp_max_1
+          entity_forecast_min: sensor.home_temp_min_0
+          entity_forecast_min_1: sensor.home_temp_min_1
+          entity_humidity: sensor.home_humidity
+          entity_pop: sensor.home_rain_chance_0
+          entity_pop_1: sensor.home_rain_chance_1
+          entity_pos: sensor.home_rain_amount_max_0
+          entity_pos_1: sensor.home_rain_amount_max_1
+          entity_summary: sensor.home_short_text_0
+          entity_summary_1: sensor.home_short_text_1
+          entity_sun: sun.sun
+          entity_temperature: sensor.home_temp
+          entity_todays_fire_danger: sensor.home_fire_danger_0
+          entity_todays_uv_forecast: sensor.home_uv_forecast_0
+          entity_uv_alert_summary: sensor.home_uv_forecast_0
+          entity_wind_bearing: sensor.home_wind_direction
+          entity_wind_gust: sensor.home_gust_speed_kilometre
+          entity_wind_speed: sensor.home_gust_speed_kilometre
+          extended_use_attr: false
+          option_color_fire_danger: true
+          option_daily_color_fire_danger: true
+          option_show_overview_decimals: false
+          option_show_overview_separator: true
+          option_static_icons: false
+          option_today_rainfall_decimals: false
+          option_today_temperature_decimals: false
+          overview_layout: complete
+          section_order:
+            - overview
+            - extended
+            - slots
+            - daily_forecast
+          show_section_extended: false
+          show_section_overview: false
+          show_section_slots: false
+          slot_l1: forecast_max
+          slot_l2: forecast_min
+          slot_l3: wind
+          slot_l4: pressure
+          slot_l5: sun_next
+          slot_l6: remove
+          slot_l7: remove
+          slot_l8: remove
+          slot_r1: popforecast
+          slot_r2: humidity
+          slot_r3: uv_summary
+          slot_r4: fire_danger
+          slot_r5: sun_following
+          slot_r6: remove
+          slot_r7: remove
+          slot_r8: remove
+          type: custom:platinum-weather-card-plus-charts
+          update_time_name_attr: issue_time
+          update_time_use_attr: true
+    - type: custom:layout-card
+      view_layout:
+        grid_column: 1
+      layout_type: grid
+      layout:
+        grid-template-columns: repeat(1, 1fr)
+        grid-gap: 8px
+      cards:
+        - type: conditional
+          conditions:
+            - entity: input_select.electricity_provider
+              state_not: "Flow Power"
+          card:
+            graph: line
+            type: sensor
+            entity: sensor.grid_sell_price
+            detail: 1
+            hours_to_show: 4
+            icon: mdi:currency-usd
+            name: Sell Price
+            layout_options:
+              grid_columns: 4
+              grid_rows: 2
+        - type: conditional
+          conditions:
+            - entity: input_select.electricity_provider
+              state: "Flow Power"
+          card:
+            graph: line
+            type: sensor
+            entity: sensor.grid_sell_price
+            detail: 1
+            hours_to_show: 4
+            icon: mdi:currency-usd
+            name: AEMO Price
+            layout_options:
+              grid_columns: 4
+              grid_rows: 2
+        - type: custom:mod-card
+          card_mod:
+            style: |
+              ha-card {
+                display: {% if states('input_select.electricity_provider') in ['Flow Power','Globird','Other'] %} none {% else %} block {% endif %};
+              }
+          card:
+            type: custom:apexcharts-card
+            update_delay: 3s
+            update_interval: 15s
+            graph_span: 24h
+            span:
+              start: minute
+            show:
+              last_updated: false
+            header:
+              show: true
+              title: Energy Price Forecast (24hrs)
+              show_states: false
+            apex_config:
+              chart:
+                height: 335px
+              tooltip:
+                enabled: true
+                x:
+                  show: true
+                  format: HH:mm
+            yaxis:
+              - id: dollars
+                decimals: 2
+                min: ~0
+                max: ~0.25
+                apex_config:
+                  forceNiceScale: true
+                  title:
+                    text: $/kWh
+                    rotate: 0
+            all_series_config:
+              type: area
+              curve: stepline
+              stroke_width: 2
+              extend_to: false
+              yaxis_id: dollars
+              float_precision: 2
+              unit: $
+              show:
+                legend_value: true
+                extremas: false
+                in_header: true
+            series:
+              - entity: sensor.nodered_forecast
+                name: Buy Price
+                color: firebrick
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentBuyPrice];
+                  })
+                show:
+                  extremas: min+time
+              - entity: sensor.nodered_forecast
+                name: Sell Price
+                color: forestgreen
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentSellPrice];
+                  })
+                show:
+                  extremas: max+time
+        - type: custom:mod-card
+          card_mod:
+            style: |
+              ha-card {
+                display: {% if is_state('input_select.electricity_provider','Flow Power') %} block {% else %} none {% endif %};
+              }
+          card:
+            type: custom:apexcharts-card
+            update_delay: 3s
+            update_interval: 15s
+            graph_span: 24h
+            span:
+              start: minute
+            show:
+              last_updated: false
+            header:
+              show: true
+              title: AEMO Energy Price Forecast (24hrs)
+              show_states: false
+            apex_config:
+              chart:
+                height: 335px
+              tooltip:
+                enabled: true
+                x:
+                  show: true
+                  format: HH:mm
+            yaxis:
+              - id: dollars
+                decimals: 2
+                min: ~0
+                max: ~0.25
+                apex_config:
+                  forceNiceScale: true
+                  title:
+                    text: $/kWh
+                    rotate: 0
+            all_series_config:
+              type: area
+              curve: stepline
+              stroke_width: 2
+              extend_to: false
+              yaxis_id: dollars
+              float_precision: 2
+              unit: $
+              show:
+                legend_value: true
+                extremas: false
+                in_header: true
+            series:
+              - entity: sensor.nodered_forecast
+                name: AEMO Price
+                color: lightblue
+                data_generator: |
+                  return entity.attributes.forecast.map((forecast) => {
+                    return [new Date(forecast.StartTime).getTime(), forecast.CurrentBuyPrice];
+                  })
+                show:
+                  extremas: min+time
+        - type: custom:state-switch
+          entity: input_boolean.em_api_server
+          states:
+            "off":
+              type: markdown
+              content: >
+                <div style="background-color: var(--primary-color); color: white;
+                padding: 10px 16px; border-radius: 4px 4px 0 0; font-weight: bold;
+                font-size: 1.2em;">
+                <h3>Next 24hr's Energy Plan</h3>
+                
+                Premium subscribers will receive a 24hr forecast of their energy use in chart format.
+                
+                
+                This will include solar generation, battery charge and discharge, battery SoC, grid import and export.
+                It will also show when any scheduled charges are planned, and when any energy exports are planned
+                due to current sell price forecasts.
+                
+                This is useful when planning ahead for your energy usage, to see an estimate of what your battery level
+                is likely to get down to over night, and by when it will be charged the next day.
+                </div>
+            "on":
+              type: custom:apexcharts-card
+              header:
+                title: Next 24hr's Energy Plan (forecast only, subject to change)
+                show: true
+              graph_span: 24h
+              span:
+                start: minute
+              now:
+                show: true
+              yaxis:
+                - id: kw
+                  min: 0
+                  decimals: 1
+                  apex_config:
+                    title:
+                      text: kW
+                - id: soc
+                  min: 0
+                  max: 100
+                  decimals: 0
+                  opposite: true
+                  apex_config:
+                    title:
+                      text: SoC %
+              series:
+                - entity: sensor.energy_manager_plan
+                  name: PV (kW)
+                  yaxis_id: kw
+                  type: area
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.inputs?.pv_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Load (kW)
+                  yaxis_id: kw
+                  type: line
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.inputs?.load_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Grid import (kW)
+                  yaxis_id: kw
+                  type: column
+                  stroke_width: 0
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.expected?.grid_import_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Grid export (kW)
+                  yaxis_id: kw
+                  type: column
+                  stroke_width: 0
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.expected?.grid_export_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Battery charge (kW)
+                  yaxis_id: kw
+                  type: column
+                  stroke_width: 0
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.expected?.battery_charge_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Battery discharge (kW)
+                  yaxis_id: kw
+                  type: column
+                  stroke_width: 0
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.expected?.battery_discharge_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Forced charge (kW)
+                  yaxis_id: kw
+                  type: line
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.setpoints?.force_charge_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Forced export (kW)
+                  yaxis_id: kw
+                  type: line
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.setpoints?.force_export_kw ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Battery SoC (%)
+                  yaxis_id: soc
+                  type: line
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.expected?.soc_pct_end ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: EV Charge (kW)
+                  yaxis_id: kw
+                  type: column
+                  stroke_width: 0
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.ev?.charge_kw ?? 0)]);
+              apex_config:
+                chart:
+                  height: 320
+                legend:
+                  show: true
+                  formatter: 'EVAL:function(seriesName, opts) { return seriesName; }'
+                tooltip:
+                  shared: true
+                  intersect: false
+                  followCursor: true
+                plotOptions:
+                  bar:
+                    columnWidth: 95%
+                stroke:
+                  width: 2
+        - type: custom:state-switch
+          entity: input_boolean.em_api_server
+          states:
+            "on":
+              type: custom:apexcharts-card
+              header:
+                title: Next 24hr's Price & Curtailment Forecast (subject to change)
+                show: true
+              graph_span: 24h
+              span:
+                start: minute
+              now:
+                show: true
+              apex_config:
+                chart:
+                  height: 220
+                legend:
+                  show: true
+                  formatter: 'EVAL:function(seriesName, opts) { return seriesName; }'
+              yaxis:
+                - id: price
+                  decimals: 3
+                  apex_config:
+                    title:
+                      text: $/kWh
+                - id: curtail
+                  opposite: true
+                  min: 0
+                  max: 100
+                  decimals: 0
+                  apex_config:
+                    title:
+                      text: Curtail (%)
+              series:
+                - entity: sensor.energy_manager_plan
+                  name: Buy Price ($/kWh)
+                  type: area
+                  color: red
+                  opacity: 0.3
+                  yaxis_id: price
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.inputs?.buy_price ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Sell Price ($/kWh)
+                  type: area
+                  color: green
+                  opacity: 0.3
+                  yaxis_id: price
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.inputs?.sell_price
+                    ?? 0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Curtailment (%)
+                  type: column
+                  yaxis_id: curtail
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(),
+                    Number(p.setpoints?.curtail_pct ?? 0)]);
+        - type: custom:state-switch
+          entity: binary_sensor.ocpp_active
+          states:
+            "on":
+              type: custom:apexcharts-card
+              header:
+                title: Next 24hr's EV Charging Forecast (subject to change)
+                show: true
+              graph_span: 24h
+              span:
+                start: minute
+              now:
+                show: true
+              apex_config:
+                chart:
+                  height: 220
+                legend:
+                  show: true
+                  formatter: 'EVAL:function(seriesName, opts) { return seriesName; }'
+              yaxis:
+                - id: power
+                  min: 0
+                  decimals: 1
+                  apex_config:
+                    title:
+                      text: Power (kW)
+                - id: battery
+                  decimals: 0
+                  opposite: true
+                  apex_config:
+                    title:
+                      text: "%"
+              series:
+                - entity: sensor.energy_manager_plan
+                  name: Solar Charge
+                  type: area
+                  color: yellow
+                  opacity: 0.3
+                  yaxis_id: power
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.ev?.solar_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Grid Charge
+                  type: area
+                  color: red
+                  opacity: 0.1
+                  yaxis_id: power
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.ev?.grid_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Battery Charge
+                  type: line
+                  color: blue
+                  yaxis_id: power
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.ev?.battery_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: Total Charge
+                  type: line
+                  color: green
+                  opacity: 0.1
+                  yaxis_id: power
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.ev?.charge_kw ??
+                    0)]);
+                - entity: sensor.energy_manager_plan
+                  name: EV SOC
+                  type: line
+                  color: purple
+                  yaxis_id: battery
+                  stroke_width: 2
+                  data_generator: >
+                    const t = entity.attributes.energy_plan?.timeline || [];
+                    return t.map(p => [new Date(p.ts).getTime(), Number(p.ev?.ev_soc ??
+                    0)]);
+    - type: custom:layout-card
+      view_layout:
+        grid_column: 1
+      layout_type: grid
+      layout:
+        grid-template-columns: repeat(2, 1fr)
+        grid-gap: 8px
+      cards:
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_today
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) * 2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) * 3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) * 5}}
+          secondary: Today
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_tomorrow
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_tomorrow
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_day_3
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_after_tomorrow
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_day_4
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_in_three_days
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_day_5
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_in_four_days
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_day_6
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_in_five_days
+          tertiary: {}
+        - type: custom:modern-circular-gauge
+          entity: sensor.solcast_pv_forecast_forecast_day_7
+          name: ' '
+          gauge_foreground_style:
+            color: adaptive
+          gauge_background_style:
+            width: 3
+            color: adaptive
+          max: "{{states('input_number.solar_array_size') | float(0) * 7}}"
+          min: 0
+          smooth_segments: true
+          adaptive_icon_color: true
+          segments:
+            - from: 0
+              color:
+                - 255
+                - 0
+                - 0
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                2}}
+              color:
+                - 243
+                - 156
+                - 18
+            - from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                3.5}}
+              color:
+                - 224
+                - 220
+                - 111
+            - color:
+                - 40
+                - 180
+                - 99
+              from: >-
+                {{states('input_number.solar_array_size') | float(0) *
+                5}}
+          secondary:
+            entity: sensor.day_in_six_days
+          tertiary: {}
+    title: Dashboard
+    icon: mdi:view-dashboard
+  - type: custom:tabbed-card
+    default_tab: 2
+    options:
+      '--mdc-theme-primary': '#1976d2'
+      '--mdc-tab-text-label-color-default': '#666'
+      '--mdc-tab-color-default': '#666'
+    tabs:
+      - attributes:
+          label: 1H
+          icon: mdi:clock-outline
+        card:
+          type: custom:apexcharts-card
+          graph_span: 1h
+          update_interval: 1min
+          header:
+            show: true
+            title: Inverter Power - Last Hour
+            show_states: true
+            colorize_states: true
+          yaxis:
+            - id: power
+              decimals: 2
+              apex_config:
+                title:
+                  text: Power (W)
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(1) + 'kW';
+                      }
+                      return value.toFixed(0) + 'W';
+                    }
+            - id: percentage
+              opposite: true
+              decimals: 1
+              max: 100
+              min: 0
+              apex_config:
+                title:
+                  text: Battery Level (%)
+          series:
+            - entity: sensor.inverter_pv_power
+              name: PV Power
+              type: area
+              color: '#FFD700'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_load_power
+              name: Load Power
+              type: area
+              color: '#87CEEB'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_import_power
+              name: Grid Import
+              type: area
+              color: '#FF6B6B'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_export_power
+              name: Grid Export
+              type: area
+              color: '#90EE90'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_charging_power
+              name: Battery Charging
+              type: area
+              color: '#FFA500'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_discharging_power
+              name: Battery Discharging
+              type: area
+              color: '#DDA0DD'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_level
+              name: Battery Level
+              type: line
+              color: '#32CD32'
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 1min
+              yaxis_id: percentage
+          apex_config:
+            chart:
+              height: 400
+              animations:
+                enabled: true
+            stroke:
+              curve: smooth
+              dashArray:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 5
+            dataLabels:
+              enabled: false
+            legend:
+              show: true
+              position: bottom
+            tooltip:
+              enabled: true
+              shared: true
+              x:
+                format: HH:mm
+              'y':
+                formatter: |
+                  EVAL:function(value, { seriesIndex }) {
+                    if (seriesIndex === 6) {
+                      return value.toFixed(1) + '%';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(2) + ' kW';
+                    }
+                    return value.toFixed(0) + ' W';
+                  }
+            grid:
+              show: true
+              strokeDashArray: 3
+            xaxis:
+              type: datetime
+              labels:
+                format: HH:mm
+      - attributes:
+          label: 6H
+          icon: mdi:clock-outline
+        card:
+          type: custom:apexcharts-card
+          graph_span: 6h
+          update_interval: 2min
+          header:
+            show: true
+            title: Inverter Power - Last 6 Hours
+            show_states: true
+            colorize_states: true
+          yaxis:
+            - id: power
+              decimals: 2
+              apex_config:
+                title:
+                  text: Power (W)
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(1) + 'kW';
+                      }
+                      return value.toFixed(0) + 'W';
+                    }
+            - id: percentage
+              opposite: true
+              decimals: 1
+              max: 100
+              min: 0
+              apex_config:
+                title:
+                  text: Battery Level (%)
+          series:
+            - entity: sensor.inverter_pv_power
+              name: PV Power
+              type: area
+              color: '#FFD700'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_load_power
+              name: Load Power
+              type: area
+              color: '#87CEEB'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_import_power
+              name: Grid Import
+              type: area
+              color: '#FF6B6B'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_export_power
+              name: Grid Export
+              type: area
+              color: '#90EE90'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_charging_power
+              name: Battery Charging
+              type: area
+              color: '#FFA500'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_discharging_power
+              name: Battery Discharging
+              type: area
+              color: '#DDA0DD'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_level
+              name: Battery Level
+              type: line
+              color: '#32CD32'
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 2min
+              yaxis_id: percentage
+          apex_config:
+            chart:
+              height: 400
+              animations:
+                enabled: true
+            stroke:
+              curve: smooth
+              dashArray:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 5
+            dataLabels:
+              enabled: false
+            legend:
+              show: true
+              position: bottom
+            tooltip:
+              enabled: true
+              shared: true
+              x:
+                format: HH:mm dd/MM
+              'y':
+                formatter: |
+                  EVAL:function(value, { seriesIndex }) {
+                    if (seriesIndex === 6) {
+                      return value.toFixed(1) + '%';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(2) + ' kW';
+                    }
+                    return value.toFixed(0) + ' W';
+                  }
+            grid:
+              show: true
+              strokeDashArray: 3
+            xaxis:
+              type: datetime
+              labels:
+                format: HH:mm
+      - attributes:
+          label: 24H
+          icon: mdi:clock-outline
+        card:
+          type: custom:apexcharts-card
+          graph_span: 24h
+          update_interval: 5min
+          header:
+            show: true
+            title: Inverter Power - Last 24 Hours
+            show_states: true
+            colorize_states: true
+          yaxis:
+            - id: power
+              decimals: 2
+              apex_config:
+                title:
+                  text: Power (W)
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(1) + 'kW';
+                      }
+                      return value.toFixed(0) + 'W';
+                    }
+            - id: percentage
+              opposite: true
+              decimals: 1
+              max: 100
+              min: 0
+              apex_config:
+                title:
+                  text: Battery Level (%)
+          series:
+            - entity: sensor.inverter_pv_power
+              name: PV Power
+              type: area
+              color: '#FFD700'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_load_power
+              name: Load Power
+              type: area
+              color: '#87CEEB'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_import_power
+              name: Grid Import
+              type: area
+              color: '#FF6B6B'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_export_power
+              name: Grid Export
+              type: area
+              color: '#90EE90'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_charging_power
+              name: Battery Charging
+              type: area
+              color: '#FFA500'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_discharging_power
+              name: Battery Discharging
+              type: area
+              color: '#DDA0DD'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_level
+              name: Battery Level
+              type: line
+              color: '#32CD32'
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 5min
+              yaxis_id: percentage
+          apex_config:
+            chart:
+              height: 400
+              animations:
+                enabled: true
+            stroke:
+              curve: smooth
+              dashArray:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 5
+            dataLabels:
+              enabled: false
+            legend:
+              show: true
+              position: bottom
+            tooltip:
+              enabled: true
+              shared: true
+              x:
+                format: HH:mm dd/MM
+              'y':
+                formatter: |
+                  EVAL:function(value, { seriesIndex }) {
+                    if (seriesIndex === 6) {
+                      return value.toFixed(1) + '%';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(2) + ' kW';
+                    }
+                    return value.toFixed(0) + ' W';
+                  }
+            grid:
+              show: true
+              strokeDashArray: 3
+            xaxis:
+              type: datetime
+              labels:
+                format: HH:mm
+      - attributes:
+          label: 3D
+          icon: mdi:calendar-outline
+        card:
+          type: custom:apexcharts-card
+          graph_span: 3d
+          update_interval: 15min
+          header:
+            show: true
+            title: Inverter Power - Last 3 Days
+            show_states: true
+            colorize_states: true
+          yaxis:
+            - id: power
+              decimals: 2
+              apex_config:
+                title:
+                  text: Power (W)
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(1) + 'kW';
+                      }
+                      return value.toFixed(0) + 'W';
+                    }
+            - id: percentage
+              opposite: true
+              decimals: 1
+              max: 100
+              min: 0
+              apex_config:
+                title:
+                  text: Battery Level (%)
+          series:
+            - entity: sensor.inverter_pv_power
+              name: PV Power
+              type: area
+              color: '#FFD700'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_load_power
+              name: Load Power
+              type: area
+              color: '#87CEEB'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_import_power
+              name: Grid Import
+              type: area
+              color: '#FF6B6B'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_export_power
+              name: Grid Export
+              type: area
+              color: '#90EE90'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_charging_power
+              name: Battery Charging
+              type: area
+              color: '#FFA500'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_discharging_power
+              name: Battery Discharging
+              type: area
+              color: '#DDA0DD'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_level
+              name: Battery Level
+              type: line
+              color: '#32CD32'
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 15min
+              yaxis_id: percentage
+          apex_config:
+            chart:
+              height: 400
+              animations:
+                enabled: true
+            stroke:
+              curve: smooth
+              dashArray:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 5
+            dataLabels:
+              enabled: false
+            legend:
+              show: true
+              position: top
+            tooltip:
+              enabled: true
+              shared: true
+              x:
+                format: dd/MM HH:mm
+              'y':
+                formatter: |
+                  EVAL:function(value, { seriesIndex }) {
+                    if (seriesIndex === 6) {
+                      return value.toFixed(1) + '%';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(2) + ' kW';
+                    }
+                    return value.toFixed(0) + ' W';
+                  }
+            grid:
+              show: true
+              strokeDashArray: 3
+            xaxis:
+              type: datetime
+              labels:
+                format: dd/MM
+      - attributes:
+          label: 1W
+          icon: mdi:calendar-week
+        card:
+          type: custom:apexcharts-card
+          graph_span: 1w
+          update_interval: 30min
+          header:
+            show: true
+            title: Inverter Power - Last Week
+            show_states: true
+            colorize_states: true
+          yaxis:
+            - id: power
+              decimals: 2
+              apex_config:
+                title:
+                  text: Power (W)
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(1) + 'kW';
+                      }
+                      return value.toFixed(0) + 'W';
+                    }
+            - id: percentage
+              opposite: true
+              decimals: 1
+              max: 100
+              min: 0
+              apex_config:
+                title:
+                  text: Battery Level (%)
+          series:
+            - entity: sensor.inverter_pv_power
+              name: PV Power
+              type: area
+              color: '#FFD700'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_load_power
+              name: Load Power
+              type: area
+              color: '#87CEEB'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_import_power
+              name: Grid Import
+              type: area
+              color: '#FF6B6B'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_export_power
+              name: Grid Export
+              type: area
+              color: '#90EE90'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_charging_power
+              name: Battery Charging
+              type: area
+              color: '#FFA500'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_discharging_power
+              name: Battery Discharging
+              type: area
+              color: '#DDA0DD'
+              opacity: 0.3
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: power
+            - entity: sensor.inverter_battery_level
+              name: Battery Level
+              type: line
+              color: '#32CD32'
+              stroke_width: 2
+              group_by:
+                func: avg
+                duration: 30min
+              yaxis_id: percentage
+          apex_config:
+            chart:
+              height: 400
+              animations:
+                enabled: true
+            stroke:
+              curve: smooth
+              dashArray:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 5
+            dataLabels:
+              enabled: false
+            legend:
+              show: true
+              position: top
+            tooltip:
+              enabled: true
+              shared: true
+              x:
+                format: dd/MM HH:mm
+              'y':
+                formatter: |
+                  EVAL:function(value, { seriesIndex }) {
+                    if (seriesIndex === 6) {
+                      return value.toFixed(1) + '%';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(2) + ' kW';
+                    }
+                    return value.toFixed(0) + ' W';
+                  }
+            grid:
+              show: true
+              strokeDashArray: 3
+            xaxis:
+              type: datetime
+              labels:
+                format: dd/MM
+    cards: []
+    icon: mdi:chart-areaspline
+  - type: custom:em-events-card
+    icon: mdi:chart-timeline
+

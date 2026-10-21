@@ -1,0 +1,384 @@
+# fronius_modbus.yaml.disabled v2.0.0
+# Fronius modbus configuration based on official Fronius protocol (updated addresses)
+- name: "fronius_inverter"
+  type: tcp
+  host: !secret modbus_host_ip
+  port: !secret modbus_port
+  sensors:
+    # Device Information
+    - name: "fronius_device_type_code"
+      device_address: !secret modbus_slave
+      address: 40133 # Register 40134 (DERTyp)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 600
+
+    - name: "fronius_inverter_serial"
+      device_address: !secret modbus_slave
+      address: 40052 # Register 40053 (SN)
+      input_type: holding
+      data_type: string
+      count: 16
+      scan_interval: 600
+
+    - name: "fronius_inverter_model"
+      device_address: !secret modbus_slave
+      address: 40020 # Register 40021 (Model)
+      input_type: holding
+      data_type: string
+      count: 16
+      scan_interval: 600
+
+    - name: "fronius_firmware_version"
+      device_address: !secret modbus_slave
+      address: 40044 # Register 40045 (Firmware)
+      input_type: holding
+      data_type: string
+      count: 8
+      scan_interval: 600
+
+    - name: "fronius_nominal_output_power"
+      device_address: !secret modbus_slave
+      address: 40134 # Register 40135 (WRtg)
+      input_type: holding
+      data_type: uint16
+      scale: 1
+      unit_of_measurement: "W"
+      scan_interval: 60
+
+    - name: "fronius_power_output_sf"
+      device_address: !secret modbus_slave
+      address: 40260 # Register 40261   WMaxLimPct_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # Grid Measurements
+    - name: "fronius_grid_frequency"
+      device_address: !secret modbus_slave
+      address: 40093 # Register 40094 (Hz)
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "Hz"
+      scan_interval: 10
+
+    - name: "fronius_ac_power"
+      device_address: !secret modbus_slave
+      address: 40091 # Register 40092 (W)
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_grid_active_power"
+      address: 40097
+      slave: 200
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: W
+      scan_interval: 10
+
+    # Total PV Power
+    - name: "fronius_pv1_power_raw"
+      device_address: !secret modbus_slave
+      address: 40284 # Register 40285 (module/1/DCW - PV1 DC power)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_pv2_power_raw"
+      device_address: !secret modbus_slave
+      address: 40304 # Register 40305 (module/2/DCW - PV2 DC power)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_dcpower_sf"
+      device_address: !secret modbus_slave
+      address: 40267 # Register 40268
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # Energy Measurements
+    - name: "fronius_total_pv_energy"
+      device_address: !secret modbus_slave
+      address: 40101 # Register 40102-40103 (WH)
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "Wh"
+      scan_interval: 10
+
+    # Battery Data (Storage module 3 = Charge, module 4 = Discharge)
+    - name: "fronius_battery_voltage"
+      device_address: !secret modbus_slave
+      address: 40323 # Register 40324 (module/3/DCV - battery voltage)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "V"
+      scan_interval: 10
+
+    - name: "fronius_voltage_sf"
+      device_address: !secret modbus_slave
+      address: 40266 # Register 40267   DCV_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_battery_charge_power"
+      device_address: !secret modbus_slave
+      address: 40324 # Register 40325 (module/3/DCW - charge power)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_battery_charge_rate_sf"
+      device_address: !secret modbus_slave
+      address: 40267 # Register 40268   DCW_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_charge_rate_sf"
+      device_address: !secret modbus_slave
+      address: 40155 # Register 40156   MaxChaRte_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_battery_discharge_power"
+      device_address: !secret modbus_slave
+      address: 40344 # Register 40345 (module/4/DCW - discharge power)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_discharge_rate_sf"
+      device_address: !secret modbus_slave
+      address: 40157 # Register 40158   MaxDisChaRte_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_wchamax"
+      device_address: !secret modbus_slave
+      address: 40355      # WChaMax
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_wdischamax"
+      device_address: !secret modbus_slave
+      address: 40356      # WChaMax , no WDisChaMax
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_battery_soc"
+      device_address: !secret modbus_slave
+      address: 40361 # Register 40362 (ChaState)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      scan_interval: 30
+
+    - name: "fronius_battery_capacity"
+      device_address: !secret modbus_slave
+      address: 40150 # Register 40151 (WHRtg)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "Wh"
+      scan_interval: 600
+
+    - name: "fronius_energy_rating_sf"
+      device_address: !secret modbus_slave
+      address: 40151 # Register 40152   WHRtg_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_energy_percent_sf"
+      device_address: !secret modbus_slave
+      address: 40375 # Register 40376   ChaState_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # Note: Daily Charge/Discharge Energy not available as direct registers
+
+    - name: "fronius_total_charge_energy"
+      device_address: !secret modbus_slave
+      address: 40325 # Register 40326-40327 (module/3/DCWH)
+      input_type: holding
+      data_type: uint32
+      unit_of_measurement: "Wh"
+      scan_interval: 10
+
+    - name: "fronius_total_discharge_energy"
+      device_address: !secret modbus_slave
+      address: 40345 # Register 40346-40347 (module/4/DCWH)
+      input_type: holding
+      data_type: uint32
+      unit_of_measurement: "Wh"
+      scan_interval: 10
+
+    # System Status
+    - name: "fronius_inverter_work_mode"
+      device_address: !secret modbus_slave
+      address: 40117 # Register 40118 (St - Operating state)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_running_state"
+      device_address: !secret modbus_slave
+      address: 40193 # Register 40194 (PVConn)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_system_state"
+      device_address: !secret modbus_slave
+      address: 40364 # Register 40365 (ChaSt - Charge status)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    # Internal Temperature
+    - name: "fronius_internal_temperature"
+      device_address: !secret modbus_slave
+      address: 40109 # Register 40110-40111 (TmpCab)
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "°C"
+      scan_interval: 60
+
+    # Power Factor and Reactive Power
+    - name: "fronius_power_factor"
+      device_address: !secret modbus_slave
+      address: 40099 # Register 40100-40101 (PF)
+      input_type: holding
+      data_type: float32
+      scan_interval: 10
+
+    - name: "fronius_reactive_power"
+      device_address: !secret modbus_slave
+      address: 40097 # Register 40098-40099 (VAr)
+      input_type: holding
+      data_type: float32
+      unit_of_measurement: "var"
+      scan_interval: 10
+
+    # Load Power - calculated (not a direct register)
+    # Use template: PV Power - Grid Power + Battery Discharge Power - Battery Charge Power
+
+    # EMS and Control
+    - name: "fronius_ems_mode"
+      device_address: !secret modbus_slave
+      address: 40358 # Register 40359 (StorCtl_Mod)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_remote_ems_control_mode"
+      device_address: !secret modbus_slave
+      address: 40358 # Register 40359 (StorCtl_Mod) - same as EMS mode
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_reserved_soc_backup"
+      device_address: !secret modbus_slave
+      address: 40360 # Register 40361 (MinRsvPct)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      scan_interval: 10
+
+    - name: "fronius_min_soc"
+      device_address: !secret modbus_slave
+      address: 40360 # Register 40361 (MinRsvPct) - same as reserved soc backup
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      scan_interval: 10
+
+    - name: "fronius_min_reserve_sf"
+      device_address: !secret modbus_slave
+      address: 40374 # Register 40375   MinRsvPct_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    # Note: Max SOC is not available as a direct register
+
+    - name: "fronius_export_power_limit"
+      device_address: !secret modbus_slave
+      address: 40242 # Register 40243 (WMaxLimPct)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      scan_interval: 10
+
+    - name: "fronius_export_power_limit_sf"
+      address: 40243      # WMaxLim_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_export_power_limit_enabled"
+      device_address: !secret modbus_slave
+      address: 40246 # Register 40247 (WMaxLim_Ena)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_export_power_ramp_sec"
+      device_address: !secret modbus_slave
+      address: 40245 # Register 40246 (WMaxLimPct_RmpTms)
+      input_type: holding
+      data_type: uint16
+      scan_interval: 10
+
+    - name: "fronius_max_charging_power"
+      device_address: !secret modbus_slave
+      address: 40154 # Register 40155 (MaxChaRte)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_max_charging_power_sf"
+      address: 40371      # WChaMax_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_max_charging_discharging_percent_sf"
+      address: 40378      # InOutWRte_SF
+      input_type: holding
+      data_type: int16
+      scan_interval: 10
+
+    - name: "fronius_max_discharging_power"
+      device_address: !secret modbus_slave
+      address: 40156 # Register 40157 (MaxDisChaRte)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+
+    - name: "fronius_current_charge_discharge_power"
+      device_address: !secret modbus_slave
+      address: 40156 # Register 40157 (MaxDisChaRte)
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "W"
+      scan_interval: 10
+

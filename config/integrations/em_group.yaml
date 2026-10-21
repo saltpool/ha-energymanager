@@ -1,0 +1,68 @@
+# === ENERGY_MANAGER_GROUPS_START v1.3.0 ===
+group:
+  inverter_management:
+    name: "Inverter Management"
+    entities:
+      - input_select.inverter_brand
+      - sensor.configuration_status
+      - input_boolean.restart_required
+      - binary_sensor.sungrow_active
+      - binary_sensor.sigenergy_active
+      - binary_sensor.alphaess_active
+      - binary_sensor.fronius_active
+      - binary_sensor.goodwe_active
+      - binary_sensor.goodwe_et_active
+      - binary_sensor.solaredge_active
+  inverter_manual_controls:
+    name: "Manual Configuration Controls"
+    entities:
+      - script.manual_activate_sungrow
+      - script.manual_activate_sigenergy
+      - script.manual_activate_alphaess
+      - script.manual_activate_fronius
+      - script.manual_activate_goodwe
+      - script.manual_activate_goodwe_et
+      - script.manual_activate_solaredge
+      - script.check_config_status
+  energy_manager_updates:
+    name: "Energy Manager Updates"
+    entities:
+      - sensor.energy_manager_update_status
+      - sensor.energy_manager_current_version
+      - input_text.energy_manager_available_version
+      - input_boolean.energy_manager_update_available
+      - input_datetime.energy_manager_last_update_check
+      - input_boolean.energy_manager_auto_update_check
+      - script.check_for_energy_manager_updates
+      - script.update_energy_manager
+  energy_manager_profiles:
+    name: "Energy Manager Profiles"
+    entities:
+      - input_number.curtail_cents
+      - input_number.grid_buy_price_night_spike_prep
+      - input_number.grid_sell_price_night
+      - input_number.battery_evening_prep
+      - input_number.battery_use_cost
+      - input_number.grid_buy_price_day_spike_prep
+      - input_number.grid_sell_price_day
+      - input_number.battery_morning_prep
+      - input_number.battery_morning_limit
+      - input_number.battery_1
+      - input_number.battery_2
+      - input_number.battery_3
+      - input_number.battery_4
+      - input_number.battery_5
+      - input_number.battery_6
+      - input_number.price_1_normal_mode
+      - input_number.price_2_normal_mode
+      - input_number.price_3_normal_mode
+      - input_number.price_4_normal_mode
+      - input_number.price_5_normal_mode
+      - input_number.price_6_normal_mode
+      - input_number.high_sell_price
+      - input_number.high_sell_battery_reserve
+      - input_number.sellbuy_mode_diff
+      - input_number.sellbuy_mode_battery_reserve
+      - input_number.bad_weather_rain_today
+      - input_number.bad_weather_rain_tomorrow
+# === ENERGY_MANAGER_GROUPS_END ===

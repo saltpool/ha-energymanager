@@ -1,0 +1,12 @@
+# === ENERGY_MANAGER_GROUPS_START v0.2.5 ===
+# Moved to packages (integrations/em_groups.yaml)
+
+em_placeholder_do_not_remove:
+  name: "EM Placeholder (safe)"
+  entities: []          # empty group; harmless and valid
+  icon: mdi:dots-horizontal
+
+# === ENERGY_MANAGER_GROUPS_END ===
+
+# User customisations below this line are preserved during updates
+# Add your personal groups here

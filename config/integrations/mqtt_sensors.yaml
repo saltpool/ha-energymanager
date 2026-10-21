@@ -1,0 +1,355 @@
+# === ENERGY_MANAGER_MQTT_SENSORS_START v1.3.0 ===
+mqtt:
+  sensor:
+    # Power Sensors
+    - name: "Inverter PV Power"
+      unique_id: "inverter_pv_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/pv_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:solar-power
+
+    - name: "Inverter PV Power Limit"
+      unique_id: "inverter_pv_power_limit_mqtt"
+      state_topic: "homeassistant/sensor/inverter/pv_power_limit/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:solar-power
+
+    - name: "Inverter Grid Power"
+      unique_id: "inverter_grid_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/grid_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      icon: mdi:transmission-tower
+
+    - name: "Inverter Battery Power"
+      unique_id: "inverter_battery_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      icon: mdi:battery-sync
+
+    - name: "Inverter Load Power"
+      unique_id: "inverter_load_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/load_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      icon: mdi:home-lightning-bolt
+
+    - name: "Inverter Import Power"
+      unique_id: "inverter_import_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/import_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:transmission-tower-import
+
+    - name: "Inverter Export Power"
+      unique_id: "inverter_export_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/export_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:transmission-tower-export
+
+    - name: "Inverter Battery Charging Power"
+      unique_id: "inverter_battery_charging_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_charging_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:battery-charging
+
+    - name: "Inverter Battery Discharging Power"
+      unique_id: "inverter_battery_discharging_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_discharging_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      force_update: true
+      icon: mdi:battery-minus
+
+    # Battery Sensors
+    - name: "Inverter Battery Level"
+      unique_id: "inverter_battery_level_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_level/state"
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+
+    - name: "Inverter Current Min SoC"
+      unique_id: "inverter_current_min_soc_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_min_soc/state"
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      icon: mdi:battery-20
+
+    - name: "Inverter Current Max SoC"
+      unique_id: "inverter_current_max_soc_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_max_soc/state"
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      icon: mdi:battery
+
+    - name: "Inverter Current Charge Discharge Power"
+      unique_id: "inverter_current_charge_discharge_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_charge_discharge_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      icon: mdi:lightning-bolt
+
+    - name: "Inverter Battery Charge"
+      unique_id: "inverter_battery_charge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_charge/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total
+      icon: mdi:battery-charging-100
+
+    - name: "Inverter Battery Capacity"
+      unique_id: "inverter_battery_capacity_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_capacity/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total
+      icon: mdi:battery-outline
+
+    - name: "Inverter Battery SOH"
+      unique_id: "inverter_battery_soh_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_soh/state"
+      unit_of_measurement: "%"
+      state_class: measurement
+      icon: mdi:battery-heart
+
+    - name: "Inverter Internal Temperature"
+      unique_id: "inverter_internal_temperature_mqtt"
+      state_topic: "homeassistant/sensor/inverter/internal_temperature/state"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      icon: mdi:thermometer
+
+    # Energy Sensors (Daily)
+    - name: "Inverter Daily PV Generation"
+      unique_id: "inverter_daily_pv_generation_mqtt"
+      state_topic: "homeassistant/sensor/inverter/daily_pv_generation/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:solar-power
+
+    - name: "Inverter Daily Battery Charge"
+      unique_id: "inverter_daily_battery_charge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/daily_battery_charge/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:battery-charging
+
+    - name: "Inverter Daily Battery Discharge"
+      unique_id: "inverter_daily_battery_discharge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/daily_battery_discharge/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:battery-minus
+
+    # Energy Sensors (Total)
+    - name: "Inverter Total Generated Energy"
+      unique_id: "inverter_total_generated_energy_mqtt"
+      state_topic: "homeassistant/sensor/inverter/total_generated_energy/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:solar-power
+
+    - name: "Inverter Total Battery Charge"
+      unique_id: "inverter_total_battery_charge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/total_battery_charge/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:battery-charging
+
+    - name: "Inverter Total Battery Discharge"
+      unique_id: "inverter_total_battery_discharge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/total_battery_discharge/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:battery-minus
+
+    - name: "Inverter Total Imported Energy"
+      unique_id: "inverter_total_imported_energy_mqtt"
+      state_topic: "homeassistant/sensor/inverter/total_imported_energy/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:transmission-tower-import
+
+    - name: "Inverter Total Exported Energy"
+      unique_id: "inverter_total_exported_energy_mqtt"
+      state_topic: "homeassistant/sensor/inverter/total_exported_energy/state"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:transmission-tower-export
+
+    # System Information
+    - name: "Inverter Model"
+      unique_id: "inverter_model_mqtt"
+      state_topic: "homeassistant/sensor/inverter/model/state"
+      icon: mdi:information
+
+    - name: "Inverter Serial"
+      unique_id: "inverter_serial_mqtt"
+      state_topic: "homeassistant/sensor/inverter/serial/state"
+      icon: mdi:information
+
+    - name: "Inverter Firmware"
+      unique_id: "inverter_firmware_mqtt"
+      state_topic: "homeassistant/sensor/inverter/firmware/state"
+      icon: mdi:information
+
+    - name: "Inverter EMS Mode"
+      unique_id: "inverter_ems_mode_mqtt"
+      state_topic: "homeassistant/sensor/inverter/ems_mode/state"
+      icon: mdi:lightning-bolt
+
+    - name: "Inverter EMS Charge Discharge"
+      unique_id: "inverter_ems_charge_discharge_mqtt"
+      state_topic: "homeassistant/sensor/inverter/ems_charge_discharge/state"
+      icon: mdi:information
+
+    - name: "Inverter Temperature"
+      unique_id: "inverter_temperature_mqtt"
+      state_topic: "homeassistant/sensor/inverter/temperature/state"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      icon: mdi:thermometer
+
+    - name: "Inverter Battery Temperature"
+      unique_id: "inverter_battery_temperature_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_temperature/state"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      icon: mdi:thermometer
+
+    - name: "Inverter Max SOC"
+      unique_id: "inverter_max_soc_mqtt"
+      state_topic: "homeassistant/sensor/inverter/max_soc/state"
+      unit_of_measurement: "%"
+      state_class: measurement
+      icon: mdi:battery-high
+
+    - name: "Inverter Min SOC"
+      unique_id: "inverter_min_soc_mqtt"
+      state_topic: "homeassistant/sensor/inverter/min_soc/state"
+      unit_of_measurement: "%"
+      state_class: measurement
+      icon: mdi:battery-low
+
+    - name: "Inverter Battery Forced Power"
+      unique_id: "inverter_battery_forced_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/battery_forced_power/state"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      icon: mdi:battery-sync
+
+    - name: "Inverter Reserved SOC Backup"
+      unique_id: "inverter_reserved_soc_backup_mqtt"
+      state_topic: "homeassistant/sensor/inverter/reserved_soc_backup/state"
+      unit_of_measurement: "%"
+      icon: mdi:battery-plus
+
+    - name: "Current Reserved SOC Backup"
+      unique_id: "inverter_current_reserved_soc_backup_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_reserved_soc_backup/state"
+      unit_of_measurement: "%"
+      icon: mdi:battery-plus
+
+    - name: "Inverter Max Charge Power"
+      unique_id: "inverter_max_charge_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/max_charge_power/state"
+      unit_of_measurement: "W"
+      icon: mdi:battery-charging
+
+    - name: "Inverter Max Discharge Power"
+      unique_id: "inverter_max_discharge_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/max_discharge_power/state"
+      unit_of_measurement: "W"
+      icon: mdi:battery-minus
+
+    - name: "Current Max Charge Power"
+      unique_id: "inverter_current_max_charge_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_max_charge_power/state"
+      suggested_display_precision: 0
+      unit_of_measurement: "W"
+      icon: mdi:battery-charging
+
+    - name: "Current Max Discharge Power"
+      unique_id: "inverter_current_max_discharge_power_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_max_discharge_power/state"
+      suggested_display_precision: 0
+      unit_of_measurement: "W"
+      icon: mdi:battery-minus
+
+    - name: "Inverter Export Power Limit"
+      unique_id: "inverter_export_power_limit_mqtt"
+      state_topic: "homeassistant/sensor/inverter/export_power_limit/state"
+      unit_of_measurement: "W"
+      icon: mdi:transmission-tower-export
+
+    - name: "Inverter Current Export Power Limit"
+      unique_id: "inverter_current_export_power_limit_mqtt"
+      state_topic: "homeassistant/sensor/inverter/current_export_power_limit/state"
+      suggested_display_precision: 0
+      unit_of_measurement: "W"
+      icon: mdi:transmission-tower-export
+
+    - name: "Inverter Export Power Limit Enabled"
+      unique_id: "inverter_export_power_limit_enabled_mqtt"
+      state_topic: "homeassistant/sensor/inverter/export_power_limit_enabled/state"
+      icon: mdi:transmission-tower
+
+    - name: "Energy Manager Plan"
+      unique_id: energy_manager_plan
+      state_topic: "energymanager/plan/state"
+      json_attributes_topic: "energymanager/plan/attrs"
+
+    - name: "Energy Manager MOTD"
+      unique_id: energy_manager_motd
+      state_topic: "energymanager/motd/state"
+      json_attributes_topic: "energymanager/motd/attrs"
+      icon: mdi:bullhorn
+
+    - name: "Energy Manager General"
+      unique_id: energy_manager_general
+      state_topic: "energymanager/motd_general/state"
+      json_attributes_topic: "energymanager/motd_general/attrs"
+      icon: mdi:bullhorn
+
+    - name: "Energy Manager Changelog"
+      unique_id: energy_manager_changelog
+      state_topic: "energymanager/changelog/state"
+      json_attributes_topic: "energymanager/changelog/attrs"
+      icon: mdi:bullhorn
+      
+      # === ENERGY_MANAGER_MQTT_SENSORS_END ===

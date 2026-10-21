@@ -1,0 +1,2783 @@
+# Energy Manager Helper File
+# === ENERGY_MANAGER_SHELL_COMMANDS_START v1.3.0 ===
+shell_command:
+  electricity_load: "python3 /config/scripts/electricity_dashboard.py load"
+  electricity_update: "python3 /config/scripts/electricity_dashboard.py update '{{ data }}'"
+  electricity_direct: "python3 /config/scripts/electricity_dashboard.py direct {{ hour }} {{ watts }}"
+  read_electricity_log: "cat /config/electricity_dashboard.log > /config/electricity_log_latest.txt"
+  read_baseline_csv: "cat /config/baseline-consumption.csv"
+  test_shell: echo "Shell command working" > /config/shell_test.txt
+  switch_to_sungrow: cp /config/sungrow_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_sigenergy: cp /config/sigenergy_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_alphaess: cp /config/alphaess_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_goodwe: cp /config/goodwe_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_goodwe_et: cp /config/goodwe_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_fronius: cp /config/fronius_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_solaredge: cp /config/solaredge_modbus.yaml.disabled /config/modbus/modbus.yaml
+  list_modbus_files: ls -la /config/*modbus* > /config/modbus_files_list.txt
+  check_config_files: "cd /config; ls -la *modbus.yaml*"
+  get_available_version: "cat /config/.energy_manager/update_status.txt 2>/dev/null || echo 'unknown'"
+  get_changelog_direct: 'python3 -c "import json; data=json.load(open(''/config/.energy_manager/update_details.json'')); print(data.get(''changelog'', ''No changelog available''))" 2>/dev/null || echo ''No changelog available'''
+  check_energy_manager_updates: "python3 /config/scripts/check_energy_manager_updates.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
+  perform_energy_manager_update: "python3 /config/scripts/perform_energy_manager_update.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
+  perform_energy_manager_update_force: "python3 /config/scripts/perform_energy_manager_update.py --force-reinstall --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
+  generate_ssh_key: 'mkdir -p /config/.energy_manager && ssh-keygen -t ed25519 -f /config/.energy_manager/ssh_key -N "" -C "energy_manager_automation"'
+  read_ssh_key: 'cat /config/.energy_manager/ssh_key.pub 2>/dev/null || echo "no_key"'
+  em_victoriametrics_setup: "python3 /config/scripts/em_victoriametrics_setup.py"
+  em_read_update_status: python3 -c "from pathlib import Path; print(Path('/config/.energy_manager/update_status.txt').read_text().strip())"
+  em_read_update_version: python3 -c "import json; print(json.load(open('/config/.energy_manager/update_details.json'))['version'])"
+  em_read_update_changelog: python3 -c "import json; print(json.load(open('/config/.energy_manager/update_details.json')).get('changelog',''))"
+
+rest_command:
+  em_motd_mark_read:
+    url: "http://localhost:1880/endpoint/em/motd/mark_read"
+    method: POST
+    content_type: "application/json"
+    payload: '{"source":"dashboard"}'
+  em_general_mark_read:
+    url: "http://localhost:1880/endpoint/em/motd_general/mark_read"
+    method: POST
+    content_type: "application/json"
+    payload: '{"source":"dashboard"}'
+# === ENERGY_MANAGER_SHELL_COMMANDS_END ===
+
+# === ENERGY_MANAGER_SENSORS_START v1.3.0 ===
+sensor:
+  - platform: integration
+    source: sensor.inverter_import_power
+    name: "Imported Energy Total"
+    unique_id: imported_energy_total
+    unit_prefix: k
+    unit_time: h
+    method: left
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.inverter_export_power
+    name: "Exported Energy Total"
+    unique_id: exported_energy_total
+    unit_prefix: k
+    unit_time: h
+    method: left
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.inverter_pv_power
+    name: "PV Energy Total"
+    unique_id: pv_energy_total
+    method: left
+    unit_prefix: k
+    unit_time: h
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.inverter_battery_charging_power
+    name: "Battery Charging Total"
+    unique_id: batt_charge_energy_total
+    unit_prefix: k
+    unit_time: h
+    method: left
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.inverter_battery_discharging_power
+    name: "Battery Discharging Total"
+    unique_id: batt_discharge_energy_total
+    unit_prefix: k
+    unit_time: h
+    method: left
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.inverter_load_power
+    name: "Total Consumed Energy"
+    unique_id: total_consumed_energy
+    unit_prefix: k
+    round: 2
+    method: left
+
+  - platform: integration
+    source: sensor.house_power_from_battery
+    name: House Energy From Battery
+    unique_id: house_energy_from_battery
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 1
+
+  - platform: integration
+    source: sensor.house_power_from_pv
+    name: House Energy From PV
+    unique_id: house_energy_from_pv
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 1
+
+  - platform: integration
+    source: sensor.house_power_from_grid
+    name: House Energy From Grid
+    unique_id: house_energy_from_grid
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 1
+
+  - platform: integration
+    source: sensor.house_daytime_power
+    name: House Daytime Energy
+    unique_id: house_daytime_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 1
+
+  - platform: integration
+    source: sensor.house_nighttime_power
+    name: House Nighttime Energy
+    unique_id: house_nighttime_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 1
+
+command_line:
+  - sensor:
+      name: "Energy Manager Current Version"
+      unique_id: energy_manager_current_version
+      command: "cat /config/.energy_manager/version.txt"
+      value_template: "{{ value.strip() }}"
+      scan_interval: 300 # Check every 5 minutes
+
+  - sensor:
+      name: "Energy Manager Decision"
+      unique_id: energy_manager_decision
+      command: "cat /share/api_data.txt 2>/dev/null || true"
+      scan_interval: 60
+
+  - sensor:
+      name: "Energy Manager Decision Timestamp"
+      unique_id: energy_manager_decision_timestamp
+      command: "stat -c %Y /share/api_data.txt || date +%s"
+      scan_interval: 300
+      command_timeout: 15
+      value_template: "{{ value | trim }}"
+
+  - sensor:
+      name: "Energy Manager Changelog Reader"
+      unique_id: energy_manager_changelog_reader
+      command: "cat /config/.energy_manager/changelog_simple.txt 2>/dev/null || echo 'No changelog available'"
+      scan_interval: 30
+
+  - binary_sensor:
+      name: "SSH Key Exists"
+      unique_id: ssh_key_exists
+      command: 'test -f /config/.energy_manager/ssh_key && echo "found" || echo "not_found"'
+      payload_on: "found"
+      payload_off: "not_found"
+
+# === ENERGY_MANAGER_SENSORS_END ===
+
+# === ENERGY_MANAGER_UPDATE_INPUTS_START v1.3.0 ===
+input_select:
+  inverter_brand:
+    name: Inverter Brand
+    icon: mdi:form-select
+    options:
+    - sungrow
+    - sigenergy
+    - goodwe
+    - goodwe_et
+    - goodwe_int
+    - alphaess
+    - fronius
+    - solaredge
+    
+  electricity_provider:
+    name: Electricity Provider
+    icon: mdi:lightning-bolt
+    options:
+    - LocalVolts
+    - Amber Electric
+    - Flow Power
+    - Globird
+    - Other
+
+  inverter_run_mode:
+    name: Inverter mode
+    options:
+      - "Start"
+      - "Stop"
+
+  inverter_ems_mode:
+    name: "EMS Mode"
+    options:
+      - "Self-Consumption mode"
+      - "Forced Mode"
+      - "External EMS"
+      - "VPP"
+    initial: "Self-Consumption mode"
+    icon: mdi:lightning-bolt
+
+  inverter_charge_discharge_mode:
+    name: "Forced Charge/Discharge"
+    options:
+      - "Stop"
+      - "Forced Charge"
+      - "Forced Discharge"
+    initial: "Stop"
+
+  electricity_distributor:
+    name: "Electricity Distributor"
+    options:
+      - "Not Configured"
+      - "Ausgrid"
+      - "Ausnet"
+      - "CitiPower"
+      - "Endeavour"
+      - "Energex"
+      - "Ergon Energy"
+      - "Essential Energy"
+      - "Evoenergy"
+      - "Jemena"
+      - "Powercor"
+      - "SA Power Networks"
+      - "TasNetworks"
+      - "United Energy"
+    icon: mdi:generator-stationary
+
+  flow_power_price_signal_charge_limit:
+    name: "Price Signal Charge Limit"
+    options:
+      - "Extreme"
+      - "Very High"
+      - "High"
+      - "Average"
+      - "Low"
+      - "Very Low"
+      - "Negative"
+
+  flow_power_price_signal_ev_readyby:
+    name: "Price Signal EV Ready-by Limit"
+    options:
+      - "Extreme"
+      - "Very High"
+      - "High"
+      - "Average"
+      - "Low"
+      - "Very Low"
+      - "Negative"
+
+  flow_power_price_signal_ev_limit_block:
+    name: "Price Signal EV Limit Block"
+    options:
+      - "Extreme"
+      - "Very High"
+      - "High"
+      - "Average"
+      - "Low"
+      - "Very Low"
+      - "Negative"
+
+  scheduled_charge_signal:
+    name: "Scheduled Charge Max Price Signal"
+    options:
+      - "Extreme"
+      - "Very High"
+      - "High"
+      - "Average"
+      - "Low"
+      - "Very Low"
+      - "Negative"
+
+  em_ev_mode:
+    name: EV charging policy
+    options:
+      - "smart_cheapest"
+      - "solar_only"
+      - "solar_preferred"
+      - "battery_only"
+    icon: mdi:meter-electric-outline
+
+  em_ev_site_phases:
+    name: Site Phases
+    options:
+      - "1"
+      - "3"
+    icon: mdi:numeric
+
+  em_ev_battery_measurement:
+    name: Battery Charging Measurement
+    options:
+      - "kWh"
+      - "Percentage"
+    icon: mdi:battery-charging
+
+  energy_profile_slot:
+    name: Energy Profile Slot
+    options:
+      - "Profile 1"
+      - "Profile 2"
+      - "Profile 3"
+      - "Profile 4"
+      - "Profile 5"
+
+  em_update_branch:
+    name: Energy Manager Update Branch
+    options:
+      - "main"
+      - "early"
+    icon: mdi:github
+
+  dynamic_reserve_strategy:
+    name: Dynamic Battery Reserve Strategy
+    options:
+      - "maximum_safety"
+      - "balanced"
+      - "maximum_export"
+
+  other_tariff_plan:
+    name: Available Electricity Plan
+    options:
+      - Refresh tariff catalogue
+    icon: mdi:format-list-bulleted  
+
+input_boolean:
+  demand_period_enabled:
+    name: Demand Period Enabled
+    icon: mdi:clock-time-five-outline
+    
+  enable_exclusion_period:
+    name: Enable Exclusion Period
+    icon: mdi:clock-outline
+    
+  high_sell_price_toggle:
+    name: high_sell_price_toggle
+    icon: mdi:toggle-switch
+
+  inverter_enable_forced_power:
+    name: "Enable Forced Charge/Discharge"
+    initial: false
+    icon: mdi:battery-sync
+
+  restart_required:
+    name: "Restart Required"
+    initial: false
+    icon: mdi:restart
+
+  inverter_export_power_limit_enabled_input:
+    name: "Export Power Limit Enabled"
+    initial: false
+    icon: mdi:transmission-tower
+
+  sigenergy_auto_enable_remote_ems:
+    name: "Auto-enable Sigenergy Remote EMS"
+    initial: true
+    icon: mdi:auto-mode
+
+  energy_manager_update_available:
+    name: "Energy Manager Update Available"
+    initial: false
+    icon: mdi:update
+
+  energy_manager_auto_update_check:
+    name: "Enable Automatic Update Checks"
+    initial: true
+    icon: mdi:update
+
+  em_api_decision_trigger:
+    name: "Energy Manager Decision Trigger"
+    initial: false
+    icon: mdi:information
+
+  em_api_server:
+    name: "Energy Manager API Server"
+    initial: true
+    icon: mdi:information
+
+  notification_price:
+    name: "Price Spike Notifications"
+    initial: true
+    icon: mdi:bell-ring
+
+  notification_warning:
+    name: "Warning Notifications"
+    initial: true
+    icon: mdi:bell-ring
+
+  emergency_override:
+    name: "Emergency Override"
+    initial: false
+    icon: mdi:car-brake-alert
+
+  energy_flow_visual:
+    name: "Energy Flow Visual"
+    initial: true
+    icon: mdi:home-plus-outline
+
+  electricity_distributor_demand_enabled:
+    name: "I am on a demand plan"
+    icon: mdi:home-alert
+
+  sellbuy_mode_enabled:
+    name: "Sell/Buy Mode Enabled"
+    icon: mdi:autorenew
+
+  energy_control_auto_reenable:
+    name: Auto re-enable Energy Control
+    icon: mdi:timer-refresh
+
+  flowpower_bad_weather_export:
+    name: Flow Power Bad Weather Export
+    icon: mdi:home-export-outline
+
+  flowpower_in_peak:
+    name: Flow Power In Peak Period
+    icon: mdi:information
+
+  flowpower_enable_peak_export:
+    name: Flow Power Enable Peak Export
+    icon: mdi:home-export-outline
+
+  enable_curtailing:
+    name: Enable Curtailing
+    icon: mdi:home-lightning-bolt-outline
+
+  curtailing_active:
+    name: Curtailing Active
+    icon: mdi:solar-power-variant-outline
+
+  globird_super_allow_export:
+    name: Globird Super Allow Export
+    icon: mdi:transmission-tower-export
+
+  globird_std_allow_export:
+    name: Globird Standard Allow Export
+    icon: mdi:transmission-tower-export
+
+  globird_free_buy_enable:
+    name: Globird Free Buy Enable
+    icon: mdi:transmission-tower-import
+    initial: true
+
+  globird_other_buy_enable:
+    name: Globird Other Buy Enable
+    icon: mdi:transmission-tower-import
+
+  globird_std_export_solar_only:
+    name: Globird Standard Export Solar
+    icon: mdi:solar-power-variant
+    initial: true
+
+  em_ev_enabled:
+    name: EV Automation On/Off
+    icon: mdi:car-electric
+
+  em_ev_schedule_enabled:
+    name: EV Charge Schedule Enabled
+    icon: mdi:clock-outline
+
+  em_ev_ready_by_enabled:
+    name: EV Deadline-based Charging
+    icon: mdi:home-clock
+
+  em_ev_allow_grid:
+    name: EV Charge from grid
+    icon: mdi:transmission-tower-import
+
+  em_ev_allow_solar:
+    name: Allows charging from excess solar
+    icon: mdi:solar-power-variant-outline
+
+  em_ev_release_curtailment:
+    name: EV Allows curtailment override for charging
+    icon: mdi:sun-angle-outline
+
+  em_ev_allow_battery_to_ev:
+    name: Allow home battery to charge EV
+    icon: mdi:battery-arrow-down
+
+  em_ev_force_charge_now:
+    name: Override to charge now
+    icon: mdi:battery-charging-high
+
+  em_ev_wicanpro_enabled:
+    name: WiCAN-Pro enabled
+    icon: mdi:car-connected
+
+  em_ev_circuit_upstream:
+    name: EV circuit upstream
+    icon: mdi:transmission-tower
+
+  globird_super_sell_charge:
+    name: Charge during super sell period
+    icon: mdi:cash-refund
+
+  globird_std_sell_charge:
+    name: Charge during standard sell period
+    icon: mdi:cash-refund
+
+  dynamic_charging:
+    name: Dynamic Charging
+    icon: mdi:swap-horizontal-circle-outline
+
+  scheduled_charge_enabled:
+    name: Scheduled Charge
+    icon: mdi:home-clock-outline
+
+  dynamic_reserve:
+    name: Dynamic Battery Reserve
+    icon: mdi:swap-horizontal-circle-outline
+
+  other_peak_1:
+    name: "Peak Period"
+
+  other_peak_2:
+    name: "Peak Period #2"
+
+  other_peak_3:
+    name: "Peak Period #3"
+
+  other_in_peak:
+    name: "In peak period"
+
+  other_offpeak_1:
+    name: "Offpeak Period"
+
+  other_offpeak_2:
+    name: "Offpeak Period #2"
+
+  other_offpeak_3:
+    name: "Offpeak Period #3"
+
+  other_in_offpeak:
+    name: "In offpeak period"
+
+  other_offpeak_1_restrict:
+    name: "Restrict Battery Use (Offpeak)"
+
+  other_offpeak_2_restrict:
+    name: "Restrict Battery Use (Offpeak #2)"
+
+  other_offpeak_3_restrict:
+    name: "Restrict Battery Use (Offpeak #3)"
+
+  other_offpeak_bat_1:
+    name: "Allow Battery Charging (Offpeak)"
+
+  other_offpeak_bat_2:
+    name: "Allow Battery Charging (Offpeak #2)"
+
+  other_offpeak_bat_3:
+    name: "Allow Battery Charging (Offpeak #3)"
+
+  other_shoulder_1:
+    name: "Shoulder Period"
+
+  other_shoulder_2:
+    name: "Shoulder Period #2"
+
+  other_shoulder_3:
+    name: "Shoulder Period #3"
+
+  other_shoulder_1_restrict:
+    name: "Restrict Battery Use (Shoulder)"
+
+  other_shoulder_2_restrict:
+    name: "Restrict Battery Use (Shoulder #2)"
+
+  other_shoulder_3_restrict:
+    name: "Restrict Battery Use (Shoulder #3)"
+
+  other_in_shoulder:
+    name: "In shoulder period"
+    initial: false
+
+  other_shoulder_bat_1:
+    name: "Allow Battery Charging (Shoulder)"
+
+  other_shoulder_bat_2:
+    name: "Allow Battery Charging (Shoulder #2)"
+
+  other_shoulder_bat_3:
+    name: "Allow Battery Charging (Shoulder #3)"
+
+  other_additional_1:
+    name: "Additional Import Period"
+
+  other_additional_bat_1:
+    name: "Allow Battery Charging (Additional)"
+
+  other_in_additional_import:
+    name: "In additional import period"
+
+  other_free_1:
+    name: Free Period
+
+  other_free_1_restrict:
+    name: "Restrict Battery Use (Free)"
+
+  other_free_bat_1:
+    name: Allow Battery Charging (Free)
+
+  other_in_free:
+    name: "In free period"
+
+  other_export_1:
+    name: Export Period
+
+  other_export_2:
+    name: "Export Period #2"
+
+  other_export_3:
+    name: "Export Period #3"
+
+  other_in_export_1:
+    name: "In export period #1"
+
+  other_in_export_2:
+    name: "In export period #2"
+
+  other_in_export_3:
+    name: "In export period #3"
+
+  other_export_1_export:
+    name: Export from battery
+
+  other_export_2_export:
+    name: "Export from battery #2"
+
+  other_export_3_export:
+    name: "Export from battery #3"
+
+  other_free_import_limit:
+    name: Import Cap
+
+  other_free_force_import:
+    name: Force Import
+
+  other_export_1_limit:
+    name: Export Cap
+
+  other_export_2_limit:
+    name: "Export Cap #2"
+
+  other_export_3_limit:
+    name: "Export Cap #3"
+
+input_button:
+  energy_profile_save:
+    name: Save Energy Profile
+    icon: mdi:content-save
+
+  energy_profile_load:
+    name: Load Energy Profile
+    icon: mdi:autorenew
+
+  validate_diy_tariff:
+    name: Validate Tariffs
+    icon: mdi:table-check
+
+  other_tariff_refresh:
+    name: Refresh Electricity Plans
+    icon: mdi:refresh
+
+  other_tariff_import:
+    name: Import Selected Electricity Plan
+    icon: mdi:download
+
+  other_tariff_export:
+    name: Export Current Electricity Plan
+    icon: mdi:upload
+
+  other_tariff_reset:
+    name: Reset Electricity Plan
+    icon: mdi:restore
+
+input_number:
+  inverter_import_limit:
+    name: Inverter Size
+    icon: mdi:home-import-outline
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kW
+    
+  solar_array_size:
+    name: Solar Array Size
+    icon: mdi:solar-panel
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kW
+    
+  inverter_export_limit:
+    name: Inverter Export Limit
+    icon: mdi:home-export-outline
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kW
+    
+  bad_weather_rain_today:
+    name: bad_weather_rain_today
+    icon: mdi:weather-rainy
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: mm
+    
+  bad_weather_rain_tomorrow:
+    name: bad_weather_rain_tomorrow
+    icon: mdi:weather-rainy
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: mm
+
+  inverter_max_soc:
+    name: "Maximum SOC"
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-high
+
+  inverter_min_soc:
+    name: "Minimum SOC"
+    min: 0
+    max: 90
+    step: 1
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-low
+
+  inverter_max_charge_power:
+    name: "Max Battery Charge Power"
+    min: 100
+    max: 35000
+    step: 100
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-charging
+
+  inverter_max_discharge_power:
+    name: "Max Battery Discharge Power"
+    min: 100
+    max: 35000
+    step: 100
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-minus
+
+  inverter_pv_power_limit:
+    name: "PV Power Limit"
+    min: 100
+    max: 50000
+    step: 100
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:solar-power-variant-outline
+
+  inverter_charge_discharge_power:
+    name: "Forced Charge/Discharge Power"
+    min: 0
+    max: 32600
+    step: 100
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:lightning-bolt-outline
+
+  safety_max_charge_power:
+    name: "Safety Limit - Max Charge Power"
+    min: 1000
+    max: 36000
+    step: 100
+    mode: box
+    unit_of_measurement: "W"
+    icon: mdi:shield-check
+
+  safety_max_discharge_power:
+    name: "Safety Limit - Max Discharge Power"
+    min: 1000
+    max: 36000
+    step: 100
+    mode: box
+    unit_of_measurement: "W"
+    icon: mdi:shield-check
+
+  inverter_reserved_soc_backup:
+    name: "Reserved SoC for Backup"
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-plus
+
+  inverter_export_power_limit_input:
+    name: "Export Power Limit"
+    min: 0
+    max: 30000
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:transmission-tower-export
+
+  inverter_export_power_hardlimit:
+    name: "Export Power Hard Limit"
+    min: 0
+    max: 30000
+    step: 100
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:transmission-tower-export
+
+  battery_charge_power_hardlimit:
+    name: "Battery Charge Power Hard Limit"
+    min: 0
+    max: 36000
+    step: 100
+    mode: box
+    unit_of_measurement: "W"
+    icon: mdi:battery-charging-high
+
+  battery_discharge_power_hardlimit:
+    name: "Battery Discharge Power Hard Limit"
+    min: 0
+    max: 36000
+    step: 100
+    mode: box
+    unit_of_measurement: "W"
+    icon: mdi:battery-charging-low
+
+  battery_capacity:
+    name: Battery Capacity
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    icon: mdi:battery
+    unit_of_measurement: kWh
+
+  battery_1:
+    name: battery_1
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-80
+
+  battery_2:
+    name: battery_2
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-60
+
+  battery_3:
+    name: battery_3
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-50
+
+  battery_4:
+    name: battery_4
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-40
+
+  battery_5:
+    name: battery_5
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-30
+
+  battery_6:
+    name: battery_6
+    min: 0
+    max: 100
+    mode: box
+    icon: mdi:battery-20
+
+  price_1_normal_mode:
+    name: price_1_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  price_2_normal_mode:
+    name: price_2_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  price_3_normal_mode:
+    name: price_3_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  price_4_normal_mode:
+    name: price_4_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  price_5_normal_mode:
+    name: price_5_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  price_6_normal_mode:
+    name: price_6_normal_mode
+    min: 0
+    max: 25
+    step: 0.01
+    mode: box
+    icon: mdi:currency-usd
+
+  battery_use_cost:
+    name: battery_use_cost
+    min: 0
+    max: 50
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  high_sell_price:
+    name: high_sell_price
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  high_sell_battery_reserve:
+    name: high_sell_battery_reserve
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    mode: box
+
+  battery_morning_prep:
+    name: battery_morning_prep
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:currency-usd
+
+  battery_morning_limit:
+    name: battery_morning_limit
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:currency-usd
+
+  battery_evening_prep:
+    name: battery_evening_prep
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:currency-usd
+
+  grid_buy_price_night_spike_prep:
+    name: grid_buy_price_night_spike_prep
+    min: -20
+    max: 40
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  grid_buy_price_day_spike_prep:
+    name: grid_buy_price_day_spike_prep
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  grid_buy_price_day:
+    name: grid_buy_price_day
+    min: -20
+    max: 100
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  grid_sell_price_night:
+    name: grid_sell_price_night
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  grid_sell_price_day:
+    name: grid_sell_price_day
+    min: 0
+    max: 2500
+    step: 5
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:currency-usd
+
+  electricity_closing_import_price:
+    name: "Electricity: Closing Import Price"
+    unit_of_measurement: $
+    icon: mdi:cash-minus
+    initial: 0
+    min: -10000
+    max: 10000
+    step: 0.00001
+    mode: box
+
+  electricity_closing_export_price:
+    name: "Electricity: Closing Export Price"
+    unit_of_measurement: $
+    icon: mdi:cash-plus
+    initial: 0
+    min: -10000
+    max: 10000
+    step: 0.00001
+    mode: box
+
+  electricity_import_cost_5_minutes:
+    name: "Electricity: Import Cost (5 Minutes)"
+    unit_of_measurement: $
+    icon: mdi:cash-minus
+    initial: 0
+    min: -10000
+    max: 10000
+    step: 0.001
+    mode: box
+
+  electricity_import_cost_total:
+    name: Electricity Import Cost Total
+    min: 0
+    max: 1000000
+    step: 0.001
+    mode: box
+
+  electricity_export_profit_5_minutes:
+    name: "Electricity: Export Profit (5 Minutes)"
+    unit_of_measurement: $
+    icon: mdi:cash-plus
+    initial: 0
+    min: -10000
+    max: 10000
+    step: 0.001
+    mode: box
+
+  electricity_provider_daily_charge:
+    name: "Electricity Provider Daily Charge"
+    unit_of_measurement: $
+    icon: mdi:cash-plus
+    min: 0
+    max: 10
+    step: 0.01
+    mode: box
+
+  ascore_now:
+    name: "Availability Score Now"
+    icon: mdi:clock-start
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_1h:
+    name: "Availability Score in 1hr"
+    icon: mdi:clock-time-one-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_2h:
+    name: "Availability Score in 2hr"
+    icon: mdi:clock-time-two-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_3h:
+    name: "Availability Score in 3hr"
+    icon: mdi:clock-time-three-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_4h:
+    name: "Availability Score 4hr"
+    icon: mdi:clock-time-four-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_5h:
+    name: "Availability Score in 5hr"
+    icon: mdi:clock-time-five-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_6h:
+    name: "Availability Score in 6hr"
+    icon: mdi:clock-time-six-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_7h:
+    name: "Availability Score in 7hr"
+    icon: mdi:clock-time-seven-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_8h:
+    name: "Availability Score in 8hr"
+    icon: mdi:clock-time-eight-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_9h:
+    name: "Availability Score in 9hr"
+    icon: mdi:clock-time-nine-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_10h:
+    name: "Availability Score in 10hr"
+    icon: mdi:clock-time-ten-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_11h:
+    name: "Availability Score in 11hr"
+    icon: mdi:clock-time-eleven-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_12h:
+    name: "Availability Score in 12hr"
+    icon: mdi:clock-time-twelve-outline
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_1d:
+    name: "Availability Score in 1d"
+    icon: mdi:calendar
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_2d:
+    name: "Availability Score in 2d"
+    icon: mdi:calendar
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_3d:
+    name: "Availability Score in 3d"
+    icon: mdi:calendar
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_4d:
+    name: "Availability Score in 4d"
+    icon: mdi:calendar
+    min: 0
+    max: 100
+    step: 1
+
+  ascore_5d:
+    name: "Availability Score in 5d"
+    icon: mdi:calendar
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_now:
+    name: "Profit Score Now"
+    icon: mdi:clock-start
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_1h:
+    name: "Profit Score in 1hr"
+    icon: mdi:clock-time-one-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_2h:
+    name: "Profit Score in 2hr"
+    icon: mdi:clock-time-two-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_3h:
+    name: "Profit Score in 3hr"
+    icon: mdi:clock-time-three-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_4h:
+    name: "Profit Score 4hr"
+    icon: mdi:clock-time-four-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_5h:
+    name: "Profit Score in 5hr"
+    icon: mdi:clock-time-five-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_6h:
+    name: "Profit Score in 6hr"
+    icon: mdi:clock-time-six-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_7h:
+    name: "Profit Score in 7hr"
+    icon: mdi:clock-time-seven-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_8h:
+    name: "Profit Score in 8hr"
+    icon: mdi:clock-time-eight-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_9h:
+    name: "Profit Score in 9hr"
+    icon: mdi:clock-time-nine-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_10h:
+    name: "Profit Score in 10hr"
+    icon: mdi:clock-time-ten-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_11h:
+    name: "Profit Score in 11hr"
+    icon: mdi:clock-time-eleven-outline
+    min: 0
+    max: 100
+    step: 1
+
+  pscore_12h:
+    name: "Profit Score in 12hr"
+    icon: mdi:clock-time-twelve-outline
+    min: 0
+    max: 100
+    step: 1
+
+  score_buy_extreme_low:
+    name: "Score Buy Extreme Low"
+    icon: mdi:currency-usd
+    min: -1
+    max: 1
+    step: 0.01
+
+  score_buy_very_low:
+    name: "Score Buy Very Low"
+    icon: mdi:currency-usd
+    min: -1
+    max: 1
+    step: 0.01
+
+  score_buy_low:
+    name: "Score Buy Low"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_buy_ok:
+    name: "Score Buy Ok"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_buy_high:
+    name: "Score Buy High"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_buy_very_high:
+    name: "Score Buy Very High"
+    icon: mdi:currency-usd
+    min: 0
+    max: 2
+    step: 0.01
+
+  score_buy_spike:
+    name: "Score Buy Spike"
+    icon: mdi:currency-usd
+    min: 0
+    max: 5
+    step: 0.01
+
+  score_sell_negative:
+    name: "Score Sell Negative"
+    icon: mdi:currency-usd
+    min: -0.1
+    max: 1
+    step: 0.01
+
+  score_sell_very_low:
+    name: "Score Sell Very Low"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_sell_low:
+    name: "Score Sell Low"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_sell_ok:
+    name: "Score Sell Ok"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_sell_high:
+    name: "Score Sell High"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+
+  score_sell_very_high:
+    name: "Score Sell Very High"
+    icon: mdi:currency-usd
+    min: 0
+    max: 2
+    step: 0.01
+
+  score_sell_extreme:
+    name: "Score Sell Extreme"
+    icon: mdi:currency-usd
+    min: 0
+    max: 5
+    step: 0.01
+
+  weight_as_price:
+    name: "Weight Availability Price"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_as_solar:
+    name: "Weight Availability Solar"
+    icon: mdi:white-balance-sunny
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_as_usage:
+    name: "Weight Availability Usage"
+    icon: mdi:home
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_as_battery:
+    name: "Weight Availability Battery"
+    icon: mdi:home-battery
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_ps_sell_price:
+    name: "Weight Profit Sell Price"
+    icon: mdi:currency-usd
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_ps_headroom:
+    name: "Weight Profit Battery Headroom"
+    icon: mdi:battery-80
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  weight_ps_night_survival:
+    name: "Weight Profit Night Survival"
+    icon: mdi:weather-night
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+
+  current_hour:
+    name: "Current Hour"
+    icon: mdi:clock-outline
+    min: 0
+    max: 23
+    step: 1
+
+  wmaxlimpct:
+    name: "WMaxLimPct"
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+
+  sellbuy_mode_battery_reserve:
+    name: "Sell/Buy Mode Battery Reserve"
+    icon: mdi:battery-20
+    min: 0
+    max: 100
+    unit_of_measurement: "%"
+    step: 1
+    mode: box
+
+  sellbuy_mode_diff:
+    name: "Sell/Buy Mode Diff"
+    icon: mdi:calculator-variant-outline
+    min: 1
+    max: 100
+    unit_of_measurement: "c"
+    step: 1
+    mode: box
+
+  inverter_max_charge_limiter_percentage:
+    name: "Limiter: Percentage of maximum charge rate"
+    min: 0
+    max: 100
+    step: 1
+    initial: 100
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:percent-box-outline
+
+  inverter_max_discharge_limiter_percentage:
+    name: "Limiter: Percentage of maximum discharge rate"
+    min: 0
+    max: 100
+    step: 1
+    initial: 100
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:percent-box-outline
+
+  flowpower_buy_price:
+    name: Flow Power Buy Price kWh
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: c/kWh
+
+  flowpower_offpeak_feedin_price:
+    name: Flow Power OffPeak Feedin Price kWh
+    icon: mdi:currency-usd
+    min: -10
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: c/kWh
+
+  flowpower_peak_feedin_price:
+    name: Flow Power Peak Feedin Price kWh
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: c/kWh
+
+  flowpower_peak_feedin_price_excess:
+    name: Flow Power Peak Feedin Excess Price kWh
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: c/kWh
+
+  flowpower_peak_battery_reserve:
+    name: Flow Power Peak Export Battery Reserve
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  flowpower_max_grid_soc:
+    name: Max SOC for Grid Charge
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  flowpower_peak_max_export:
+    name: Flow Power Peak Maximum Export kWh
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:transmission-tower-export
+    unit_of_measurement: kwh
+
+  globird_super_sell:
+    name: Globird Super Sell Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_std_sell:
+    name: Globird Standard Sell Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_other_sell:
+    name: Globird Other Sell Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_peak_buy_price:
+    name: Globird Peak Buy Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_free_buy_price:
+    name: Globird Free Buy Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_free_buy_period_limit:
+    name: Globird Free Buy Period Limit
+    icon: mdi:battery-arrow-up
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "kWh"
+
+  globird_other_buy_price:
+    name: Globird Other Buy Price
+    icon: mdi:currency-usd
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "c/kWh"
+
+  globird_super_max_export:
+    name: Globird Super Maximum Export kWh
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:transmission-tower-export
+    unit_of_measurement: kwh
+
+  globird_super_max_export_kw_percentage:
+    name: Globird Super Max Export Percentage
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:percent
+    unit_of_measurement: "%"
+
+  globird_std_max_export_kw_percentage:
+    name: Globird Standard Max Export Percentage
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:percent
+    unit_of_measurement: "%"
+
+  globird_other_max_export_kw_percentage:
+    name: Globird Other Max Export Percentage
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:percent
+    unit_of_measurement: "%"
+
+  globird_bad_weather_max_export:
+    name: Globird Bad Weather Max Export Percentage
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    icon: mdi:percent
+    unit_of_measurement: "%"
+
+  globird_super_battery_reserve:
+    name: Globird Super Export Battery Reserve
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  globird_std_battery_reserve:
+    name: Globird Standard Export Battery Reserve
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  prev_imported_energy_total:
+    name: Previous imported energy total
+    min: 0
+    max: 100000
+    step: 0.001
+
+  prev_exported_energy_total:
+    name: Previous exported energy total
+    min: 0
+    max: 100000
+    step: 0.001
+
+  inverter_import_energy_5_minutes:
+    name: Import Energy 5 Minutes
+    min: 0
+    max: 100000
+    step: 0.001
+
+  inverter_export_energy_5_minutes:
+    name: Export Energy 5 Minutes
+    min: 0
+    max: 100000
+    step: 0.001
+
+  flowpower_max_export_percent_good_weather:
+    name: Max Export rate percentage for good weather
+    icon: mdi:home-export-outline
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  flowpower_max_export_percent_bad_weather:
+    name: Max Export rate percentage for bad weather
+    icon: mdi:home-export-outline
+    min: 0
+    max: 100
+    mode: box
+    unit_of_measurement: "%"
+
+  goodwe_schedule_8slot:
+    name: GoodWe Schedule 8-Slot
+    min: 1
+    max: 8
+    mode: box
+    icon: mdi:numeric
+
+  goodwe_schedule_4slot:
+    name: GoodWe Schedule 4-Slot
+    min: 1
+    max: 4
+    mode: box
+    icon: mdi:numeric
+
+  curtail_cents:
+    name: Curtail Cents
+    min: -10
+    max: 20
+    initial: 0
+    unit_of_measurement: "c"
+    mode: box
+    icon: mdi:transmission-tower-off
+
+  em_ev_battery_capacity_kwh:
+    name: EV Battery Capacity
+    min: 30
+    max: 150
+    step: 1
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:battery-high
+
+  em_ev_target_kwh:
+    name: EV Energy target
+    min: 1
+    max: 150
+    step: 1
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:battery-arrow-up
+
+  em_ev_target_soc:
+    name: EV Battery SOC target
+    min: 20
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-arrow-up
+
+  em_ev_current_soc:
+    name: EV Battery SOC
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-high
+
+  em_ev_block_above_price:
+    name: EV Block charging over price
+    min: -1.00
+    max: 1.50
+    step: 0.01
+    mode: box
+    unit_of_measurement: $/kWh
+    icon: mdi:currency-usd
+
+  em_ev_solar_start_surplus_w:
+    name: EV Solar surplus threshold to start charging
+    min: 1900
+    max: 25000
+    step: 100
+    mode: box
+    unit_of_measurement: W
+    icon: mdi:lightning-bolt
+
+  em_ev_solar_stop_surplus_w:
+    name: EV Solar surplus threshold to stop charging
+    min: 1900
+    max: 25000
+    step: 100
+    mode: box
+    unit_of_measurement: W
+    icon: mdi:lightning-bolt
+
+  em_ev_min_home_battery_soc:
+    name: EV Minimum home battery SOC before charging
+    min: 0
+    max: 100
+    step: 1
+    mode: slider
+    unit_of_measurement: "%"
+    icon: mdi:battery-20
+
+  em_ev_maximum_circuit_a:
+    name: EV Maximum circuit (Amps)
+    min: 1
+    max: 32
+    step: 1
+    mode: box
+    unit_of_measurement: A
+    icon: mdi:sine-wave
+
+  em_ev_readyby_max_price:
+    name: EV ready-by maximum price
+    min: -1.00
+    max: 1.50
+    step: 0.01
+    mode: box
+    unit_of_measurement: $/kWh
+    icon: mdi:currency-usd
+
+  em_ev_grid_max:
+    name: Grid maximum Amps
+    min: 32
+    max: 150
+    step: 1
+    mode: box
+    unit_of_measurement: A
+    icon: mdi:current-ac
+
+  billing_day:
+    name: Monthly billing billing_day
+    min: 1
+    max: 31
+    step: 1
+    mode: box
+    unit_of_measurement: "day of month"
+    icon: mdi:calendar
+
+  scheduled_charge_soc:
+    name: Scheduled charge SoC
+    min: 10
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging
+
+  scheduled_charge_price:
+    name: Scheduled charge max prixe
+    min: 0
+    max: 1
+    step: 0.01
+    mode: box
+    unit_of_measurement: "$"
+    icon: mdi:currency-usd
+
+  battery_reserve_export_cutoff:
+    name: Battery Reserve Export Cutoff
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-check
+
+  other_peak_tariff:
+    name: Peak Tariff
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_offpeak_tariff:
+    name: Offpeak Tariff
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_offpeak_1_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_offpeak_2_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_offpeak_3_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_shoulder_tariff:
+    name: Shoulder Tariff
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_shoulder_1_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_shoulder_2_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_shoulder_3_battery_restrict_under:
+    name: Restrict When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_additional_tariff:
+    name: Additional Period Tariff
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_export_1_tariff:
+    name: Export Tariff
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_export_2_tariff:
+    name: "Export #2 Tariff"
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_export_3_tariff:
+    name: "Export #3 Tariff"
+    min: 0
+    max: 1
+    step: 0.1
+    mode: box
+    unit_of_measurement: $
+    icon: mdi:currency-usd
+
+  other_export_1_battery_limit:
+    name: Battery SoC Limit
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-arrow-down
+
+  other_export_2_battery_limit:
+    name: "Battery SoC Limit #2"
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-arrow-down
+
+  other_export_3_battery_limit:
+    name: "Battery SoC Limit #3"
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-arrow-down
+
+  other_free_kwh:
+    name: Import limit
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:home-import-outline
+
+  other_free_1_battery_restrict_under:
+    name: When Battery Under
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  other_export_1_kwh:
+    name: Export limit
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:home-export-outline
+
+  other_export_2_kwh:
+    name: "Export limit #2"
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:home-export-outline
+
+  other_export_3_kwh:
+    name: "Export limit #3"
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:home-export-outline
+
+input_text:
+  amber_api_key:
+    name: Amber API Key
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: password
+    
+  amber_site:
+    name: Amber Site
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: text
+    
+  localvolts_key:
+    name: LocalVolts Key
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: password
+    
+  localvolts_partner_id:
+    name: LocalVolts Partner ID
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: text
+    
+  nmi:
+    name: NMI
+    icon: mdi:numeric
+    min: 0
+    max: 255
+    mode: text
+    
+  energymanager_key:
+    name: EnergyManager Key
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: password
+    
+  em_api_version:
+    name: EM API Version
+    icon: mdi:api
+    min: 0
+    max: 255
+    mode: text
+    
+  timezone:
+    name: Timezone
+    icon: mdi:map-clock
+    min: 0
+    max: 255
+    mode: text
+    
+  solcast_key:
+    name: Solcast Key
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: password
+    
+  solcast_array_1:
+    name: Solcast Array 1
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: text
+    
+  solcast_array_2:
+    name: Solcast Array 2
+    icon: mdi:shield-key-outline
+    min: 0
+    max: 255
+    mode: text
+
+  saved_inverter_brand:
+    name: "Saved Inverter Brand"
+
+  energy_manager_current_version:
+    name: "Energy Manager Current Version (Hidden)"
+    initial: "0.0.1"
+    max: 10
+
+  energy_manager_available_version:
+    name: "Energy Manager Available Version (Hidden)"
+    initial: "unknown"
+    max: 20
+
+  energy_manager_changelog:
+    name: "Energy Manager Changelog"
+    initial: ""
+    max: 255
+
+  ssh_public_key:
+    name: "SSH Public Key"
+    max: 255
+    initial: ""
+
+  ssh_key_status:
+    name: "SSH Key Status"
+    max: 50
+    initial: "unknown"
+
+  ssh_key_dismissed:
+    name: "SSH Key Message Dismissed"
+    max: 10
+    initial: "false"
+
+  ascore_now_text:
+    name: "Availability Score Now Text"
+    max: 100
+
+  ascore_1h_text:
+    name: "Availability Score 1h Text"
+    max: 100
+
+  ascore_2h_text:
+    name: "Availability Score 2h Text"
+    max: 100
+
+  ascore_3h_text:
+    name: "Availability Score 3h Text"
+    max: 100
+
+  ascore_4h_text:
+    name: "Availability Score 4h Text"
+    max: 100
+
+  ascore_5h_text:
+    name: "Availability Score 5h Text"
+    max: 100
+
+  ascore_6h_text:
+    name: "Availability Score 6h Text"
+    max: 100
+
+  ascore_7h_text:
+    name: "Availability Score 7h Text"
+    max: 100
+
+  ascore_8h_text:
+    name: "Availability Score 8h Text"
+    max: 100
+
+  ascore_9h_text:
+    name: "Availability Score 9h Text"
+    max: 100
+
+  ascore_10h_text:
+    name: "Availability Score 10h Text"
+    max: 100
+
+  ascore_11h_text:
+    name: "Availability Score 11h Text"
+    max: 100
+
+  ascore_12h_text:
+    name: "Availability Score 12h Text"
+    max: 100
+
+  ascore_1d_text:
+    name: "Availability Score 1d Text"
+    max: 100
+
+  ascore_2d_text:
+    name: "Availability Score 2d Text"
+    max: 100
+
+  ascore_3d_text:
+    name: "Availability Score 3d Text"
+    max: 100
+
+  ascore_4d_text:
+    name: "Availability Score 4d Text"
+    max: 100
+
+  ascore_5d_text:
+    name: "Availability Score 5d Text"
+    max: 100
+
+  pscore_now_text:
+    name: "Profit Score Now Text"
+    max: 100
+
+  pscore_1h_text:
+    name: "Profit Score 1h Text"
+    max: 100
+
+  pscore_2h_text:
+    name: "Profit Score 2h Text"
+    max: 100
+
+  pscore_3h_text:
+    name: "Profit Score 3h Text"
+    max: 100
+
+  pscore_4h_text:
+    name: "Profit Score 4h Text"
+    max: 100
+
+  pscore_5h_text:
+    name: "Profit Score 5h Text"
+    max: 100
+
+  pscore_6h_text:
+    name: "Profit Score 6h Text"
+    max: 100
+
+  pscore_7h_text:
+    name: "Profit Score 7h Text"
+    max: 100
+
+  pscore_8h_text:
+    name: "Profit Score 8h Text"
+    max: 100
+
+  pscore_9h_text:
+    name: "Profit Score 9h Text"
+    max: 100
+
+  pscore_10h_text:
+    name: "Profit Score 10h Text"
+    max: 100
+
+  pscore_11h_text:
+    name: "Profit Score 11h Text"
+    max: 100
+
+  pscore_12h_text:
+    name: "Profit Score 12h Text"
+    max: 100
+
+  energy_control_duration:
+    name: Energy Control Duration
+    initial: "01:00:00"
+    min: 0
+    max: 8
+    pattern: "^[0-9]{2}:[0-9]{2}:[0-9]{2}$"
+
+  price_signal:
+    name: "Price Signal"
+    max: 20
+
+  aemo_region:
+    name: "AEMO Region"
+    min: 3
+    max: 4
+
+  nodered_last_error:
+    name: NodeRED Last Error
+    max: 100
+
+  ev_reason_code:
+    name: EV Reason Code
+    max: 250
+
+  ev_reason_text:
+    name: EV Reason Text
+    max: 250
+
+  ev_arbitration_reason:
+    name: EV Arbitration Reason
+    max: 150
+
+  diy_tariff_validation_result:
+    name: DIY Tariff Validation Result
+    max: 255
+    initial: "Not yet validated"
+
+  other_tariff_plan_last_selected:
+    name: Last selected electricity plan
+
+input_datetime:
+  battery_install_date:
+    name: Battery Install Date
+    icon: mdi:home-battery
+    has_date: true
+    has_time: false
+    
+  demand_start:
+    name: Demand Start
+    icon: mdi:clock-time-five-outline
+    has_date: false
+    has_time: true
+    
+  demand_end:
+    name: Demand End
+    icon: mdi:clock-time-nine-outline
+    has_date: false
+    has_time: true
+    
+  exclusion_start_time:
+    name: Exclusion start time
+    icon: mdi:clock-time-two-outline
+    has_date: false
+    has_time: true
+    
+  exclusion_end_time:
+    name: Exclusion end time
+    icon: mdi:clock-time-three-outline
+    has_date: false
+    has_time: true
+
+  energy_manager_last_update_check:
+    name: "Last Update Check"
+    has_date: true
+    has_time: true
+
+  flowpower_peak_start_time:
+    name: Flow Power Peak Start
+    has_date: false
+    has_time: true
+    initial: "17:30:00"
+    icon: mdi:clock-start
+
+  flowpower_peak_end_time:
+    name: Flow Power Peak End
+    has_date: false
+    has_time: true
+    initial: "21:30:00"
+    icon: mdi:clock-end
+
+  globird_super_start:
+    name: Globird Super Start
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_super_end:
+    name: Globird Super End
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_std_start:
+    name: Globird Standard Start
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_std_end:
+    name: Globird Standard End
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_peak_buy_start:
+    name: Globird Peak Buy Start
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_peak_buy_end:
+    name: Globird Peak Buy End
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_free_buy_start:
+    name: Globird Free Buy Start
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_free_buy_end:
+    name: Globird Free Buy End
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  globird_other_buy_start:
+    name: Globird Other Buy Start
+    has_date: false
+    has_time: true
+    initial: "00:00:00"
+    icon: mdi:clock-start
+
+  globird_other_buy_end:
+    name: Globird Other Buy End
+    has_date: false
+    has_time: true
+    initial: "23:59:59"
+    icon: mdi:clock-start
+
+  em_ev_schedule_start:
+    name: Start of charging window
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  em_ev_schedule_end:
+    name: End of charging window
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  em_ev_ready_by_time:
+    name: Required ready-by time
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  scheduled_charge_start:
+    name: Scheduled charge start
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  scheduled_charge_end:
+    name: Scheduled charge end
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_peak_1_start:
+    name: "Peak start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_peak_1_end:
+    name: "Peak end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_peak_2_start:
+    name: "Peak #2 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_peak_2_end:
+    name: "Peak #2 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_peak_3_start:
+    name: "Peak #3 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_peak_3_end:
+    name: "Peak #3 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_offpeak_1_start:
+    name: "Offpeak start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_offpeak_1_end:
+    name: "Offpeak end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_offpeak_2_start:
+    name: "Offpeak #2 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_offpeak_2_end:
+    name: "Offpeak #2 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_offpeak_3_start:
+    name: "Offpeak #3 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_offpeak_3_end:
+    name: "Offpeak #3 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_shoulder_1_start:
+    name: "Shoulder start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_shoulder_1_end:
+    name: "Shoulder end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_shoulder_2_start:
+    name: "Shoulder #2 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_shoulder_2_end:
+    name: "Shoulder #2 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_shoulder_3_start:
+    name: "Shoulder #3 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_shoulder_3_end:
+    name: "Shoulder #3 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_additional_1_start:
+    name: "Additional Period start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_additional_1_end:
+    name: "Additional Period end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_free_1_start:
+    name: "Free start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_free_1_end:
+    name: "Free end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_export_1_start:
+    name: "Export start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_export_1_end:
+    name: "Export end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_export_2_start:
+    name: "Export #2 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_export_2_end:
+    name: "Export #2 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+  other_export_3_start:
+    name: "Export #3 start"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+
+  other_export_3_end:
+    name: "Export #3 end"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+timer:
+  energy_control:
+    name: Energy Control Timer
+    restore: true
+
+template:
+- number:
+  - name: battery_2a
+    unique_id: em_yaml_battery_2a
+    default_entity_id: number.battery_2a
+    state: '{{ (states(''input_number.battery_1'') | float(0)) - 1 }}'
+    min: -1
+    max: 100
+    step: 1
+    set_value: []
+    
+  - name: battery_3a
+    unique_id: em_yaml_battery_3a
+    default_entity_id: number.battery_3a
+    state: '{{ (states(''input_number.battery_2'') | float(0)) - 1 }}'
+    min: -1
+    max: 100
+    step: 1
+    set_value: []
+    
+  - name: battery_4a
+    unique_id: em_yaml_battery_4a
+    default_entity_id: number.battery_4a
+    state: '{{ (states(''input_number.battery_3'') | float(0)) - 1 }}'
+    min: -1
+    max: 100
+    step: 1
+    set_value: []
+    
+  - name: battery_5a
+    unique_id: em_yaml_battery_5a
+    default_entity_id: number.battery_5a
+    state: '{{ (states(''input_number.battery_4'') | float(0)) - 1 }}'
+    min: -1
+    max: 100
+    step: 1
+    set_value: []
+    
+  - name: battery_6a
+    unique_id: em_yaml_battery_6a
+    default_entity_id: number.battery_6a
+    state: '{{ (states(''input_number.battery_5'') | float(0)) - 1 }}'
+    min: -1
+    max: 100
+    step: 1
+    set_value: []
+    
+  - name: battery_high_sell_mode_usable
+    unique_id: em_yaml_battery_high_sell_mode_usable
+    default_entity_id: number.battery_high_sell_mode_usable
+    state: '{{ 100 - (states(''input_number.high_sell_battery_reserve'') | float(0)) }}'
+    min: 0
+    max: 100
+    step: 1
+    set_value: []
+    
+  sensor:
+  - name: Grid Buy Price
+    unique_id: em_yaml_grid_buy_price
+    default_entity_id: sensor.grid_buy_price
+    state: '{{ states(''sensor.nodered_buyprice'') | float(0) | round(2) }}'
+    unit_of_measurement: "AUD/kWh"
+    
+  - name: Grid Sell Price
+    unique_id: em_yaml_grid_sell_price
+    default_entity_id: sensor.grid_sell_price
+    state: '{{ states(''sensor.nodered_sellprice'') | float(0) | round(2) }}'
+    unit_of_measurement: "AUD/kWh"
+    
+  - name: BOM Last Updated
+    unique_id: em_yaml_bom_last_updated
+    default_entity_id: sensor.bom_last_updated
+    state: '{% set s = states.sensor.home_temp %}{{ as_timestamp(s.last_updated) | timestamp_custom(''%B %-d, %Y at %-I:%M
+      %p'') if s is defined else ''Unavailable'' }}'
+
+# === ENERGY_MANAGER_UPDATE_INPUTS_END ===
+
+

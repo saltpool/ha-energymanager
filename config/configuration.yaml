@@ -1,0 +1,42 @@
+# Energy Manager Configuration File
+# === ENERGY_MANAGER_CORE_START v1.3.0 ===
+default_config:
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+modbus: !include_dir_merge_list modbus/
+utility_meter: !include utility_meter.yaml
+template: !include template.yaml
+group: !include group.yaml
+
+homeassistant:
+  packages: !include_dir_named integrations
+  customize:
+    sensor.pv_energy_total:
+      state_class: total_increasing
+      device_class: energy
+
+logger:
+  default: warning
+  logs:
+    py.warnings: error
+# === ENERGY_MANAGER_CORE_END ===
+
+# === ENERGY_MANAGER_SHELL_COMMANDS_START v0.2.4 ===
+# (moved)
+# === ENERGY_MANAGER_SHELL_COMMANDS_END ===
+
+# === ENERGY_MANAGER_SENSORS_START v0.0.13 ===
+# (moved)
+# === ENERGY_MANAGER_SENSORS_END ===
+
+# === ENERGY_MANAGER_UPDATE_INPUTS_START v0.2.5 ===
+# (moved)
+# === ENERGY_MANAGER_UPDATE_INPUTS_END ===
+
+# User customisations below this line are preserved during updates
+# Add your personal Home Assistant configuration here

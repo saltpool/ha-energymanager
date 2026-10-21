@@ -1,0 +1,397 @@
+# sungrow_modbus.yaml.disabled v2.0.0
+- name: "sungrow_inverter"
+  type: tcp
+  host: !secret modbus_host_ip
+  port: !secret modbus_port
+  timeout: 5
+  delay: 15
+  message_wait_milliseconds: 150
+  sensors:
+    - name: "sungrow_device_type_code"
+      device_address: !secret modbus_slave
+      address: 4999 # Register 5000 - 1 (protocol address - 1)
+      input_type: input
+      data_type: uint16
+      scan_interval: 600
+
+    - name: "sungrow_inverter_serial"
+      device_address: !secret modbus_slave
+      address: 4989
+      input_type: input
+      data_type: string
+      count: 10
+      scan_interval: 600
+
+    - name: "sungrow_firmware_version"
+      device_address: !secret modbus_slave
+      address: 13249
+      input_type: input
+      data_type: string
+      count: 15
+      scan_interval: 600
+
+    - name: "sungrow_nominal_output_power"
+      device_address: !secret modbus_slave
+      address: 5000 # Register 5001 - 1
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "kW"
+      scan_interval: 60
+
+    - name: "sungrow_daily_pv_energy"
+      device_address: !secret modbus_slave
+      address: 5002 # Register 5003 - 1
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sungrow_total_pv_energy"
+      device_address: !secret modbus_slave
+      address: 13002
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      precision: 1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sungrow_internal_temperature"
+      unique_id: sungrow_internal_temperature
+      device_address: !secret modbus_slave
+      address: 5007 # reg 5008
+      input_type: input
+      data_type: int16
+      precision: 1
+      unit_of_measurement: "°C"
+      device_class: Temperature
+      state_class: measurement
+      scale: 0.1
+      scan_interval: 60
+
+    - name: "sungrow_pv_power"
+      device_address: !secret modbus_slave
+      address: 5016 # Register 5017-5018 - 1
+      input_type: input
+      data_type: uint32
+      swap: word
+      precision: 0
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scale: 1
+      scan_interval: 25
+
+    - name: "sungrow_grid_active_power"
+      device_address: !secret modbus_slave
+      input_type: input
+      address: 5600
+      data_type: int32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 25
+
+    - name: "sungrow_reactive_power"
+      device_address: !secret modbus_slave
+      address: 5032 # Register 5033-5034 - 1
+      input_type: input
+      data_type: int32
+      unit_of_measurement: "var"
+      device_class: reactive_power
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sungrow_power_factor"
+      device_address: !secret modbus_slave
+      address: 5034 # Register 5035 - 1
+      input_type: input
+      data_type: int16
+      scale: 0.001
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sungrow_grid_frequency"
+      device_address: !secret modbus_slave
+      address: 5035 # Register 5036 - 1
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "Hz"
+      device_class: frequency
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sungrow_load_power"
+      unique_id: sungrow_load_power
+      device_address: !secret modbus_slave
+      address: 13007 # reg 13008
+      input_type: input
+      data_type: int32
+      swap: word
+      precision: 0
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scale: 1
+      scan_interval: 25
+
+    - name: "sungrow_battery_power"
+      unique_id: sungrow_battery_power
+      device_address: !secret modbus_slave
+      address: 13021 # reg 13022
+      input_type: input
+      data_type: uint16
+      precision: 0
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scale: 1
+      scan_interval: 25
+
+    - name: "sungrow_battery_soc"
+      device_address: !secret modbus_slave
+      address: 13022
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sungrow_rated_battery_capacity"
+      device_address: !secret modbus_slave
+      address: 13038
+      input_type: input
+      data_type: uint16
+      precision: 1
+      scale: 0.01
+      unit_of_measurement: "kWh"
+      device_class: energy_storage
+      scan_interval: 600
+
+    - name: "sungrow_battery_soh"
+      device_address: !secret modbus_slave
+      address: 13023
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "sungrow_battery_temperature"
+      device_address: !secret modbus_slave
+      address: 13024
+      input_type: input
+      data_type: int16
+      scale: 0.1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sungrow_daily_charge_energy"
+      device_address: !secret modbus_slave
+      address: 13039
+      input_type: input
+      data_type: uint16
+      precision: 1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scale: 0.1
+      scan_interval: 60
+
+    - name: "sungrow_daily_discharge_energy"
+      device_address: !secret modbus_slave
+      address: 13025
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      precision: 1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sungrow_accumulated_charge_energy"
+      device_address: !secret modbus_slave
+      address: 13040
+      input_type: input
+      data_type: uint32
+      swap: word
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sungrow_accumulated_discharge_energy"
+      device_address: !secret modbus_slave
+      address: 13026
+      input_type: input
+      swap: word
+      data_type: uint32
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sungrow_ems_mode"
+      device_address: !secret modbus_slave
+      address: 13049
+      input_type: holding
+      data_type: uint16
+      #precision: 0
+      state_class: measurement
+      #0: Self-consumption
+      #2: Forced mode
+      #3: External EMS mode
+      #4: VPP
+      scan_interval: 25
+
+    - name: "sungrow_charge_discharge_command"
+      device_address: !secret modbus_slave
+      address: 13050
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      precision:  0
+      #0xAA: Charge (170)
+      #0xBB: Discharge (187)
+      #0xCC: Stop (204)
+      scan_interval: 25
+
+    - name: "sungrow_inverter_start_stop_state"
+      device_address: !secret modbus_slave
+      #address: 5037  # Register 5038 - 1
+      address: 12999
+      input_type: holding
+      data_type: uint16
+      precision: 0
+      state_class: measurement
+      #0xCF(Start) (207)
+      #0xCE(Stop) (206)
+      scan_interval: 25
+
+    - name: "sungrow_power_flow_status"
+      unique_id: sungrow_power_flow_status
+      device_address: !secret modbus_slave
+      address: 13000  # reg 13001 Power Flow Status
+      input_type: input
+      data_type: uint16
+      scan_interval: 25
+
+    - name: sungrow_battery_export_power_raw
+      device_address: !secret modbus_slave
+      address: 13009
+      input_type: input
+      data_type: int32
+      swap: word
+      precision: 0
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scale: 1
+      scan_interval: 25
+
+    - name: "sungrow_charge_discharge_power"
+      device_address: !secret modbus_slave
+      address: 13051
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "W"
+      device_class: power
+      precision: 0
+      scan_interval: 25
+
+    - name: "sungrow_max_soc"
+      device_address: !secret modbus_slave
+      address: 13057
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "%"
+      scale: 0.1
+      precision: 1
+      scan_interval: 60
+
+    - name: "sungrow_min_soc"
+      device_address: !secret modbus_slave
+      address: 13058
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "%"
+      scale: 0.1
+      precision: 1
+      scan_interval: 60
+
+    - name: "sungrow_export_power_limit"
+      device_address: !secret modbus_slave
+      address: 13073
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      device_class: power
+      unit_of_measurement: "W"
+      precision: 0
+      scale: 1
+      scan_interval: 25
+
+    - name: "sungrow_export_power_limit_enabled"
+      device_address: !secret modbus_slave
+      address: 13086
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      precision: 0
+      # 0xAA: Enable (170)
+      # 0x55: Disable (85)
+      scan_interval: 25
+
+    - name: "sungrow_reserved_soc_backup"
+      device_address: !secret modbus_slave
+      address: 13099
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "%"
+      device_class: battery
+      scale: 1
+      precision: 0
+      scan_interval: 60
+
+    - name: "sungrow_max_charging_power"
+      device_address: !secret modbus_slave
+      address: 33046
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "W"
+      scale: 10
+      precision: 0
+      scan_interval: 25
+
+    - name: "sungrow_max_discharging_power"
+      device_address: !secret modbus_slave
+      address: 33047
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      unit_of_measurement: "W"
+      scale: 10
+      precision: 0
+      scan_interval: 25

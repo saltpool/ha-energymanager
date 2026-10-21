@@ -1,0 +1,197 @@
+# === ENERGY_MANAGER_UTILITY_METERS_START v1.3.0 ===
+# Five minutes
+inverter_import_energy_5_minutes:
+  unique_id: inverter_import_energy_5_minutes
+  name: "Inverter: Import Energy (5 Minutes)"
+  source: sensor.imported_energy_total
+  cron: "*/5 * * * *"
+
+inverter_export_energy_5_minutes:
+  unique_id: inverter_export_energy_5_minutes
+  name: "Inverter: Export Energy (5 Minutes)"
+  source: sensor.exported_energy_total
+  cron: "*/5 * * * *"
+
+# Fifteen Minutes
+inverter_import_energy_15_minutes:
+  unique_id: inverter_import_energy_15_minutes
+  name: "Inverter: Import Energy (15 Minutes)"
+  source: sensor.imported_energy_total
+  cycle: quarter-hourly
+
+inverter_export_energy_15_minutes:
+  unique_id: inverter_export_energy_15_minutes
+  name: "Inverter: Export Energy (15 Minutes)"
+  source: sensor.exported_energy_total
+  cycle: quarter-hourly
+
+# Hourly
+inverter_import_energy_hourly:
+  unique_id: inverter_import_energy_hourly
+  name: "Inverter: Import Energy (Hourly)"
+  source: sensor.imported_energy_total
+  cycle: hourly
+
+inverter_export_energy_hourly:
+  unique_id: inverter_export_energy_hourly
+  name: "Inverter: Export Energy (Hourly)"
+  source: sensor.exported_energy_total
+  cycle: hourly
+
+electricity_import_cost_hourly:
+  name: "Electricity: Import Cost Hourly"
+  source: sensor.em_import_cost_5m_source
+  cycle: hourly
+  delta_values: true
+
+electricity_export_profit_hourly:
+  name: "Electricity: Export Profit Hourly"
+  source: sensor.em_export_profit_5m_source
+  cycle: hourly
+  delta_values: true
+
+# Daily
+daily_pv_generation:
+  source: sensor.inverter_daily_pv_generation
+  cycle: daily
+  name: "Daily PV Generation"
+
+daily_pv_generation_alt:
+  source: sensor.pv_energy_total
+  cycle: daily
+  name: "Daily PV Generation alt"
+
+daily_battery_charge:
+  source: sensor.inverter_daily_battery_charge
+  cycle: daily
+  name: "Daily Battery Charge"
+
+daily_battery_discharge:
+  source: sensor.inverter_daily_battery_discharge
+  cycle: daily
+  name: "Daily Battery Discharge"
+
+daily_imported_energy:
+  source: sensor.imported_energy_total
+  cycle: daily
+  name: "Daily Imported Energy"
+
+daily_exported_energy:
+  source: sensor.exported_energy_total
+  cycle: daily
+  name: "Daily Exported Energy"
+
+electricity_import_cost_daily:
+  name: "Electricity: Import Cost Daily"
+  source: input_number.electricity_import_cost_total
+  cycle: daily
+
+daily_consumed_energy:
+  source: sensor.total_consumed_energy
+  name: "Daily Consumed Energy"
+  cycle: daily
+
+daily_house_energy_from_pv:
+  source: sensor.house_energy_from_pv
+  name: Daily House Energy From PV
+  unique_id: daily_house_energy_from_pv
+  cycle: daily
+
+daily_house_energy_from_battery:
+  source: sensor.house_energy_from_battery
+  name: Daily House Energy From Battery
+  unique_id: daily_house_energy_from_battery
+  cycle: daily
+
+daily_house_energy_from_grid:
+  source: sensor.house_energy_from_grid
+  name: Daily House Energy From Grid
+  unique_id: daily_house_energy_from_grid
+  cycle: daily
+
+daily_daytime_consumption:
+  source: sensor.house_daytime_energy
+  name: Daily Daytime Consumption
+  unique_id: daily_daytime_consumption
+  cycle: daily
+
+calendar_day_nighttime_consumption:
+  source: sensor.house_nighttime_energy
+  name: Calendar Day Nighttime Consumption
+  unique_id: calendar_day_nighttime_consumption
+  cycle: daily
+
+overnight_consumption:
+  source: sensor.house_nighttime_energy
+  name: Overnight Consumption
+  unique_id: overnight_consumption
+  cycle: daily
+  offset:
+    hours: 12
+
+electricity_export_profit_daily:
+  name: "Electricity: Export Profit Daily"
+  source: sensor.em_export_profit_5m_source
+  cycle: daily
+  delta_values: true
+
+# Monthly energy meters
+monthly_pv_generation:
+  source: sensor.inverter_daily_pv_generation
+  cycle: monthly
+  name: "Monthly PV Generation"
+
+monthly_battery_charge:
+  source: sensor.inverter_daily_battery_charge
+  cycle: monthly
+  name: "Monthly Battery Charge"
+
+monthly_battery_discharge:
+  source: sensor.inverter_daily_battery_discharge
+  cycle: monthly
+  name: "Monthly Battery Discharge"
+
+monthly_imported_energy:
+  source: sensor.imported_energy_total
+  name: "Monthly Imported Energy"
+
+monthly_exported_energy:
+  source: sensor.exported_energy_total
+  name: "Monthly Exported Energy"
+
+electricity_import_cost_monthly:
+  name: "Electricity: Import Cost Monthly"
+  source: input_number.electricity_import_cost_total
+  cycle: monthly
+
+electricity_export_profit_monthly:
+  name: "Electricity: Export Profit Monthly"
+  source: sensor.em_export_profit_5m_source
+  delta_values: true
+
+# Yearly energy meters
+yearly_pv_generation:
+  source: sensor.inverter_daily_pv_generation
+  cycle: yearly
+  name: "Yearly PV Generation"
+
+yearly_battery_charge:
+  source: sensor.inverter_daily_battery_charge
+  cycle: yearly
+  name: "Yearly Battery Charge"
+
+yearly_battery_discharge:
+  source: sensor.inverter_daily_battery_discharge
+  cycle: yearly
+  name: "Yearly Battery Discharge"
+
+yearly_imported_energy:
+  source: sensor.imported_energy_total
+  cycle: yearly
+  name: "Yearly Imported Energy"
+
+yearly_exported_power:
+  source: sensor.exported_energy_total
+  cycle: yearly
+  name: "Yearly Exported Power"
+# === ENERGY_MANAGER_UTILITY_METERS_END ===

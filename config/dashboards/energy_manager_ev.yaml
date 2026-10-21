@@ -1,0 +1,337 @@
+# energy_manager_ev.yaml v1.3.0
+views:
+  - type: sections
+    max_columns: 3
+    icon: mdi:car-electric
+    path: em-ev
+    title: EV Charging
+    sections:
+      - type: grid
+        cards:
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: binary_sensor.ocpp_active
+                state: "on"
+            card:
+              type: markdown
+              content: >
+                ## 🚗 EV Charging (Premium only)
+
+                Status: {{ states('input_text.ev_reason_text') }}
+
+                Decision: {{ states('input_text.ev_arbitration_reason') }}
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: binary_sensor.ocpp_active
+                state: "on"
+            card:
+              type: entities
+              title: EV Charging Module
+              entities:
+                - entity: input_boolean.em_ev_enabled
+                  name: EV Automation On/Off
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: binary_sensor.ocpp_active
+                state: "on"
+            card:
+              type: entities
+              title: OCPP Charger Status
+              entities:
+                - entity: switch.charger_charge_control
+                - entity: number.charger_maximum_current
+                - entity: sensor.charger_vendor
+                - entity: sensor.charger_model
+                - entity: sensor.charger_serial
+                - entity: sensor.charger_version_firmware
+                - entity: sensor.charger_status
+                - entity: sensor.charger_status_connector
+                - entity: sensor.charger_soc
+                - entity: sensor.charger_energy_session
+                - entity: sensor.charger_current_import
+                - entity: sensor.charger_power_active_import
+                - entity: sensor.charger_time_session
+                - entity: sensor.charger_temperature
+                - entity: sensor.charger_error_code
+                - entity: sensor.charger_error_code_connector
+                - entity: button.charger_unlock
+                - entity: button.charger_reset
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: binary_sensor.ocpp_active
+                state: "off"
+            card:
+              type: markdown
+              content: >
+                ## ⚠️ EV Charging Support is Currently Disabled
+
+                The settings located on this dashboard will **not work** until you have **connected your OCPP 1.6j compliant charger to Home Assistant**. 
+
+
+                Note that the OCPP charger must support a user-configurable OCPP endpoint AND control through the Energy Manager configured method. Not all "OCPP compliant" fast chargers allow the owner to control via OCPP. Some also require cloud connectivity. It is very important to do your own research as to whether your charger (or one you are going to purchase) will work.
+
+
+                The recommended charger for Energy Manager is the **Ocular IQ Home Solar** which is Australian made and works well with customisable OCPP. There have been reports of the **SigenStore EV Charger module** (both AC and DC) working with Energy Manager. 
+
+
+                The **myenergi Zappi** is known to require cloud connectivity and may or may not work. The **Sungrow iHomeManager** and **Tesla Wall Connector** _WILL NOT WORK_ as they either do not support OCPP or do not allow owner configuration.
+
+
+                Please follow the following procedure to enable:
+                  
+
+                1 - Download and install the HACS OCPP package/integration.
+
+                - Click on the HACS menu item on the left.
+                
+                - Enter "OCPP" in the search bar in HACS.
+                
+                - **Download** the component **Open Charge Point Protocol (OCPP)**
+
+                - **Restart** Home Assistant
+
+                - Go to [Settings → Devices & services → Integrations](/config/integrations).
+
+                - Click on **+ Add integration** and search for **OCPP** and click on **Open Charge Point Protocol (OCPP)**
+
+                - Keep all the **defaults** on the **OCPP Central System Configuration** page and press **Submit**
+
+                - Ensure you keep **central** as the **Device name** and click **Skip and finish**.
+
+
+              
+                2 - Go to [Settings → Devices & services → Integrations → Open Charge Point Protocol (OCPP)](/config/integrations/integration/ocpp) to open **Open Charge Point Protocol (OCPP)** and keep the page open.
+
+
+                3 - Go to your **EV charger** and **configure the OCPP server as your Home Assistant**, on port tcp 9000, by entering in the URL of **ws://homeassistant.local:9000/**.
+
+
+                _Note: If your Home Assistant is known as something other than homeassistant.local, change the URL appropriately._
+
+
+                4 - As long as you have configured your charger correctly to point to Home Assistant, a green notification will be shown on your OCCP Home Assistant page with an option to **Add** a discovered charger.
+
+                
+                - Click **Add** to link your charger with Home Assistant.
+
+                - When the **OCPP Charger Configuration** box is displayed, **you must keep the _Charge point identity_ as _charger_**. The integration will **not work** if you change this name.
+
+                - Update the **Maximum charging current** if your system differs.
+
+                - Keep all other settings as **default**.
+
+                - Press **Submit** when ready.
+
+
+                _Note: If you do not see a successful discovery event, consult your charger manual to confirm you have configured the OCPP server correctly.  The OCPP integration that has been installed does not support authentication and not all EV charges will work if they do not fully follow the OCPP 1.6 standard. Chargers must be fully compatible and compliant with OCPP v1.6 to work._
+
+
+                5 - Ensure that the newly added service to the OCPP integration is **enabled**.
+
+
+                6 - Once the OCPP compatible and compliant charger has been discovered and added to Home Assistant, **this instruction page will be replaced with a list of charging sensors**.
+      - type: grid
+        cards:
+          - type: entities
+            title: "Mode 1: Scheduled Charging Settings"
+            entities:
+              - entity: input_boolean.em_ev_schedule_enabled
+                name: Enable a charging schedule
+              - entity: input_select.em_ev_mode
+                name: Charging policy
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state_not: "Flow Power"
+                  - entity: input_select.em_ev_mode
+                    state_not: ["battery_only","solar_only"]
+                row:
+                  entity: input_number.em_ev_block_above_price
+                  name: Maximum grid import price
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Flow Power"
+                  - entity: input_select.em_ev_mode
+                    state_not: ["battery_only","solar_only"]
+                row:
+                  entity: input_select.flow_power_price_signal_ev_limit_block
+                  name: "Maximum buy price, based on PEA watch"
+              - entity: input_datetime.em_ev_schedule_start
+                name: Schedule start time
+              - entity: input_datetime.em_ev_schedule_end
+                name: Schedule end time
+          - type: markdown
+            content: >
+                Opportunistic charging will occur during this period. If you need it ready by a specific time, use the **Ready-by** mode.
+                
+                
+                If the scheduled end-time is reached and your selected **charge amount** has not been reached, it will continue at the next **scheduled start time**.
+
+
+                Ensure your maximum **grid charging price** is entered appropriately.
+
+
+
+                **Charging Policies:**
+
+                **smart_cheapest** - Charges at maximum rate during forecast-selected cheapest intervals to meet the target kWh. Uses grid. Falls back to “best effort” if insufficient cheap time exists.
+
+                **solar_only** - Charges only from excess solar. Requires ~8A minimum solar to start. Stops if grid import exceeds ~500W. Will not use grid if more than this.
+
+                **solar_preferred** - Charges using solar only if ~8A or over excess generation is occurring. If generation is under ~8A the grid will supplement the charge to keep the charge active, however, if _maximum grid import price_ is exceeded, it will top up from your battery _until_ the _min home battery SOC_ is reached, but as long as _Allow home battery to charge EV_ has been enabled. Otherwise it will stop charging.
+
+                **battery_only** - Charges using stored energy from your battery only. It will keep charging until your _min home battery soc_ is achieved (refer _Battery Protection_ section). Note that the _Allow home battery to charge EV_ must be enabled for this to work.  This is intended for night time use and will not charge using solar.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+          - type: entities
+            title: "Mode 2: Ready-by Charging"
+            entities:
+              - entity: input_boolean.em_ev_ready_by_enabled
+                name: Enable deadline-base charging
+              - entity: input_datetime.em_ev_ready_by_time
+                name: Required ready-by time
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state_not: "Flow Power"
+                row:
+                  entity: input_number.em_ev_readyby_max_price
+                  name: Maximum grid import price
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Flow Power"
+                row:
+                  entity: input_select.flow_power_price_signal_ev_readyby
+                  name: "Maximum ready-by buy price, based on PEA watch"
+          - type: markdown
+            content: >
+                Make sure that you select a **realistic maximum price** or you may not achieve your desired charge within the selected deadline.
+
+
+                **Ready-by** pricing will use solar and also import from the grid when required, as long as the price is lower than your configured **grid charging price**, to try and charge by your set deadline.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+      - type: grid
+        cards:
+          - type: entities
+            title: Solar Charging
+            entities:
+              - entity: input_boolean.em_ev_allow_solar
+                name: Allow charging from solar excess
+              - entity: input_boolean.em_ev_release_curtailment
+                name: Allow disable of curtailment
+              - entity: input_number.em_ev_solar_start_surplus_w
+                name: Surplus/Start threshold
+              - entity: input_number.em_ev_solar_stop_surplus_w
+                name: Lower threshold (stops flapping)
+          - type: markdown
+            content: >
+                Make sure that the **Surplus/Start threshold** is considerably greater than the **Lower threshold** to stop charge flapping. 8A (~1900W single phase, 5700W 3-phase) minimum is required for safe EV charging.
+                Solar charging will not occur if 8A is not met if the charging policy is set to **solar_only**. 
+                
+                
+                If **solar_preferred** is selected, the solar charge will be topped up by **grid import**, but only to your selected maximum grid import price.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+          - type: entities
+            title: Battery Protection
+            entities:
+              - entity: input_number.em_ev_min_home_battery_soc
+                name: Min home battery SOC
+              - entity: input_boolean.em_ev_allow_battery_to_ev
+                name: Allow home battery to charge EV
+          - type: markdown
+            content: >
+              Only enable if you would like to allow the charging of your EV with stored battery energy.
+
+
+              The **Min home battery SOC** is the reserve set on your battery so that EV charging can use your home battery **until** this battery SOC is met.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+          - type: entities
+            title: General Settings
+            entities:
+              - entity: input_number.em_ev_battery_capacity_kwh
+              - entity: input_select.em_ev_battery_measurement
+              - type: conditional
+                conditions:
+                  - entity: input_select.em_ev_battery_measurement
+                    state: "kWh"
+                row:
+                  entity: input_number.em_ev_target_kwh
+                  name: Required charge amount
+              - type: conditional
+                conditions:
+                  - entity: input_select.em_ev_battery_measurement
+                    state: "Percentage"
+                row:
+                  entity: input_number.em_ev_target_soc
+                  name: Charge to
+              - entity: input_number.em_ev_maximum_circuit_a
+                name: EV Circuit Size in Amps
+              - entity: input_boolean.em_ev_circuit_upstream
+                name: Upstream Circuit
+              - entity: input_select.em_ev_site_phases
+                name: Single or 3-Phase Power
+              - entity: input_number.em_ev_grid_max
+                name: Amps per phase (max grid import)
+              - entity: input_boolean.em_ev_allow_grid
+                name: Allow grid charging
+              - entity: input_boolean.em_ev_release_curtailment
+                name: Allow disable of curtailment
+          - type: markdown
+            content: >
+                **Battery Charging Measurement** - this can be set at either **kWh** or **Percentage** but if you select percentage you **MUST** have an independent integration installed that can read your EV battery SOC (this is not possible through OCPP), and it must be placed in your /share/ev_battery_soc_sensor.txt file as a single line with the full entity name, for example, sensor.7x_zeekr_battery_level (this will depend on your integration and vehicle)). Otherwise, you **MUST** keep the measurement as **kWh** to support OCPP.
+
+
+                Ensure the **EV Circuit size in amps** is appropriate for you as Energy Manager will base max charging from your circuit size. If you set this incorrectly you may trip a fuse. For continuous load, you should set this at 80% of the circuit size.
+
+
+                Enable **Upstream Circuit** if your charger is cabled outside of your battery system and use cannot be detected by Home Assistant normally.
+
+
+                **Amps per phase** - this is your maximum power feed to your premises. This is usually 40A or 63A, but check with your electrician - this is important to stop chargers rejecting your charging request due to existing import load.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.electricity_provider
+                state: "Globird"
+            card:
+              type: entities
+              title: Globird Specific
+              entities:
+                - entity: input_boolean.globird_super_sell_charge
+                - entity: input_boolean.globird_std_sell_charge

@@ -1,0 +1,490 @@
+# alphaess_modbus.yaml v2.0.0
+# AlphaESS Modbus configuration for Home Assistant
+- name: "alphaess_inverter"
+  type: tcp
+  host: !secret modbus_host_ip
+  port: !secret modbus_port
+  delay: 2
+  message_wait_milliseconds: 100
+  sensors:
+    # Device Information & Status
+    - name: "alphaess_inverter_work_mode"
+      device_address: !secret modbus_slave
+      address: 0x0440
+      input_type: holding
+      data_type: uint16
+      scan_interval: 60
+      # Note: 0=Standby, 1=Online, 2=UPS mode, 3=Bypass, 4=Fault mode, 5=DC mode, 6=Selftest mode, 7=Check mode
+
+    - name: "alphaess_firmware_version"
+      device_address: !secret modbus_slave
+      address: 0x0640
+      input_type: holding
+      data_type: string
+      count: 5
+      scan_interval: 600
+
+    - name: "alphaess_inverter_serial"
+      device_address: !secret modbus_slave
+      address: 0x064A
+      input_type: holding
+      data_type: string
+      count: 10
+      scan_interval: 600
+
+    - name: "alphaess_internal_temperature"
+      device_address: !secret modbus_slave
+      address: 0x0435
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    # PV Generation Data
+    - name: "alphaess_pv_power"
+      device_address: !secret modbus_slave
+      address: 0x0453  # Used to be 0x052D
+      input_type: holding
+      data_type: uint32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_total_active_pv_power"
+      device_address: !secret modbus_slave
+      address: 0x00A1
+      input_type: holding
+      data_type: int32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_total_pv_energy"
+      device_address: !secret modbus_slave
+      address: 0x043E
+      input_type: holding
+      data_type: uint32
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "alphaess_total_pv_power"
+      device_address: !secret modbus_slave
+      address: 0x0453
+      input_type: holding
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    # Grid Data
+    - name: "alphaess_grid_power"
+      device_address: !secret modbus_slave
+      address: 0x021
+      input_type: holding
+      data_type: int32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+      # Positive = import from grid, Negative = export to grid
+
+    - name: "alphaess_grid_power_factor"
+      device_address: !secret modbus_slave
+      address: 0x036
+      input_type: holding
+      data_type: int16
+      scale: 0.01
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_total_energy_feed_to_grid"
+      device_address: !secret modbus_slave
+      address: 0x010
+      input_type: holding
+      data_type: uint32
+      scale: 0.01
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "alphaess_total_energy_consume_from_grid"
+      device_address: !secret modbus_slave
+      address: 0x012
+      input_type: holding
+      data_type: uint32
+      scale: 0.01
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    # Battery Data
+    - name: "alphaess_battery_voltage"
+      device_address: !secret modbus_slave
+      address: 0x0100
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_battery_current"
+      device_address: !secret modbus_slave
+      address: 0x0101
+      input_type: holding
+      data_type: int16
+      scale: 0.1
+      unit_of_measurement: "A"
+      device_class: current
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_battery_soc"
+      device_address: !secret modbus_slave
+      address: 0x0102
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_battery_soh"
+      device_address: !secret modbus_slave
+      address: 0x011B
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "alphaess_battery_power"
+      device_address: !secret modbus_slave
+      address: 0x0126
+      input_type: holding
+      data_type: int16
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+      # Note: Negative = Charge, Positive = Discharge
+
+    - name: "alphaess_battery_capacity"
+      device_address: !secret modbus_slave
+      address: 0x0119
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy_storage
+      scan_interval: 600
+
+    - name: "alphaess_battery_charge_energy"
+      device_address: !secret modbus_slave
+      address: 0x0120
+      input_type: holding
+      data_type: uint32
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "alphaess_battery_discharge_energy"
+      device_address: !secret modbus_slave
+      address: 0x0122
+      input_type: holding
+      data_type: uint32
+      scale: 0.1
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "alphaess_battery_max_charge_current"
+      device_address: !secret modbus_slave
+      address: 0x0111
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "A"
+      device_class: current
+      scan_interval: 600
+
+    - name: "alphaess_battery_max_discharge_current"
+      device_address: !secret modbus_slave
+      address: 0x0112
+      input_type: holding
+      data_type: uint16
+      scale: 0.1
+      unit_of_measurement: "A"
+      device_class: current
+      scan_interval: 600
+
+    - name: "alphaess_min_cell_temperature"
+      device_address: !secret modbus_slave
+      address: 0x010D
+      input_type: holding
+      data_type: int16
+      scale: 0.1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_max_cell_temperature"
+      device_address: !secret modbus_slave
+      address: 0x0110
+      input_type: holding
+      data_type: int16
+      scale: 0.1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    # Inverter Output Data
+    - name: "alphaess_inverter_power_total"
+      device_address: !secret modbus_slave
+      address: 0x040C
+      input_type: holding
+      data_type: int32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    # EMS Control (Read/Write)
+    - name: "alphaess_feed_into_grid_percent"
+      device_address: !secret modbus_slave
+      address: 0x0800
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_ups_reserve_soc"
+      device_address: !secret modbus_slave
+      address: 0x0850
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_charge_cut_soc"
+      device_address: !secret modbus_slave
+      address: 0x0855
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_system_mode"
+      device_address: !secret modbus_slave
+      address: 0x0805
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 60
+
+    # Time Control Settings
+    - name: "alphaess_time_discharge_start_time1"
+      device_address: !secret modbus_slave
+      address: 0x0851
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "h"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "alphaess_time_discharge_stop_time1"
+      device_address: !secret modbus_slave
+      address: 0x0852
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "h"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "alphaess_time_charge_start_time1"
+      device_address: !secret modbus_slave
+      address: 0x0856
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "h"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "alphaess_time_charge_stop_time1"
+      device_address: !secret modbus_slave
+      address: 0x0857
+      input_type: holding
+      data_type: uint16
+      unit_of_measurement: "h"
+      state_class: measurement
+      scan_interval: 600
+
+    # Dispatch Control (Advanced)
+    - name: "alphaess_dispatch_start"
+      device_address: !secret modbus_slave
+      address: 0x0880
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 60
+      # 0=Stop, 1=Start
+
+    - name: "alphaess_dispatch_active_power"
+      device_address: !secret modbus_slave
+      address: 0x0881
+      input_type: holding
+      data_type: int32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 60
+      # Offset: 32000, charge:<32000, discharge:>32000
+
+    - name: "alphaess_dispatch_mode"
+      device_address: !secret modbus_slave
+      address: 0x0885
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "alphaess_dispatch_soc"
+      device_address: !secret modbus_slave
+      address: 0x0886
+      input_type: holding
+      data_type: uint16
+      scale: 0.4
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 60
+
+    # Backup/EPS Data
+    - name: "alphaess_backup_power_total"
+      device_address: !secret modbus_slave
+      address: 0x041A
+      input_type: holding
+      data_type: uint32
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    # Fault and Warning Information
+    - name: "alphaess_battery_warning"
+      device_address: !secret modbus_slave
+      address: 0x011C
+      input_type: holding
+      data_type: uint32
+      scan_interval: 60
+
+    - name: "alphaess_battery_fault"
+      device_address: !secret modbus_slave
+      address: 0x011E
+      input_type: holding
+      data_type: uint32
+      scan_interval: 60
+
+    - name: "alphaess_inverter_fault1"
+      device_address: !secret modbus_slave
+      address: 0x043A
+      input_type: holding
+      data_type: uint32
+      scan_interval: 60
+
+    - name: "alphaess_system_fault"
+      device_address: !secret modbus_slave
+      address: 0x08d4
+      input_type: holding
+      data_type: uint32
+      scan_interval: 60
+
+    - name: "alphaess_pv_1"
+      device_address: !secret modbus_slave
+      address: 0x041f
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_pv_2"
+      device_address: !secret modbus_slave
+      address: 0x0423
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_pv_3"
+      device_address: !secret modbus_slave
+      address: 0x0427
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_pv_4"
+      device_address: !secret modbus_slave
+      address: 0x042b
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_pv_5"
+      device_address: !secret modbus_slave
+      address: 0x042f
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "alphaess_pv_6"
+      device_address: !secret modbus_slave
+      address: 0x0433
+      data_type: uint32
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+  # Write-only sensors (for control commands)
+  switches:
+    - name: "alphaess_battery_mos_control"
+      device_address: !secret modbus_slave
+      address: 0x012E
+      write_type: holding
+      command_on: 1
+      command_off: 0
+      # 0=Open, 1=Close
+

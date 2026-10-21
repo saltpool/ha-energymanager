@@ -1,0 +1,3355 @@
+# energy_manager_pv.yaml v1.3.0
+views:
+  - type: sections
+    max_columns: 3
+    icon: mdi:home-lightning-bolt
+    path: em-inverter
+    title: Inverter
+    sections:
+      - type: grid
+        cards:
+          - type: conditional
+            conditions:
+              - entity: input_boolean.emergency_override
+                state: "on"
+            card:
+              type: markdown
+              content: >
+                <div>
+                ⚠️ Warning: Emergency Override has been enabled. Energy Manager is disabled in this mode.
+                </div>
+              card_mod:
+                style: |
+                  ha-card {
+                    background-color: #ffe6e7;
+                    color: #ff000e;
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    font-size: 1.2em;
+                  }
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.em_motd_unread
+                state: "on"
+            card:
+              type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 3fr 1fr
+                grid-gap: 12px
+              cards:
+                - type: markdown
+                  content: |
+                    ## 📢Version Announcement available
+                    [Open information page](/energy-pv/5)
+                  card_mod:
+                    style: |
+                      ha-card {
+                        background-color: #e6fcedff;
+                        color: #000000ff;
+                        padding: 10px 16px;
+                        border-radius: 10px;
+                        font-weight: bold;
+                        font-size: 1.2em;
+                      }
+                - type: button
+                  icon: mdi:check
+                  show_name: false
+                  tap_action:
+                    action: call-service
+                    service: rest_command.em_motd_mark_read
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.em_general_unread
+                state: "on"
+            card:
+              type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 3fr 1fr
+                grid-gap: 12px
+              cards:
+                - type: markdown
+                  content: |
+                    ## 📢 General Announcement available
+                    [Open information page](/energy-pv/5)
+                  card_mod:
+                    style: |
+                      ha-card {
+                        background-color: #e6fcedff;
+                        color: #000000ff;
+                        padding: 10px 16px;
+                        border-radius: 10px;
+                        font-weight: bold;
+                        font-size: 1.2em;
+                      }
+                - type: button
+                  icon: mdi:check
+                  show_name: false
+                  tap_action:
+                    action: call-service
+                    service: rest_command.em_general_mark_read
+          - type: entities
+            title: System Information
+            entities:
+              - entity: sensor.energy_manager_current_version
+                name: Energy Manager Version
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["alphaess", "goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.inverter_device_type
+                  name: Model
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: ["goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.inverter_model
+                  name: Model
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ""
+                row:
+                  entity: sensor.inverter_serial
+                  name: Serial Number
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.inverter_firmware
+                  name: Firmware version
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["fronius", "goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.inverter_running_state
+                  name: Inverter Running Status
+              - entity: sensor.inverter_ems_mode_text
+                name: EMS Mode
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: ["goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.goodwe_battery
+                  name: Battery Mode
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: "fronius"
+                row:
+                  entity: sensor.inverter_battery_soh
+                  name: Battery SoH (%)
+            state_color: true
+          - type: entities
+            title: System Status
+            entities:
+              - entity: binary_sensor.pv_generating
+                name: PV Generating
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('binary_sensor.pv_generating') %}
+                          --generating-color:
+                            {% if val == 'on' %}
+                              orange
+                            {% else %}
+                              grey
+                            {% endif %};
+                        }
+                        :host .state {color: var(--generating-color) !important; }
+              - entity: binary_sensor.battery_charging
+                name: Battery Charging
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('binary_sensor.battery_charging') %}
+                          --battery-charging-color:
+                            {% if val == 'on' %}
+                              orange
+                            {% else %}
+                              grey
+                            {% endif %};
+                        }
+                        :host .state {color: var(--battery-charging-color) !important; }
+              - entity: binary_sensor.battery_discharging
+                name: Battery Discharging
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('binary_sensor.battery_discharging') %}
+                          --battery-discharging-color:
+                            {% if val == 'on' %}
+                              orange
+                            {% else %}
+                              grey
+                            {% endif %};
+                        }
+                        :host .state {color: var(--battery-discharging-color) !important; }
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["goodwe", "goodwe_et", "goodwe_int", "fronius"]
+                row:
+                  entity: sensor.battery_hours_remaining
+                  card_mod:
+                    style:
+                      hui-generic-entity-row:
+                        $: |
+                          :host {
+                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
+                            {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
+                            --runtime-color:
+                              {% if state in ['Idle', 'idle', 'Unknown', 'unknown', 'Unavailable', 'unavailable', ''] %}
+                                blue
+                              {% else %}
+                                {% set hours_match = state | regex_findall('(\d+)h') %}
+                                {% set hours = hours_match[0] | int(0) if hours_match else 0 %}
+                                {% set mins_match = state | regex_findall('(\d+)m') %}
+                                {% set mins = mins_match[0] | int(0) if mins_match else 0 %}
+                                {% set total_mins = (hours * 60) + mins %}
+                                {% if charging > 10 %}
+                                  {% if total_mins <= 120 %}
+                                    green
+                                  {% elif total_mins <= 360 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% elif discharging > 10 %}
+                                  {% if total_mins > 360 %}
+                                    green
+                                  {% elif total_mins > 240 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% else %}
+                                  #615EDB
+                                {% endif %}
+                              {% endif %};
+                          }
+                          :host .state {
+                            color: var(--runtime-color) !important;
+                          }
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["goodwe", "goodwe_et", "goodwe_int", "fronius"]
+                  - entity: binary_sensor.has_battery_completion_time
+                    state: "on"
+                row:
+                  entity: sensor.battery_completion_time
+                  card_mod:
+                    style:
+                      hui-generic-entity-row:
+                        $: |
+                          :host {
+                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
+                            {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
+                            --completion-color:
+                              {% if state == 'Idle' or state == 'idle' %}
+                                blue
+                              {% else %}
+                                {% set hours_match = state | regex_findall('(\d+)h') %}
+                                {% set hours = hours_match[0] | int(0) if hours_match else 0 %}
+                                {% set mins_match = state | regex_findall('(\d+)m') %}
+                                {% set mins = mins_match[0] | int(0) if mins_match else 0 %}
+                                {% set total_mins = (hours * 60) + mins %}
+                                {% if charging > 10 %}
+                                  {# Charging: shorter time = better (green) #}
+                                  {% if total_mins <= 120 %}
+                                    green
+                                  {% elif total_mins <= 360 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% elif discharging > 10 %}
+                                  {# Discharging: longer time = better (green) #}
+                                  {% if total_mins > 240 %}
+                                    green
+                                  {% elif total_mins > 360 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% else %}
+                                  blue
+                                {% endif %}
+                              {% endif %};
+                          }
+                          :host .state {
+                            color: var(--completion-color) !important;
+                          }
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["goodwe", "goodwe_et", "goodwe_int"]
+                  - entity: binary_sensor.has_battery_completion_time
+                    state: "off"
+                row:
+                  entity: sensor.battery_state
+                  card_mod:
+                    style:
+                      hui-generic-entity-row:
+                        $: |
+                          :host {
+                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
+                            {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
+                            --completion-color:
+                              {% if state == 'Idle' or state == 'idle' %}
+                                blue
+                              {% else %}
+                                {% set hours_match = state | regex_findall('(\d+)h') %}
+                                {% set hours = hours_match[0] | int(0) if hours_match else 0 %}
+                                {% set mins_match = state | regex_findall('(\d+)m') %}
+                                {% set mins = mins_match[0] | int(0) if mins_match else 0 %}
+                                {% set total_mins = (hours * 60) + mins %}
+                                {% if charging > 10 %}
+                                  {# Charging: shorter time = better (green) #}
+                                  {% if total_mins <= 120 %}
+                                    green
+                                  {% elif total_mins <= 360 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% elif discharging > 10 %}
+                                  {# Discharging: longer time = better (green) #}
+                                  {% if total_mins > 240 %}
+                                    green
+                                  {% elif total_mins > 360 %}
+                                    orange
+                                  {% else %}
+                                    red
+                                  {% endif %}
+                                {% else %}
+                                  blue
+                                {% endif %}
+                              {% endif %};
+                          }
+                          :host .state {
+                            color: var(--completion-color) !important;
+                          }
+              - entity: binary_sensor.exporting_power
+                name: Exporting Power
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('binary_sensor.exporting_power') %}
+                          --exporting-color:
+                            {% if val == 'on' %}
+                              orange
+                            {% else %}
+                              grey
+                            {% endif %};
+                        }
+                        :host .state {color: var(--exporting-color) !important; }
+              - entity: binary_sensor.importing_power
+                name: Importing Power
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('binary_sensor.importing_power') %}
+                          --importing-color:
+                            {% if val == 'on' %}
+                              orange
+                            {% else %}
+                              grey
+                            {% endif %};
+                        }
+                        :host .state {color: var(--importing-color) !important; }
+              - entity: sensor.inverter_internal_temperature
+                name: Inverter Temperature
+                card_mod:
+                  style:
+                    hui-generic-entity-row:
+                      $: |
+                        :host {
+                          {% set val = states('sensor.inverter_internal_temperature') | float(0) %}
+                          --temp-color:
+                            {% if val <= 50 %}
+                              green
+                            {% elif val <= 60 %}
+                              orange
+                            {% else %}
+                              red
+                            {% endif %};
+                        }
+                        :host .state {color: var(--temp-color) !important; }
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["fronius"]
+                row:
+                  entity: sensor.inverter_battery_temperature
+                  name: Battery Temperature
+                  card_mod:
+                    style:
+                      hui-generic-entity-row:
+                        $: |
+                          :host {
+                            {% set val = states('sensor.inverter_battery_temperature') | float(0) %}
+                            --temp-color:
+                              {% if val <= 40 %}
+                                green
+                              {% elif val <= 55 %}
+                                orange
+                              {% else %}
+                                red
+                              {% endif %};
+                          }
+                          :host .state {color: var(--temp-color) !important; }
+            state_color: true
+          - show_name: true
+            show_icon: true
+            type: button
+            tap_action:
+              action: toggle
+            entity: switch.energy_control_on_off
+            name: Energy Control
+            show_state: true
+            icon: mdi:home-battery
+            grid_options:
+              columns: 4
+              rows: 3
+          - type: conditional
+            grid_options:
+              columns: 4
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              show_name: true
+              show_icon: true
+              type: button
+              entity: input_boolean.high_sell_price_toggle
+              name: High Sell Price Mode
+              show_state: true
+              icon: mdi:currency-usd
+          - type: conditional
+            grid_options:
+              columns: 4
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              show_name: true
+              show_icon: true
+              type: button
+              entity: input_boolean.sellbuy_mode_enabled
+              name: Sell/Buy Mode
+              show_state: true
+              icon: mdi:autorenew
+          - type: conditional
+            grid_options:
+              columns: 8
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state: ["Flow Power", "Globird", "Other"]
+            card:
+              type: entities
+              show_header_toggle: false
+              entities:
+                - entity: input_boolean.energy_control_auto_reenable
+                  name: Auto re-enable Energy Control
+          - type: conditional
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              type: entities
+              entities:
+                - entity: input_boolean.energy_control_auto_reenable
+                  name: Auto re-enable Energy Control
+          - type: conditional
+            conditions:
+              - entity: input_boolean.energy_control_auto_reenable
+                state: "on"
+            card:
+              type: entities
+              title: Energy Control Disable Timer
+              entities:
+                - entity: input_text.energy_control_duration
+                  name: Disable Duration
+                - entity: timer.energy_control
+                  name: Energy Control Disable Timer Status
+          - type: conditional
+            conditions:
+              - entity: input_text.nodered_last_error
+                state_not: ["", "unknown", "unavailable"]
+            card:
+              type: markdown
+              content: >
+                <div>
+                ⚠️ Warning: {{ states('input_text.nodered_last_error')}}
+                <br><br>Energy Manager will not function until this error is fixed.
+                <br><br>If you believe this is in error, you can clear the message from input_text.nodered_last_error.
+                </div>
+              card_mod:
+                style: |
+                  ha-card {
+                    background-color: #ffe6e7;
+                    color: #ff0000ff;
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    font-size: 1.2em;
+                  }
+          - type: markdown
+            content: |
+              {% if is_state('switch.energy_control_on_off', 'on') %}
+                <h1 style="color: orange; margin-top: 0;">✅ Energy Manager Decision</h1>
+              {% else %}
+                <h1 style="color: black; margin-top: 0;">❌ Energy Manager Decision</h1>
+                <h2>Energy Control is disabled.</h2>
+                <h3>The last update received was:</h3>
+              {% endif %}
+              {% set file_content = states('sensor.energy_manager_decision') | string %}
+              {% if file_content | trim == '' or file_content in ['unknown', 'unavailable', 'Unknown'] %}
+                <i>The decision will be displayed once you have successfully queried the Energy Manager API.<p>Connectivity will not occur until your Amber Electric/LocalVolts pricing is received (if applicable), and your BOM integration is working. You must also have entered your Energy Manager API key. Only after this will Energy Manager attempt to connect through to the Energy Manager API servers.</p></i>
+              {% else %}
+                {% set translated_content = file_content
+                  .replace('Mode: Self', 'Mode: Self Consumption')
+                  .replace('Mode: Imp', 'Mode: Import')
+                  .replace('Mode: Exp', 'Mode: Export')
+                  .replace('Reason: Self', 'Reason: Ordinary Self Consumption')
+                  .replace('Reason: export_','Reason: Export period ')
+                  .replace('Reason: FPFC','Reason: Free period, force charge')
+                  .replace('Reason: SCT','Reason: Scheduled charge, charge to')
+                  .replace('Reason: SCH','Reason: Scheduled charge, target reached, hold')
+                  .replace('Reason: CHGRQD','Reason: Charge required - ')
+                  .replace('Reason: BATTR','Reason: Battery discharge restricted. Less than ')
+                  .replace('Reason: FPPB','Reason: Free period, preserve battery')
+                  .replace('Reason: CAPRFP','Reason: Free import cap reached')
+                  .replace('Reason: EXPCP','Reason: Export cap reached')
+                  .replace('Reason: CRTE','Reason: Curtail Export')
+                  .replace('Reason: FICB','Reason: Free import - charging battery')
+                  .replace('Batt:', 'Battery SoC:')
+                  .replace('Exp SOC:', 'Battery reserve:')
+                  .replace('free_', 'Free Tariff #')
+                  .replace('peak_', 'Peak Tariff #')
+                  .replace('offpeak_', 'Offpeak Tariff #')
+                  .replace('shoulder_', 'Shoulder Tariff #')
+                  .replace('export_', 'Export Tariff #')
+                  .replace('Curtail:', 'Curtail Exports:')
+                  .replace('Chg','Charge')
+                  .replace('Dchg','Discharge')
+                  .replace('MD:','Mode:')
+                  .replace('BY:','Buy band:')
+                  .replace('SL:','Sell band:')
+                  .replace('CT:','Curtailment:')
+                  .replace('ENOW:','Export now:')
+                  .replace('Plan: NSCR','Plan: No scheduled charge required')
+                  .replace('CRFEH','Charge reduced: Forecasted export headroom')
+                  .replace('DRUNAV:','Dynamic reserve unavailable:')
+                  .replace('DRSV','Dynamic reserve:')
+                  .replace('CREEEI','cap reached; exporting eligible excess in')
+                  .replace('STRSV','Stop reserve')
+                  .replace('Imp remain:','Import cap remaining:')
+                  .replace('Exp remain:','Export cap remaining:')
+                  .replace('Exp now:', 'Export Now:')
+                  .replace('EUTO','exporting up to')
+                  .replace('KWHEI','kWh excess in')
+                  .replace('KWHFHT','kWh for a higher tariff. Stop reserve')
+                  .replace('EXIN','exporting in')
+                  .replace('SOTPKC','SOC or the provider kWh cap.')
+                  .replace('DRRH','Dynamic reserve reached: holding')
+                  .replace('SFFSOL','SOC for forecast use until solar recovery.')
+                  .replace('DR:H','Dynamic reserve: holding')
+                  .replace('KFAHPEP','kWh for a higher-priced export period. Target reserve')
+                  .replace('DRWFEB','Dynamic reserve: waiting for an enabled battery-export period. Target reserve')
+                  .replace('DYNRES','Dynamic reserve:')
+                  .replace('PKCR','provider kWh cap reached; battery export stopped.')
+                  .replace('DRNBER','Dynamic reserve: no battery export required now. Target reserve')
+                %}
+                <ul style="padding-left: 20px; font-size: 1.1em; line-height: 1.6;">
+                  {{ translated_content }}
+                </ul>
+                {% set epoch = states('sensor.energy_manager_decision_timestamp') | int(0) %}
+                **Last Updated:** {{ epoch | timestamp_custom('%d %b %Y at %I:%M %p', true) }}
+              {% endif %}
+      - type: grid
+        cards:
+          - type: entities
+            title: EMS Control
+            entities:
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["fronius", "goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: input_select.inverter_ems_mode
+                  name: EMS Mode
+              - entity: input_select.inverter_charge_discharge_mode
+                name: Forced Charge/Discharge
+          - type: entities
+            title: Battery SOC Settings
+            entities:
+              - entity: input_number.inverter_min_soc
+                name: Minimum SoC
+                mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: "fronius"
+                row:
+                  entity: input_number.inverter_max_soc
+                  name: Maximum SoC
+                  mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["alphaess", "fronius"]
+                row:
+                  entity: input_number.inverter_reserved_soc_backup
+                  name: Reserved SoC for Backup
+                  mode: box
+          - type: entities
+            title: Power Settings
+            entities:
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["alphaess", "fronius"]
+                row:
+                  entity: input_number.inverter_max_charge_power
+                  name: Max Battery Charge Power
+                  mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["alphaess", "fronius"]
+                row:
+                  entity: input_number.inverter_max_discharge_power
+                  name: Max Battery Discharge Power
+                  mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "fronius"
+                row:
+                  entity: input_number.inverter_max_charge_power
+                  name: Max Battery Charge/Discharge Power
+                  mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "alphaess"
+                row:
+                  entity: input_number.inverter_max_charge_power
+                  name: Max Battery Charge/Discharge Power
+                  mode: box
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "sigenergy"
+                row:
+                  entity: input_number.inverter_pv_power_limit
+                  name: PV Power Limit
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["sigenergy", "alphaess"]
+                row:
+                  entity: input_boolean.inverter_export_power_limit_enabled_input
+                  name: Export Power Limit Enabled
+              - entity: input_number.inverter_export_power_limit_input
+                name: Export Power Limit
+                mode: box
+          - type: markdown
+            content: >
+              Important: Do **not** modify any of these values if you enable automation.
+
+
+              These settings are **solely** for Energy Manager to change and will be reverted back on decisions.
+
+
+              Any modifications that you need to make must be done from the [Settings](/energy-pv/em-settings) tab above.
+            card_mod:
+              style: |
+                ha-card {
+                  border-top: none;
+                  margin-top: -20px;
+                  margin-bottom: 20px;
+                }
+          - type: entities
+            title: Scheduled Charge
+            entities:
+              - entity: input_boolean.scheduled_charge_enabled
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.scheduled_charge_enabled
+                    state: "on"
+                row:
+                  entity: input_datetime.scheduled_charge_start
+                  name: Start Time
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.scheduled_charge_enabled
+                    state: "on"
+                row:
+                  entity: input_datetime.scheduled_charge_end
+                  name: End Time
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.scheduled_charge_enabled
+                    state: "on"
+                row:
+                  entity: input_number.scheduled_charge_soc
+                  name: Charge to SoC
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.scheduled_charge_enabled
+                    state: "on"
+                  - entity: input_select.electricity_provider
+                    state: ["Amber Electric", "LocalVolts", "Globird"]
+                row:
+                  entity: input_number.scheduled_charge_price
+                  name: Max buy price
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.scheduled_charge_enabled
+                    state: "on"
+                  - entity: input_select.electricity_provider
+                    state: "Flow Power"
+                row:
+                  entity: input_select.scheduled_charge_signal
+                  name: Max buy price Signal
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Current Power Usage Profile by Hour (W)
+            graph_span: 24h
+            span:
+              start: day
+            now:
+              show: true
+              label: Now
+            series:
+              - entity: sensor.power_estimate_profile
+                name: Predicted Power (W)
+                type: column
+                data_generator: >
+                  let data = []; const attributes =
+                  entity.attributes.attributes; const today = new Date(); if
+                  (attributes) {
+                    for (let i = 0; i < 24; i++) {
+                      let hourKey = 'hour_' + String(i).padStart(2, '0');
+                      let value = attributes[hourKey];
+                      if (value !== null && value !== undefined) {
+                        let timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), i, 0, 0, 0);
+                        data.push([timestamp.getTime(), parseFloat(value)]);
+                      }
+                    }
+                  } return data;
+      - type: grid
+        cards:
+          - type: conditional
+            conditions:
+              - entity: input_boolean.energy_flow_visual
+                state: "on"
+            card:
+              type: custom:energy-flow-card
+              title: Energy Flow
+          - type: conditional
+            conditions:
+              - entity: sensor.demand_interval
+                state: "True"
+            card:
+              type: markdown
+              content: >
+                <div>
+                <center>⚡ Demand Period Active ⚡</center>
+                </div>
+              card_mod:
+                style: |
+                  ha-card {
+                    background-color:rgb(249, 228, 217);
+                    color:rgb(247, 115, 0);
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    font-size: 1.2em;
+                  }
+          - type: conditional
+            conditions:
+              - entity: input_select.electricity_provider
+                state: "Flow Power"
+            card:
+              type: markdown
+              content: >-
+                {% set state = states('input_text.price_signal') %}
+                {% set region = states('input_text.aemo_region') %}
+                {% set msg = {
+                  'Extreme': 'It is not a good time to import from the grid.<br>You will most likely severely impact your PEA score.<br>Use your battery instead.',
+                  'Very High': 'It is NOT a good time to import from the grid. You will very likely impact your PEA score.<br>Use your battery instead.',
+                  'High': 'It is NOT a good time to import from the grid. You are likely to impact your PEA score.<br>Use your battery instead.',
+                  'Average': 'You may impact your PEA score if you import from the grid at the moment.',
+                  'Low': 'Probably a good time to use energy from the grid. Prices are relatively cheap.',
+                  'Very Low': 'This is most likely a great time to use energy from the grid.',
+                  'Negative': 'It is a great time to use energy from the grid.',
+                  'Unknown': 'Current price is unknown. Proceed with caution.'
+                } %}
+                {% set icon = {
+                  'Extreme': '<img src="/local/icons/chev_down_3_circle_white.svg" width="64">',
+                  'Very High': '<img src="/local/icons/chev_down_2_circle_white.svg" width="64">',
+                  'High': '<img src="/local/icons/chev_down_1_circle_white.svg" width="64">',
+                  'Average': '<img src="/local/icons/line_circle_white.svg" width="64">',
+                  'Low': '<img src="/local/icons/chev_up_1_circle_white.svg" width="64">',
+                  'Very Low': '<img src="/local/icons/chev_up_2_circle_white.svg" width="64">',
+                  'Negative': '<img src="/local/icons/chev_up_3_circle_white.svg" width="64">',
+                  'Unknown': '<img src="/local/icons/question_circle.svg" width="64">'
+                } %}
+                  # {{ region }} PEA Watch
+                  {{ icon.get(state, 'Unknown') }}
+                  {{ msg.get(state, 'Unknown') }}
+              card_mod:
+                style: |
+                  ha-card {
+                    min-height: 195px;
+                    {% set state = states('input_text.price_signal') %}
+                    {% set colors = {
+                      'Extreme': "#b11122",
+                      'Very High': "#b11122",
+                      'High': "#b11122",
+                      'Average': "#ff5100ff",
+                      'Low': "#008000",
+                      'Very Low': "#008000",
+                      'Negative': "#05ffffff"
+                    } %}
+                    background-color: {{ colors.get(state, 'grey') }};
+                    color: white;
+                    text-align: center;
+                  }
+          - type: entities
+            title: Power Status
+            show_header_toggle: false
+            entities:
+              - entity: sensor.inverter_pv_power
+              - entity: sensor.inverter_load_power
+              - type: custom:multiple-entity-row
+                entity: sensor.inverter_export_power
+                name: Import/Export Power
+                state_header: Export
+                format: precision0
+                entities:
+                  - entity: sensor.inverter_import_power
+                    name: Import
+                    format: precision0
+              - type: custom:multiple-entity-row
+                entity: sensor.inverter_battery_discharging_power
+                name: Battery Power
+                state_header: Discharging
+                icon: mdi:battery-charging-100
+                format: precision0
+                entities:
+                  - entity: sensor.inverter_battery_charging_power
+                    name: Charging
+                    format: precision0
+              - type: custom:multiple-entity-row
+                entity: sensor.inverter_battery_charge
+                name: Battery State
+                state_header: Charge
+                icon: mdi:home-battery-outline
+                format: precision2
+                entities:
+                  - entity: sensor.inverter_battery_level
+                    name: Level
+                    format: precision2
+          - type: entities
+            title: Energy Today
+            show_header_toggle: false
+            entities:
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state_not: ["Flow Power", "Globird", "Other"]
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.sell_formatted
+                  name: Current Energy Prices
+                  state_header: Sell
+                  icon: mdi:currency-usd
+                  hide_unavailable: true
+                  format: precision3
+                  entities:
+                    - entity: sensor.buy_formatted
+                      name: Buy
+                      hide_unavailable: true
+                      format: precision3
+              - type: custom:multiple-entity-row
+                entity: sensor.export_formatted
+                name: Energy Costs
+                state_header: Profit
+                icon: mdi:currency-usd
+                format: precision2
+                entities:
+                  - entity: sensor.net_formatted
+                    name: Net Position
+                    format: precision2
+                  - entity: sensor.import_formatted
+                    name: Cost
+                    format: precision2
+                card_mod:
+                  style: |
+                    div.entity:first-of-type {
+                      color:
+                        {% set cost = states('sensor.grid_energy_net_daily_cost') | float(0) %}
+                        {% if cost == 0 %}
+                          white
+                        {% elif cost > 0 %}
+                          green
+                        {% else %}
+                          red
+                        {% endif %} !important;
+                    }
+              - type: custom:multiple-entity-row
+                entity: sensor.daily_exported_energy
+                name: Energy Totals
+                state_header: Exported
+                icon: mdi:transmission-tower
+                format: precision2
+                entities:
+                  - entity: sensor.daily_pv_generation_alt
+                    name: Solar Gen
+                    format: precision2
+                  - entity: sensor.daily_imported_energy
+                    name: Imported
+                    format: precision2
+              - type: custom:multiple-entity-row
+                entity: sensor.daily_house_energy_from_grid
+                name: Consumption
+                state_header: From Grid
+                icon: mdi:home-lightning-bolt-outline
+                format: precision2
+                entities:
+                  - entity: sensor.daily_consumed_energy
+                    name: Consumed
+                    format: precision2
+                  - entity: sensor.daily_house_energy_from_pv
+                    name: From PV
+                    format: precision2
+                  - entity: sensor.daily_house_energy_from_battery
+                    name: From Batt
+                    format: precision2
+              - type: custom:multiple-entity-row
+                entity: sensor.overnight_consumption
+                name: Day & Night Consumption
+                state_header: During Night
+                icon: mdi:weather-night-partly-cloudy
+                format: precision2
+                entities:
+                  - entity: sensor.daily_daytime_consumption
+                    name: During Day
+                    format: precision2
+              - type: custom:multiple-entity-row
+                entity: sensor.daily_battery_charge
+                name: Battery
+                state_header: Total Charged
+                icon: mdi:battery-sync
+                format: precision2
+                entities:
+                  - entity: sensor.daily_battery_discharge
+                    name: Total Discharged
+                    format: precision2
+          - type: entities
+            title: Inverter Settings
+            show_header_toggle: false
+            entities:
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "sigenergy"
+                row:
+                  entity: sensor.sigenergy_remote_ems
+                  name: Remote EMS Status
+                  icon: mdi:information
+                  card_mod:
+                    style:
+                      hui-generic-entity-row:
+                        $: |
+                          :host {
+                            {% set val = states('sensor.sigenergy_remote_ems') %}
+                            --remote-ems-color:
+                              {% if val == 'Off' or val == 'off' %}
+                                orange
+                              {% elif val == 'On' or val == 'on' %}
+                                green
+                              {% else %}
+                                var(--primary-text-color)
+                              {% endif %};
+                          }
+                          :host .state { color: var(--remote-ems-color) !important; }
+              - entity: sensor.inverter_ems_mode_text
+                name: Current EMS Control Mode                                        # JBH - For myself - Update to SIG Name
+                icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: "sigenergy"
+                row:
+                  entity: sensor.inverter_forced_charge_command
+                  name: Current Forced Charge/Discharge Mode
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not:
+                      [
+                        "alphaess",
+                        "fronius",
+                        "goodwe",
+                        "goodwe_et",
+                        "goodwe_int",
+                      ]
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.inverter_current_max_soc
+                  name: Current SoC Status
+                  state_header: Maximum
+                  format: precision0
+                  icon: mdi:battery
+                  entities:
+                    - entity: sensor.inverter_current_min_soc
+                      name: Minimum
+                      format: precision0
+                    - entity: sensor.inverter_current_reserved_soc_backup
+                      name: Reserved
+                      format: precision0
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "alphaess"
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.inverter_current_max_soc
+                  name: Current SoC Status
+                  state_header: Maximum
+                  format: precision0
+                  icon: mdi:battery
+                  entities:
+                    - entity: sensor.inverter_current_min_soc
+                      name: Minimum
+                      format: precision0
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "fronius"
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.inverter_current_max_soc
+                  name: Current SoC Status
+                  state_header: Maximum
+                  format: precision0
+                  icon: mdi:battery
+                  entities:
+                    - entity: sensor.inverter_current_reserved_soc_backup
+                      name: Reserved
+                      format: precision0
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not:
+                      [
+                        "alphaess",
+                        "goodwe",
+                        "goodwe_et",
+                        "goodwe_int",
+                        "fronius",
+                      ]
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.inverter_current_max_discharge_power
+                  name: Max Battery Power
+                  state_header: Discharge
+                  format: precision0
+                  icon: mdi:battery
+                  entities:
+                    - entity: sensor.inverter_current_max_charge_power
+                      name: Charge
+                      format: precision0
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: ["goodwe", "goodwe_et", "goodwe_int"]
+                row:
+                  entity: sensor.inverter_current_max_charge_power
+                  name: Current Charge/Discharge Power
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "fronius"
+                row:
+                  entity: sensor.fronius_current_charge_discharge_power
+                  name: Max Battery Charge/Discharge Power
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "alphaess"
+                row:
+                  entity: sensor.inverter_current_max_charge_power
+                  name: Max Battery Charge/Discharge Power
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "sungrow"
+                row:
+                  entity: sensor.inverter_current_charge_discharge_power
+                  name: Current Charge Discharge Power
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state_not: ["alphaess", "fronius", "sigenergy"]
+                row:
+                  entity: sensor.inverter_current_export_power_limit
+                  name: Current Export Power Limit
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: ["alphaess", "fronius"]
+                row:
+                  entity: sensor.inverter_current_export_power_limit
+                  name: Current Export Power Limit (%, not Watts)
+                  icon: mdi:information
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: ["sigenergy"]
+                row:
+                  type: custom:multiple-entity-row
+                  entity: sensor.inverter_pv_power_limit
+                  name: Current Power Limits
+                  state_header: PV Generation
+                  format: precision0
+                  icon: mdi:flash
+                  entities:
+                    - entity: sensor.inverter_current_export_power_limit
+                      name: Export
+                      format: precision0
+      - type: grid
+        cards: []
+    cards: []
+  - title: Pricing
+    path: em-pricing
+    icon: mdi:battery-outline
+    type: panel
+    cards:
+      - type: custom:state-switch
+        entity: input_select.electricity_provider
+        states:
+          "LocalVolts": &shared_card
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card_mod_templates:
+                  responsive_text_24: &responsive_24
+                    card_mod:
+                      style: |
+                        :host {
+                          @media (max-width: 768px) { font-size: 16px !important; }
+                          @media (max-width: 480px) { font-size: 12px !important; }
+                          @media (max-width: 360px) { font-size: 10px !important; }
+                        }
+                  responsive_text_20: &responsive_20
+                    card_mod:
+                      style: |
+                        :host {
+                          @media (max-width: 768px) { font-size: 14px !important; }
+                          @media (max-width: 480px) { font-size: 10px !important; }
+                          @media (max-width: 360px) { font-size: 8px !important; }
+                        }
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-settings.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_select.energy_profile_slot
+                      title: "Energy profile slot."
+                      style:
+                        top: 11%
+                        left: 65%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: icon
+                      icon: mdi:content-save
+                      title: "Save Profile to currently selected slot."
+                      tap_action:
+                        action: call-service
+                        service: input_button.press
+                        target:
+                          entity_id: input_button.energy_profile_save
+                      style:
+                        top: 13%
+                        left: 64%
+                        color: blue
+                      <<: *responsive_24
+                    - type: icon
+                      icon: mdi:autorenew
+                      title: "Load Profile from currently selected slot."
+                      tap_action:
+                        action: call-service
+                        service: input_button.press
+                        target:
+                          entity_id: input_button.energy_profile_load
+                      style:
+                        top: 13%
+                        left: 66%
+                        color: blue
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_sell_price_night
+                      title: "Enter the definition of a price spike for the morning shoulder period. If the sell price exceeds this figure between the hours of 6-8am, export may occur."
+                      style:
+                        top: 29%
+                        left: 29%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_sell_price_day
+                      title: "Enter the definition of a day/evening price spike. If the sell price exceeds this figure (all hours outside of 6-8am), export may occur."
+                      style:
+                        top: 20%
+                        left: 62%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_night_spike_prep
+                      title: "This is the price that you are willing to pay to charge your battery up if a morning shoulder price spike is detected (as defined)."
+                      style:
+                        top: 36%
+                        left: 20%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_day_spike_prep
+                      title: "This is the price that you are willing to pay to charge your battery up if a day/evening price spike is detected (as defined)."
+                      style:
+                        top: 36%
+                        left: 63%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_day
+                      title: "This is the price that you are willing to pay to buy electricity if EM has detected that you can't generate enough to charge your battery purely from solar. Note that if you have this set too low, charging may not occur."
+                      style:
+                        top: 34%
+                        left: 43%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.curtail_cents
+                      title: "Curtailing of excess generation will occur when the sell price is under this amount, if curtailing has been enabled on the PV Settings tab."
+                      style:
+                        top: 18%
+                        left: 27%
+                        color: blue
+                        font-size: 24px
+                    - type: state-label
+                      entity: input_number.battery_use_cost
+                      title: "If there is not enough solar generation, import from the grid when the buy price is under this figure. If the buy price is over this figure it will discharge from the battery instead."
+                      style:
+                        top: 39%
+                        left: 44%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_morning_prep
+                      title: "If an upcoming morning shoulder spike has been detected, and the buy price is under the maximum charging price, charge the battery up to this percentage."
+                      style:
+                        top: 27%
+                        left: 10%
+                        color: white
+                        font-size: 20px
+                      suffix: "%"
+                      <<: *responsive_20
+                    - type: state-label
+                      entity: input_number.battery_morning_limit
+                      title: "If a morning shoulder spike export is in progress, discharge the battery down to this percentage only."
+                      style:
+                        top: 29.5%
+                        left: 10%
+                        color: white
+                        font-size: 20px
+                      suffix: "%"
+                      <<: *responsive_20
+                    - type: state-label
+                      entity: input_number.battery_evening_prep
+                      title: "This is the maximum percentage that you want the battery to charge to during the day. Note that this is independent of any maximum SoC setting you may have configured and your maximum SoC will override this if set lower."
+                      style:
+                        top: 26%
+                        left: 40.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_capacity
+                      title: "The total battery capacity in kWh, as defined on the PV Settings tab."
+                      style:
+                        left: 19.5%
+                        top: 11.25%
+                        color: gray
+                        font-size: 24px
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_1_normal_mode
+                      title: "The minimum price to sell at if the tier 1 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 58%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_2_normal_mode
+                      title: "The minimum price to sell at if the tier 2 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 62%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_3_normal_mode
+                      title: "The minimum price to sell at if the tier 3 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 66%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_4_normal_mode
+                      title: "The minimum price to sell at if the tier 4 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 70%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_5_normal_mode
+                      title: "The minimum price to sell at if the tier 5 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 74%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_6_normal_mode
+                      title: "The minimum price to sell at if the tier 6 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 78%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_1
+                      title: "Tier 1: Battery percentage range that apply to the tier 1 sell pricing on the right."
+                      style:
+                        top: 57%
+                        left: 8%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - 100%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_2
+                      title: "Tier 2: Battery percentage range that apply to the tier 2 sell pricing on the right."
+                      style:
+                        top: 61.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_3
+                      title: "Tier 3: Battery percentage range that apply to the tier 3 sell pricing on the right."
+                      style:
+                        top: 65.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_4
+                      title: "Tier 4: Battery percentage range that apply to the tier 4 sell pricing on the right."
+                      style:
+                        top: 70%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_5
+                      title: "Tier 5: Battery percentage range that apply to the tier 5 sell pricing on the right."
+                      style:
+                        top: 74.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_6
+                      title: "Tier 6: Battery percentage range that apply to the tier 6 sell pricing on the right."
+                      style:
+                        top: 78.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_2a
+                      style:
+                        top: 61.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_3a
+                      style:
+                        top: 65.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_4a
+                      suffix: "%"
+                      style:
+                        top: 70%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_5a
+                      suffix: "%"
+                      style:
+                        top: 74.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_6a
+                      suffix: "%"
+                      style:
+                        top: 78.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_price
+                      title: "If in High Sell mode, this is the lowest price to sell at."
+                      style:
+                        top: 62%
+                        left: 43%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 32%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 43%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_high_sell_mode_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 63%
+                        left: 32%
+                        color: white
+                        font-size: 24px
+                      suffix: "% Usable"
+                      tap_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 56%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 67.5%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.sell_buy_mode_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 63%
+                        left: 56.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "% Usable"
+                      tap_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_diff
+                      title: "This is the price difference between selling now and buying later that you are willing to export at. Note that this is based off the forecast as per your energy provider and forecasts can change. Example, assuming this setting is 10c, if the current sell price is 30c and the price to buy later is predicted to be 12c, then the difference is 18c and export will occur as the difference is greater than 10c."
+                      style:
+                        top: 64%
+                        left: 67%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used. This applies to Normal Mode only."
+                      style:
+                        top: 96%
+                        left: 20%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now. This applies to Normal Mode only."
+                      style:
+                        top: 96%
+                        left: 56%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.inverter_export_limit
+                      title: "The inverter export limit, as defined on the PV Settings tab."
+                      style:
+                        left: 19%
+                        top: 13.5%
+                        font-size: 24px
+                        color: gray
+                      suffix: kW
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+          "Amber Electric": *shared_card
+          "Flow Power":
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-flowpower.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
+                      style:
+                        top: 40%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
+                      style:
+                        top: 68%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_peak_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 8.5%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_peak_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 19%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.flowpower_peak_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 45%
+                        left: 8.5%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_select.flow_power_price_signal_charge_limit
+                      title: "This is the PEA signal that you are willing to purchase electricity UP TO. Energy Manager will not restrict to purchasing AT this price, but will still purchase at the cheapest period UP UNTIL (and including) this price, IF REQUIRED. Note that the PEA here is estimated, it may not reflect exactly what Flow Power define."
+                      style:
+                        top: 45%
+                        left: 37%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_max_grid_soc
+                      title: "This is the maximum SOC that you are willing to charge your battery up to if electricity is required to be purchased from the grid. It will not affect the maximum SOC that natural solar generation will take your battery to. Your inverter-configured maximum SOC will override this if it is set lower than here."
+                      style:
+                        top: 80%
+                        left: 37%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+          "Globird":
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-globird.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
+                      style:
+                        top: 40%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
+                      style:
+                        top: 68%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_super_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 8.5%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_super_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 19%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.globird_super_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported during the Super export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount, so it will stop at the first met, either your kWh limit or your battery reserve."
+                      style:
+                        top: 45%
+                        left: 8%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_std_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 33%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_std_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 44%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.globird_std_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported during the Standard (not Super) export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount."
+                      style:
+                        top: 45%
+                        left: 33%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
+          "Other":
+            type: vertical-stack
+            cards:
+              - type: markdown
+                content: >-
+                  # Custom Electricity Plans
+
+                  All configurations are performed on the [Settings tab](/energy-pv/em-settings).
+
+
+                  This current page is only used by Amber Electric, LocalVolts, Globird and Flow Power providers.
+
+  - type: sections
+    title: Settings
+    path: em-settings
+    icon: mdi:cog-outline
+    sections:
+      - type: grid
+        cards:
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                content: >-
+                  # Your Energy Setup
+
+                  Enter the details of your solar and battery setup.
+
+
+                  **Battery Install Date:** Used to calculate battery
+                  cycles/day.
+
+                  **Inverter Size:** This should be the advertised inverter
+                  size, in kW.
+
+                  **Battery Charge and Discharge Power Limit:** Check your manual
+                  or with your installer to find out what the maximum charge and
+                  discarge limits are for your batteries.
+                  _Important: Do NOT enter a discharge limit that is higher
+                  than your inverter rating.__
+
+                  **Invert Export Limit:** This will generally be what your
+                  energy company (e.g. Energex) allow you to export. Normally it
+                  would be 5kW, even if you have a larger inverter.
+
+                  **Battery Capacity:** Enter the size of your battery stack, in
+                  kWh.
+
+                  **Total Solar Array Size:** Enter the total size of your solar
+                  panel array(s), in kW
+
+                  **Energy Manager API Key:** Obtain your free API Key from
+                  https://energymanager.com.au
+
+                  **Exclusion Period:** You are able to set a time period when
+                  you will disable battery discharge, so that you will *only*
+                  take from the grid - good for EV charging. Leave disabled
+                  unless you really need it. [PREMIUM ONLY]
+                text_only: true
+              - type: entities
+                title: System Configuration
+                entities:
+                  - entity: input_select.inverter_brand
+                    name: Inverter Brand
+                  - entity: sensor.configuration_status
+                    name: Status
+                  - entity: input_boolean.restart_required
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "goodwe"
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.goodwe_schedule_8slot
+                      name: GoodWe EH Slot (1-8)
+              - type: conditional
+                conditions:
+                  - entity: input_select.inverter_brand
+                    state: "goodwe_et"
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.goodwe_schedule_4slot
+                      name: GoodWe ET/ESA Slot (1-4)
+              - type: entities
+                entities:
+                  - entity: input_datetime.battery_install_date
+                  - entity: input_number.inverter_import_limit
+                    name: Inverter Size (kW)
+                  - entity: input_number.battery_charge_power_hardlimit
+                    name: Battery Charge Limit (W)
+                    icon: mdi:battery-arrow-up
+                  - entity: input_number.battery_discharge_power_hardlimit
+                    name: Battery Discharge Limit (W)
+                    title: "Important: This must NOT be higher than the inverter rating, even if the battery can discharge at a higher rate. Your inverter may behave erratically if this is configured incorrectly."
+                    icon: mdi:battery-arrow-down
+                  - entity: input_number.safety_max_charge_power
+                    name: Safety - Max Charge
+                    mode: box
+                  - entity: input_number.safety_max_discharge_power
+                    name: Safety - Max Discharge
+                    mode: box
+                  - entity: input_number.inverter_export_power_hardlimit
+                    name: Export Power Limit (W)
+                  - entity: input_number.battery_capacity
+                    name: Battery Capacity (kWh)
+                  - entity: input_number.solar_array_size
+                    name: Total Solar Array Size (kW)
+                  - entity: input_boolean.enable_curtailing
+                    name: Enable Curtailing
+                  - entity: input_boolean.dynamic_charging
+                  - entity: input_number.inverter_max_charge_limiter_percentage
+                    name: Allow charge rate %
+                    mode: box
+                  - entity: input_number.inverter_max_discharge_limiter_percentage
+                    name: Allow discharge rate %
+                    mode: box
+                  - entity: input_text.energymanager_key
+                    name: Energy Manager API Key (Required)
+                  - entity: input_text.em_api_version
+                    name: Energy Manager API Version
+                  - entity: input_text.timezone
+                    name: Timezone (e.g., AEST or AEDT) (Required)
+                  - entity: input_select.em_update_branch
+                  - entity: input_boolean.energy_flow_visual
+                  - entity: input_boolean.enable_exclusion_period
+              - type: conditional
+                conditions:
+                  - entity: input_boolean.enable_exclusion_period
+                    state: "on"
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.exclusion_start_time
+                    - entity: input_datetime.exclusion_end_time
+
+              - type: entities
+                title: Dynamic Battery Reserve
+                entities:
+                  - type: conditional
+                    conditions:
+                      - entity: input_select.electricity_provider
+                        state_not: "Other"
+                    row:
+                      entity: input_boolean.dynamic_reserve
+                  - type: conditional
+                    conditions:
+                      - entity: input_boolean.dynamic_reserve
+                        state: "on"
+                    row:
+                      entity: input_select.dynamic_reserve_strategy
+                      name: Strategy
+
+              - type: markdown
+                content: >
+                  **Dynamic Reserve** will calculate the best battery reserve for your selling strategy based on your predicted house power load between "now" and when your PV Generation exceeds your house load in the morning. Note that you should start **Conservatively** until you understand how it works.
+
+
+                  **Amber & LocalVolts**: Dynamic reserve is not available on the **Normal Mode** selling strategy. However, if enabled, on other modes it will aim to have your battery near your minimum SOC each morning by exporting any excess.
+
+
+                  **Flow Power**: Dynamic reserve will override your **Peak reserve** settings and will work out its own reserve each night.
+
+
+                  **Glowbird**: Dynamic reserve will override both your **Peak export reserve** and your **Other export reserve** settings and will work out its own reserve each night.
+
+
+                  **Other**: Dynamic reserve will override your **Peak export reserve** settings and will work out its own reserve each night.  Ensure that you allow export from the battery during the periods that you want included in the dynamic reserve.
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-top: none;
+                      margin-top: -20px;
+                      margin-bottom: 20px;
+                    }
+
+
+
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: ["LocalVolts", "Amber Electric"]
+                card:
+                  type: sensor
+                  entity: sensor.nodered_energyproviderupdate
+                  graph: none
+                  detail: 1
+                  name: Electricity Provider API Last Successful Poll
+              - graph: none
+                type: sensor
+                entity: sensor.solcast_last_updated
+                detail: 1
+                name: Solcast API Last Successful Poll
+              - graph: none
+                type: sensor
+                entity: sensor.em_last_updated
+                detail: 1
+                name: Energy Manager API Last Successful Poll
+                icon: mdi:clock
+              - graph: none
+                type: sensor
+                entity: sensor.bom_last_updated
+                detail: 1
+                icon: mdi:clock
+                name: BOM Last Successful Poll
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                content: >
+                  # Electricity Provider
+
+                  Select your Electricity Provider and enter **either** your
+                  LocalVolts details **or** your Amber Electric details below,
+                  depending on who your electricity provider is.
+
+
+                  **LocalVolts:** You can obtain your API Key and Partner ID by
+                  emailing LocalVolts support. NMI can usually be set as "*".
+
+
+                  **Amber Electric:** You can obtain your API Key from
+                  https://app.amber.com.au/developers/. NMI is automatically
+                  pulled during integration initialisation.
+
+
+                  **Flow Power** & **Globird:** You do not need an API key for Flow Power or Globird.
+
+
+                  **Other:** You can add tariff information for many other electricity providers. No electricity provider APIs are supported with this selection.
+
+
+                  **Important:** You need to select an electricity provider from
+                  those available. Energy Management will not work with other
+                  providers.
+                text_only: true
+              - type: entity
+                entity: input_select.electricity_provider
+                state_color: false
+                grid_options:
+                  columns: 12
+                  rows: 2
+                name: Your Electricity Provider (Select)
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: LocalVolts
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_text.localvolts_partner_id
+                      name: LocalVolts Partner ID (Required)
+                    - entity: input_text.localvolts_key
+                      name: LocalVolts API Key (Required)
+                    - entity: input_text.nmi
+                      name: Electricity NMI (Required, try *)
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Amber Electric
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_text.amber_api_key
+                      name: Amber Electric API Key (Required)
+                    - entity: input_text.amber_site
+                      name: Amber Electric Site ID (Required)
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Flow Power
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.flowpower_peak_start_time
+                      name: Peak Start Time (Required)
+                    - entity: input_datetime.flowpower_peak_end_time
+                      name: Peak End Time (Required)
+                    - entity: input_number.flowpower_buy_price
+                      name: Buy Price
+                    - entity: input_number.flowpower_offpeak_feedin_price
+                      name: Off-peak Export Price
+                    - entity: input_number.flowpower_peak_feedin_price
+                      name: Peak Export Price
+                    - entity: input_number.flowpower_peak_max_export
+                      name: Peak Export Limit
+                    - entity: input_boolean.flowpower_enable_peak_export
+                      name: Allow peak exporting
+                    - entity: input_number.flowpower_max_export_percent_good_weather
+                      name: "Normal: Percent export rate"
+                    - entity: input_boolean.flowpower_bad_weather_export
+                      name: Export on bad weather
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Flow Power"
+                  - entity: input_boolean.flowpower_bad_weather_export
+                    state: "on"
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.flowpower_max_export_percent_bad_weather
+                      name: "Bad weather: Percent export rate"
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.globird_peak_buy_start
+                      name: Peak Buy Start Time
+                    - entity: input_datetime.globird_peak_buy_end
+                      name: Peak Buy End Time
+                    - entity: input_number.globird_peak_buy_price
+                      name: Peak Buy Price
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.globird_free_buy_start
+                      name: Free Buy Start Time
+                    - entity: input_datetime.globird_free_buy_end
+                      name: Free Buy End Time
+                    - entity: input_number.globird_free_buy_price
+                      name: Free Buy Price
+                    - entity: input_boolean.globird_free_buy_enable
+                      name: Enable Free Buy Period Charge
+                    - entity: input_number.globird_free_buy_period_limit
+                      name: Free Buy Period Limit
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.globird_other_buy_price
+                      name: Other Buy Price
+                    - entity: input_boolean.globird_other_buy_enable
+                      name: Enable Other Buy Period Charge
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.globird_super_start
+                      name: Super Sell Period Start
+                    - entity: input_datetime.globird_super_end
+                      name: Super Sell Period End
+                    - entity: input_number.globird_super_sell
+                      name: Super Period Sell Price
+                    - entity: input_number.globird_super_max_export
+                      name: Super Period Max Export kWh
+                    - entity: input_number.globird_super_max_export_kw_percentage
+                      name: Super Period Export kW percent
+                    - entity: input_boolean.globird_super_allow_export
+                      name: Allow Super Period Export
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_datetime.globird_std_start
+                      name: Standard Sell Period Start
+                    - entity: input_datetime.globird_std_end
+                      name: Standard Sell Period End
+                    - entity: input_number.globird_std_sell
+                      name: Standard Period Sell Price
+                    - entity: input_number.globird_std_max_export_kw_percentage
+                      name: Standard Period Export kW percent
+                    - entity: input_boolean.globird_std_allow_export
+                      name: Allow Standard Period Export
+                    - entity: input_boolean.globird_std_export_solar_only
+                      name: Only Export Excess Solar
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: Globird
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.globird_other_sell
+                      name: Other Period Sell Price
+                    - entity: input_number.globird_other_max_export_kw_percentage
+                      name: Other Period Export kW percent
+                    - entity: input_boolean.enable_curtailing
+                      name: Enable Curtailing for Other Period
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Globird"
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_number.globird_bad_weather_max_export
+                      name: "Bad weather: Restrict Additional Export Rate"
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Electricity Plan Catalogue
+                  entities:
+                    - entity: input_select.other_tariff_plan
+                      name: Electricity plan
+                    - entity: input_button.other_tariff_refresh
+                      name: Refresh available plans
+                    - entity: input_button.other_tariff_import
+                      name: Import selected plan
+                    - entity: input_button.other_tariff_export
+                      name: Export current plan
+                    - entity: input_button.other_tariff_reset
+                      name: Reset current plan
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Peak Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_peak_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                      row:
+                        entity: input_number.other_peak_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_peak_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                        - entity: input_boolean.other_peak_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_2_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                        - entity: input_boolean.other_peak_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_2_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                        - entity: input_boolean.other_peak_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_peak_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                        - entity: input_boolean.other_peak_2
+                          state: "on"
+                        - entity: input_boolean.other_peak_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_3_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_peak_1
+                          state: "on"
+                        - entity: input_boolean.other_peak_2
+                          state: "on"
+                        - entity: input_boolean.other_peak_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_peak_3_end
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Offpeak Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_offpeak_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_number.other_offpeak_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_bat_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_1_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_1_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_offpeak_1_battery_restrict_under
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_2_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_2_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_bat_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_2_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_offpeak_2_battery_restrict_under
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_3_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_offpeak_3_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_bat_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_offpeak_3_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_offpeak_1
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_2
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3
+                          state: "on"
+                        - entity: input_boolean.other_offpeak_3_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_offpeak_3_battery_restrict_under
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Shoulder Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_shoulder_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_number.other_shoulder_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_bat_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_1_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_1_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_shoulder_1_battery_restrict_under
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_2_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_2_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_bat_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_2_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_shoulder_2_battery_restrict_under
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_3_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_shoulder_3_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_bat_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_shoulder_3_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_shoulder_1
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_2
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3
+                          state: "on"
+                        - entity: input_boolean.other_shoulder_3_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_shoulder_3_battery_restrict_under
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Additional Import Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_additional_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_additional_1
+                          state: "on"
+                      row:
+                        entity: input_number.other_additional_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_additional_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_additional_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_additional_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_additional_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_additional_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_additional_bat_1
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Free Period Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_free_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_free_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_free_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_free_force_import
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_free_bat_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_free_import_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                        - entity: input_boolean.other_free_import_limit
+                          state: "on"
+                      row:
+                        entity: input_number.other_free_kwh
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_free_1_restrict
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_free_1
+                          state: "on"
+                        - entity: input_boolean.other_free_1_restrict
+                          state: "on"
+                      row:
+                        entity: input_number.other_free_1_battery_restrict_under
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Export Tariff Configuration
+                  entities:
+                    - entity: input_boolean.other_export_1
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_1_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_1_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_1_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_1_export
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_1_export
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_1_battery_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_1_export
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_1_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_1_export
+                          state: "on"
+                        - entity: input_boolean.other_export_1_limit
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_1_kwh
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_2
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_2_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_2_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_2_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_2_export
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_2_export
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_2_battery_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_2_export
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_2_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_2_export
+                          state: "on"
+                        - entity: input_boolean.other_export_2_limit
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_2_kwh
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_3
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_3_tariff
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_3_start
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                      row:
+                        entity: input_datetime.other_export_3_end
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_3_export
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                        - entity: input_boolean.other_export_3_export
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_3_battery_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                        - entity: input_boolean.other_export_3_export
+                          state: "on"
+                      row:
+                        entity: input_boolean.other_export_3_limit
+                    - type: conditional
+                      conditions:
+                        - entity: input_boolean.other_export_1
+                          state: "on"
+                        - entity: input_boolean.other_export_2
+                          state: "on"
+                        - entity: input_boolean.other_export_3
+                          state: "on"
+                        - entity: input_boolean.other_export_3_export
+                          state: "on"
+                        - entity: input_boolean.other_export_3_limit
+                          state: "on"
+                      row:
+                        entity: input_number.other_export_3_kwh
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: entities
+                  title: Check Configuration
+                  entities:
+                    - type: button
+                      name: Validate Tariff
+                      icon: mdi:check-decagram
+                      tap_action:
+                        action: perform-action
+                        perform_action: input_button.press
+                        target:
+                          entity_id: input_button.validate_diy_tariff
+
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state: "Other"
+                card:
+                  type: markdown
+                  content: |
+                    ## Validation Result
+
+                    {{ states('input_text.diy_tariff_validation_result') }}
+
+              - type: entities
+                title: Electricity Provider
+                entities:
+                  - entity: input_number.electricity_provider_daily_charge
+                    name: Daily Charge
+                  - entity: input_number.billing_day
+                    name: Billing day
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    content: >
+                      # Electricity Distributor
+
+                      Select your **Electricity Distributor** from the list.
+                      This is used to define your demand period, should you have one.
+
+
+                      **Important**: Make sure to turn on the **Enable if you are on a demand tariff**
+                      if you are on a demand tariff.
+                  - type: entity
+                    entity: input_boolean.electricity_distributor_demand_enabled
+                    name: Enable if you are on a demand tariff (off for Time-of-Use)
+                  - type: entity
+                    entity: input_select.electricity_distributor
+                    name: Electricity Distributor (for demand periods)
+              - type: markdown
+                content: >-
+                  # Your Solcast Details
+
+                  Enter the details of your **Solcast configuration** here.
+                  Solcast is used to predict the amount of solar generation
+                  from your array for the day, and to predict the coming day's
+                  generation.
+
+
+                  Your free API key and site codes can be created and retrieved
+                  from https://www.solcast.com. You will **need** at least the
+                  API key and one site code for Energy Manager to work
+                  correctly.
+                text_only: true
+              - type: entities
+                entities:
+                  - entity: input_text.solcast_key
+                    name: Solcast API Key (Required)
+                  - entity: input_text.solcast_array_1
+                    name: Solcast Array 1 Code (Required)
+                  - entity: input_text.solcast_array_2
+                    name: Solcast Array 2 Code (Optional)
+              - type: conditional
+                conditions:
+                  - entity: input_select.electricity_provider
+                    state_not: ["Flow Power", "Globird", "Other"]
+                card:
+                  type: vertical-stack
+                  cards:
+                    - type: markdown
+                      content: >-
+                        # Notifications
+
+                        If you would like to be notified when price spikes and other
+                        important events occur, please install the **NTFY** app on
+                        your Android or iOS device and then subsribe to your unique
+                        channel. Notifications will also appear in Home Assistant. [PREMIUM ONLY]:
+                          
+
+                        **https://ntfy.energymanager.com.au/{{states('input_text.energymanager_key')}}**
+
+
+                        Make sure to select **Use another server** and enter
+                        https://ntfy.energymanager.com.au as the server name when
+                        subscribing.
+
+
+                        **Price Spike Notifications:** If a price spike is detected, a notification will be sent.
+
+
+                        **Warning Notifications:** If a configuration issue is detected (for example, no Solcast data), a notification will be sent.
+                      text_only: true
+                    - type: entities
+                      entities:
+                        - entity: input_boolean.notification_price
+                        - entity: input_boolean.notification_warning
+              - type: markdown
+                content: >-
+                  # Emergency Override
+
+                  The emergency override toggle will disable energy manager from running any automations (except for retrieving electricity pricing data).
+
+
+                  This will disable energy manager completely until you manually re-enable it. If you turn it off, remember to turn it back on as it will not enable by itself.
+                text_only: true
+              - type: entities
+                entities:
+                  - entity: input_boolean.emergency_override
+        column_span: 3
+    header:
+      layout: responsive
+      badges_position: bottom
+    max_columns: 2
+    cards: []
+    dense_section_placement: false
+  - type: sections
+    title: Score Settings
+    path: em-score-settings
+    icon: mdi:counter
+    sections:
+      - type: grid
+        cards:
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                content: >-
+                  # Energy Scores - for Amber & LocalVolts Wholesale Rates Only
+
+                  You are provided access to Energy Availabilty and Profit Potential scores
+                  to allow you more granular control of your energy consumption. Here you are able to customise additional settings
+                  that will change how your Energy Availability and Profit Potential scores will be
+                  calculated.
+
+
+                  The scores are contained in entities that you can link other automations into,
+                  to allow you to defer energy using appliances/loads to periods when the most energy will be available.
+
+
+                  Examples of load deferring may be EV charging, washing machines, pool pumps, hot water systems, etc.
+                  Update the settings below to reflect what factors should impact your scoring system.
+                  Entering a higher number places more emphasis, or importance, on that factor. They will all be normalised
+                  at the EM servers so that the total of all factors equals 1, but will remain proportional.
+
+                  ## What do these scores mean that these weightings are getting applied to?
+
+                  ### Availability Scores
+
+                  These scores rate how much energy is available for you to use now, over the next 12hrs and possibly over the next 5 days.
+                  It is rated from 1-100, with 100 being the best.  It takes into account your predicted current and future solar generation, your
+                  current and future household power requirements, how full your battery is (taking into consideration your
+                  upcoming household requirements), and of course the cost of purchasing energy from the grid, if that becomes
+                  a requirement.
+
+
+                  #### How can these Availability scores be used?
+
+                  These scores can change every 5 minutes as forecasts and prices change. Since entities are created for now, the next 12hrs, and the next
+                  5 days, you can create your own automations to perform a function when a specific score is reached. For example, perhaps
+                  you want to turn on a pool heat pump when there is ample spare energy, you could watch for the "now" score to change to
+                  something over, for example, 60, and then turn on.  If the "now" score drops below it again, turn it off.  This way you
+                  can load-shift, or defer, their power use to a time that you have more energy available, for example, while your inverter is
+                  curtailing and the sun is shining.
+
+
+                  The entities are known as: **input_number.ascore_now**, **input_number.ascore_1h** to **input_number.ascore_12h**, and **input_number.ascore_1d** to **input_number.ascore_5d**
+                  The **input_number.ascore_now** sensor would be the most important one to watch, as that is the score right now.
+
+
+                  ### Profit Potential Scores
+
+                  These scores rate how potentially profitable the current hour and the next 12hrs could be.  It is rated from 1-100 (a
+                  negative FIT will score a 1), with 100 being the best.
+
+
+                  #### How can these Profit Potential scores be used?
+
+                  Similar to the Availability scores, these change every 5 mins as pricing forecasts change. Again, since entities are created for now
+                  and the next 12hrs, you can create automations that will **stop** certain appliances during a time where there is a potential to export
+                  your power. Being able to export more power during a price spike is important, as you will want to export it as quickly as possible.
+
+
+                  This will depend on the ability of your battery to discharge, but if you can minimise your usage during an export favourable
+                  time, then you may be able to export more of your energy to maximise your profits.
+
+
+                  The entities are known as: **input_number.pscore_now** and **input_number.pscore_1h** to **input_number.pscore_12h**.
+
+
+                  The **input_number.pscore_now** sensor would be the most important one to watch, as that is the score right now.
+                text_only: true
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                content: >
+                  # Weightings
+
+                  Enter how important you believe each factor is in defining availability. If you leave these all at zero, the defaults (in brackets)
+                  will be applied until you change them.
+
+
+                  **Weight Availabilty Price**: How important grid price is in determining availability (0.30).
+
+
+                  **Weight Availability Solar**: Importance of available solar (0.40)
+
+
+                  **Weight Availability Usage**: If load is high, availability to spare is lower. How important is this? (0.20)
+
+
+                  **Weight Availability Battery**: A fuller battery means more availabilty to use/export, how important is this to you? (0.10)
+
+
+                  **Weight Profit Sell Price**: Is selling for a high price important? (0.55)
+
+
+                  **Weight Profit Battery Headroom**: Is having spare capacity in the battery important? (0.25)
+
+
+                  **Weight Profit Night Survival**: Is making it through the night on your battery important? (0.20)
+              - type: markdown
+                content: >
+                  ### Availability Weightings
+                text_only: true
+              - type: entities
+                entities:
+                  - entity: input_number.weight_as_price
+                    name: "Buy Price Weighting"
+                  - entity: input_number.weight_as_solar
+                    name: "Solar Weighting"
+                  - entity: input_number.weight_as_usage
+                    name: "Usage Weighting"
+                  - entity: input_number.weight_as_battery
+                    name: "Battery weighting"
+              - type: markdown
+                content: >
+                  ### Profit Potential Weightings
+                text_only: true
+              - type: entities
+                entities:
+                  - entity: input_number.weight_ps_sell_price
+                    name: "Sell Price Weighting"
+                  - entity: input_number.weight_ps_headroom
+                    name: "Battery Headroom Weighting"
+                  - entity: input_number.weight_ps_night_survival
+                    name: "Night Survival Weighting"
+        column_span: 3
+    header:
+      layout: responsive
+      badges_position: bottom
+    max_columns: 2
+    cards: []
+    dense_section_placement: false
+  - type: sections
+    max_columns: 2
+    icon: mdi:update
+    path: ""
+    sections:
+      - type: grid
+        cards:
+          - type: markdown
+            content: >-
+              # Energy Manager Updates
+          - type: entities
+            entities:
+              - entity: sensor.energy_manager_update_status
+                name: Update Status
+              - entity: sensor.energy_manager_current_version
+                name: Current Version
+              - entity: sensor.energy_manager_available_version_display
+                name: Available Version
+              - entity: input_datetime.energy_manager_last_update_check
+                name: Last Check
+              - entity: input_boolean.energy_manager_auto_update_check
+                name: Auto-Check Updates
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.ssh_key_exists
+                state: "off"
+            card:
+              type: button
+              tap_action:
+                action: call-service
+                service: automation.trigger
+                target:
+                  entity_id: automation.generate_ssh_key_shell
+              name: Generate SSH Key
+              icon: mdi:key-plus
+              show_name: true
+              show_icon: true
+          - type: conditional
+            conditions:
+              - entity: input_text.ssh_key_status
+                state: "success"
+              - entity: input_text.ssh_key_dismissed
+                state_not: "true"
+            card:
+              type: vertical-stack
+              cards:
+                - type: markdown
+                  content: |
+                    ## 🔑 SSH Key Generated!
+
+                    **Add to SSH Addon:**
+
+
+                    1. Go to Settings → Apps → Advanced SSH & Web Terminal
+
+                    2. Click Configuration tab
+
+                    3. Click on the 3-dots to the right of 'Options' and select 'Edit in YAML'
+
+                    4. Replace 'authorized keys: []' with the following:
+
+                    ```yaml
+                    authorized_keys:
+                      - "{{ states('input_text.ssh_public_key') }}"
+                    ```
+                    Then:
+
+                    5. Save and restart SSH addon
+
+                    6. Done! Energy Manager updates will now work once you have configured your free API key.
+                - type: button
+                  tap_action:
+                    action: call-service
+                    service: input_text.set_value
+                    target:
+                      entity_id: input_text.ssh_key_dismissed
+                    service_data:
+                      value: "true"
+                  name: "✓ Done - Hide This Message"
+                  icon: mdi:check
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: script.check_for_energy_manager_updates
+            name: Check Updates
+            icon: mdi:update
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.check_for_energy_manager_updates
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: script.update_energy_manager
+            name: Install Update
+            icon: mdi:download
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.update_energy_manager
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: script.update_energy_manager_force
+            name: Force Reinstall
+            icon: mdi:download-multiple
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.update_energy_manager_force
+          - type: conditional
+            conditions:
+              - entity: input_boolean.energy_manager_update_available
+                state: "on"
+            card:
+              type: markdown
+              content: >
+                ## 🆕 Update Available!
+
+                **New Version:** {{ states('input_text.energy_manager_available_version') }}
+
+                **Current Version:** {{ states('sensor.energy_manager_current_version') }}
+
+                **Last Checked:** {{ states('input_datetime.energy_manager_last_update_check') }}
+
+                ### 📋 Updates:
+
+                {{ states('input_text.energy_manager_changelog') }}
+                ---
+                Click "Install Update" above to upgrade.
+    cards: []
+  - type: sections
+    max_columns: 3
+    icon: mdi:information-outline
+    path: ""
+    sections:
+      - type: grid
+        cards:
+          - type: markdown
+            content: |
+              {{ state_attr('sensor.energy_manager_motd', 'md') }}
+               
+               ---
+              _Title: Version Information
+              Version: {{ state_attr('sensor.energy_manager_motd', 'version') }}
+              Updated: {{ state_attr('sensor.energy_manager_motd', 'updated') }}_
+      - type: grid
+        cards:
+          - type: markdown
+            content: |
+              {{ state_attr('sensor.energy_manager_general', 'md') }}
+               
+               ---
+              _Title: General Information
+              Updated: {{ state_attr('sensor.energy_manager_general', 'updated') }}_
+      - type: grid
+        cards:
+          - type: markdown
+            content: |
+              {{ state_attr('sensor.energy_manager_changelog', 'md') }}
+               
+               ---
+              _Title: Changelog
+              Updated: {{ state_attr('sensor.energy_manager_changelog', 'updated') }}_
+

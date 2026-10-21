@@ -1,0 +1,3429 @@
+# em_scripts.yaml 
+# === ENERGY_MANAGER_SCRIPTS_START v1.3.0 ===
+script:
+  switch_inverter_brand:
+    alias: "Switch Inverter Brand"
+    description: "Switches the active modbus configuration based on selected brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "sungrow"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting Sungrow Activation"
+                  message: "Activating Sungrow configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_sungrow
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "sigenergy"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting Sigenergy Activation"
+                  message: "Activating Sigenergy configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_sigenergy
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "alphaess"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting AlphaESS Activation"
+                  message: "Activating AlphaESS configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_alphaess
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "goodwe"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting Goodwe Activation"
+                  message: "Activating Goodwe configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_goodwe
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "goodwe_et"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting Goodwe ET Activation"
+                  message: "Activating Goodwe ET configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_goodwe_et
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "goodwe_int"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Goodwe integration Activation"
+                  message: "Activated Goodwe integration-based configuration."
+                  notification_id: manual_activation_progress
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "fronius"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting Fronius Activation"
+                  message: "Activating Fronius configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_fronius
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
+                state: "solaredge"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Starting SolarEdge Activation"
+                  message: "Activating SolarEdge configuration... Please wait."
+                  notification_id: manual_activation_progress
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_solaredge
+              - delay: "00:00:01"
+              - action: shell_command.check_config_files
+              - delay: "00:00:01"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual {{ states('input_select.inverter_brand') | title }} Activation Complete"
+          message: >
+            {{ states('input_select.inverter_brand') | title }} configuration has been activated but a restart is required.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: inverter_config_change
+  set_inverter_ems_mode:
+    alias: "Set Inverter EMS Mode"
+    description: "Sets EMS mode based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  mode_value: >
+                    {% set mode_text = states('input_select.inverter_ems_mode') %}
+                    {% if mode_text == 'Self-Consumption mode' %}
+                      0
+                    {% elif mode_text == 'Forced Mode' %}
+                      2
+                    {% elif mode_text == 'External EMS' %}
+                      3
+                    {% elif mode_text == 'VPP' %}
+                      4
+                    {% else %}
+                      0
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13049
+                  value: "{{ mode_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  mode_value: >
+                    {% set mode_text = states('input_select.inverter_ems_mode') %}
+                    {% if mode_text == 'Self-Consumption mode' %}
+                      0
+                    {% else %}
+                      1
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  unit: 247
+                  address: 40029 # (EMS mode)
+                  value: "{{ mode_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  mode_value: >
+                    {% set mode_text = states('input_select.inverter_ems_mode') %}
+                    {% if mode_text == 'Forced Mode' %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0880 # Dispatch Start (0880H)
+                  value: "{{ mode_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  mode_value: >
+                    {% set mode_text = states('input_select.inverter_ems_mode') %}
+                    {% if mode_text == 'Self-Consumption mode' %}
+                      1
+                    {% elif mode_text == 'External EMS' %}
+                      3
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57348 # 0xE004 Storage Control Mode
+                  value: "{{ mode_value | int }}"
+  set_inverter_charge_discharge_mode:
+    alias: "Set Inverter Charge/Discharge Mode"
+    description: "Sets charge/discharge mode using generic options mapped to brand-specific implementations"
+    fields:
+      option:
+        description: "Generic mode option (Stop, Forced Charge, Forced Discharge)"
+        example: "Self Consumption"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: sungrow_inverter
+                          unit: !secret modbus_slave
+                          address: 13050 # Charge/discharge command
+                          value: 204 # Stop (0xCC)
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: sungrow_inverter
+                          unit: !secret modbus_slave
+                          address: 13050 # Charge/discharge command
+                          value: 170 # Charge (0xAA)
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: sungrow_inverter
+                          unit: !secret modbus_slave
+                          address: 13050 # Charge/discharge command
+                          value: 187 # Discharge (0xBB)
+                default:
+                  - action: system_log.write
+                    data:
+                      message: "Unknown Sungrow mode option: {{ option }}"
+                      level: warning
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40029 # (EMS mode)
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40031 # ems mode command
+                          value: 2 # Stop
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40029 # (EMS mode)
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40031 # ems mode command
+                          value: 4 # Charge
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40029 # (EMS mode)
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40031 # ems mode command
+                          value: 5 # Discharge
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              # AlphaESS uses dispatch mode for charge/discharge control
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0880 # Dispatch Start
+                          value: 0 # Disable dispatch
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0881 # Dispatch Active power (0881H-0882H)
+                          value:
+                            - 0
+                            - 32000
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0885 # Dispatch Mode (0 = default, 2 = Go) (0885H)
+                          value: 0
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0880 # Dispatch Start
+                          value: 1 # Enable dispatch
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0881 # Dispatch Active power (0881H-0882H)
+                          value:
+                            - "{{ (32000 - states('input_number.inverter_charge_discharge_power') | int) // 65536 }}"
+                            - "{{ (32000 - states('input_number.inverter_charge_discharge_power') | int) % 65536 }}"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0886 # Dispatch SOC (0.4%/bit) (0886H)
+                          value: "{{ (states('input_number.inverter_max_soc') | int) / 0.4 }}"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0887 # Dispatch Time (0887H-0888H)
+                          value:
+                            - 0
+                            - 10800 # 3hrs
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0885 # Dispatch Mode (0 = default, 2 = Go) (0885H)
+                          value: 2
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0880 # Dispatch Start (0880H)
+                          value: 1 # Enable dispatch
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0881 # Dispatch Active power (0881H-0882H)
+                          value:
+                            - "{{ (states('input_number.inverter_charge_discharge_power') | int + 32000) // 65536 }}"
+                            - "{{ (states('input_number.inverter_charge_discharge_power') | int + 32000) % 65536 }}"
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0886 # Dispatch SOC (0.4%/bit) (0886H)
+                          value: "{{ (states('input_number.inverter_min_soc') | int) / 0.4 }}"
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0887 # Dispatch Time (0887H-0888H)
+                          value:
+                            - 0
+                            - 10800 # 3hrs
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: alphaess_inverter
+                          unit: !secret modbus_slave
+                          address: 0x0885 # Dispatch Mode (0 = default, 2 = Go) (0885H)
+                          value: 2
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'goodwe' }}"
+            sequence:
+              - variables:
+                  slot8_raw: "{{ states('input_number.goodwe_schedule_8slot') | int(1) }}"
+                  slot8: "{{ [1, [8, slot8_raw] | min] | max }}"
+                  base8: "{{ 47547 + (slot8 - 1) * 6 }}"
+                  addr_start: "{{ base8 + 0 }}"
+                  addr_end: "{{ base8 + 1 }}"
+                  addr_week: "{{ base8 + 2 }}"
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_start }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_end }}"
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_week }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_power
+                        data:
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: general
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_power
+                        data:
+                          value: >-
+                            {% set max = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set hard = states('input_number.battery_charge_power_hardlimit') | float(0) %}
+                            {% if hard <= 0 %}
+                              0
+                            {% else %}
+                              {{ [0, [100, (max / hard * 100)] | min] | max | round(0) }}
+                            {% endif %}
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ states('input_number.inverter_max_soc') | int }}"
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: eco_charge
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_start }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_end }}"
+                          value: 5947
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_week }}"
+                          value: 65407
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_power
+                        data:
+                          value: >-
+                            {% set max = states('input_number.inverter_max_discharge_power') | float(0) %}
+                            {% set hard = states('input_number.battery_discharge_power_hardlimit') | float(0) %}
+                            {% if hard <= 0 %}
+                              0
+                            {% else %}
+                              {{ [0, [100, (max / hard * 100)] | min] | max | round(0) }}
+                            {% endif %}
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ states('input_number.inverter_min_soc') | int }}"
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: eco_discharge
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_start }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_end }}"
+                          value: 5947
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ addr_week }}"
+                          value: 65407
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'goodwe_et' }}"
+            sequence:
+              - variables:
+                  slot4_raw: "{{ states('input_number.goodwe_schedule_4slot') | int(1) }}"
+                  slot4: "{{ [1, [4, slot4_raw] | min] | max }}"
+                  base4: "{{ 47515 + (slot4 - 1) * 4 }}"
+                  a0: "{{ base4 + 0 }}"
+                  a1: "{{ base4 + 1 }}"
+                  a2: "{{ base4 + 2 }}"
+                  a3: "{{ base4 + 3 }}"
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47612
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a3 }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a2 }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a0 }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a1 }}"
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47511
+                          value: 1
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47511
+                          value: 4
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ (states('input_number.inverter_max_soc') | int) }}"
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47612
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47612
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a0 }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a1 }}"
+                          value: 5947
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a2 }}"
+                          value: >-
+                            {% set max_w  = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set hard_w = states('input_number.battery_charge_power_hardlimit') | float(0) %}
+                            {% if hard_w <= 0 %}
+                              0
+                            {% else %}
+                              {% set p = (max_w / hard_w * 1000) %}
+                              {% set p = ([0, [1000, p] | min] | max) | round(0) | int %}
+                              {{ 65536 - p }}
+                            {% endif %}
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a3 }}"
+                          value: 63871
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47511
+                          value: 3
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ states('input_number.inverter_min_soc') | int }}"
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47612
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: 47612
+                          value: 1
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a0 }}"
+                          value: 0
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a1 }}"
+                          value: 5947
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a2 }}"
+                          value: >-
+                            {% set max_w  = states('input_number.inverter_max_discharge_power') | float(0) %}
+                            {% set hard_w = states('input_number.battery_discharge_power_hardlimit') | float(0) %}
+                            {% if hard_w <= 0 %}
+                              0
+                            {% else %}
+                              {% set p = (max_w / hard_w * 1000) %}
+                              {% set p = ([0, [1000, p] | min] | max) | round(0) | int %}
+                              {{ p }}
+                            {% endif %}
+                      - delay: "00:00:01"
+                      - action: modbus.write_register
+                        data:
+                          hub: goodwe_inverter
+                          unit: !secret modbus_slave
+                          address: "{{ a3 }}"
+                          value: 63871
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'goodwe_int' }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: general
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_ems_mode
+                        data:
+                          option: auto
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ states('input_number.inverter_max_soc') | int }}"
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: eco_charge
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_ems_mode
+                        data:
+                          option: charge_battery
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_ems_power_limit
+                        data:
+                          value: >-
+                            {% set max_w  = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set hard_w = states('input_number.battery_charge_power_hardlimit') | float(0) %}
+                            {{ [0, [max_w, hard_w] | min] | max | round(0) | int }}
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_eco_mode_soc
+                        data:
+                          value: "{{ states('input_number.inverter_min_soc') | int }}"
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_inverter_operation_mode
+                        data:
+                          option: eco_discharge
+                      - delay: "00:00:01"
+                      - action: select.select_option
+                        target:
+                          entity_id: select.goodwe_ems_mode
+                        data:
+                          option: discharge_battery
+                      - delay: "00:00:01"
+                      - action: number.set_value
+                        target:
+                          entity_id: number.goodwe_ems_power_limit
+                        data:
+                          value: >-
+                            {% set max_w  = states('input_number.inverter_max_discharge_power') | float(0) %}
+                            {% set hard_w = states('input_number.battery_discharge_power_hardlimit') | float(0) %}
+                            {{ [0, [max_w, hard_w] | min] | max | round(0) | int }}
+
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40355 # WChaMax
+                          value: >
+                            {% set w = states('sensor.fronius_wchamax') | float(0) %}
+                            {% set sf = states('sensor.fronius_max_charging_power_sf') | int(0) %}
+                            {{ (w / (10 ** sf)) | round(0) | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40358 # StorCtl_Mod
+                          value: 0
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40365 # OutWRte
+                          value: >
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+                            {{ raw_100 | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40366 # InWRte
+                          value: >
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+                            {{ raw_100 | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40360 # MinRsvPct
+                          value: >
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+                            {% set min_soc = states('input_number.inverter_reserved_soc_backup') | float(0) %}
+                            {% set part = (min_soc / 100 * raw_100) %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ part | int }}
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40355 # WChaMax
+                          value: >
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set sf = states('sensor.fronius_max_charging_power_sf') | int(0) %}
+                            {{ (user_max_w / (10 ** sf)) | round(0) | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40358 # StorCtl_Mod
+                          value: 2
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40365 # OutWRte
+                          value: >
+                            {% set desired_w = states('input_number.inverter_charge_discharge_power') | float(0) %}
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set eff_w = [desired_w, user_max_w] | min %}
+                            {% set inv_max_w = states('sensor.fronius_wchamax') | float(1) %}
+
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+
+                            {% set part = (eff_w / inv_max_w * raw_100) if inv_max_w > 0 else 0 %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ (65536 - part) | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40366 # InWRte
+                          value: >
+                            {% set desired_w = states('input_number.inverter_charge_discharge_power') | float(0) %}
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set eff_w = [desired_w, user_max_w] | min %}
+                            {% set inv_max_w = states('sensor.fronius_wchamax') | float(1) %}
+
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+
+                            {% set part = (eff_w / inv_max_w * raw_100) if inv_max_w > 0 else 0 %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ part | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40360 # MinRsvPct
+                          value: >
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+                            {% set part = 99 / 100 * raw_100 %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ part | int }}
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40355 # WChaMax
+                          value: >
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set sf = states('sensor.fronius_max_charging_power_sf') | int(0) %}
+                            {{ (user_max_w / (10 ** sf)) | round(0) | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40358 # StorCtl_Mod
+                          value: 3
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40366 # InWRte
+                          value: >
+                            {% set desired_w = states('input_number.inverter_charge_discharge_power') | float(0) %}
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set eff_w = [desired_w, user_max_w] | min %}
+                            {% set inv_max_w = states('sensor.fronius_wdischamax') | float(states('sensor.fronius_wchamax') | float(1)) %}
+
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+
+                            {% set part = (eff_w / inv_max_w * raw_100) if inv_max_w > 0 else 0 %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ (65536 - part) | int }}
+                      - action: modbus.write_register
+                        data:
+                          hub: fronius_inverter
+                          unit: !secret modbus_slave
+                          address: 40365 # OutWRte
+                          value: >
+                            {% set desired_w = states('input_number.inverter_charge_discharge_power') | float(0) %}
+                            {% set user_max_w = states('input_number.inverter_max_charge_power') | float(0) %}
+                            {% set eff_w = [desired_w, user_max_w] | min %}
+                            {% set inv_max_w = states('sensor.fronius_wdischamax') | float(states('sensor.fronius_wchamax') | float(1)) %}
+
+                            {% set sf = states('sensor.fronius_max_charging_discharging_percent_sf') | int(-2) %}
+                            {% set raw_100 = 100 * (10 ** (-sf)) %}
+
+                            {% set part = (eff_w / inv_max_w * raw_100) if inv_max_w > 0 else 0 %}
+                            {% set part = [part, 0] | max %}
+                            {% set part = [part, raw_100] | min %}
+                            {{ part | int }}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Stop' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57357 # 0xE00D - Remote Control Command Mode
+                          value: 0 # 0 = Off (no charge/discharge)
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Charge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57357 # 0xE00D - Remote Control Command Mode
+                          value: 3 # 3 = Charge from PV+AC (forced charge)
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ option == 'Forced Discharge' }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57357 # 0xE00D - Remote Control Command Mode
+                          value: 4 # 4 = Maximize export (forced discharge)
+        default:
+          - action: system_log.write
+            data:
+              message: "Unknown inverter brand: {{ states('input_select.inverter_brand') }}"
+              level: error
+  set_inverter_min_soc:
+    alias: "Set Inverter Min SOC"
+    description: "Sets minimum SOC based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_min_soc') | float * 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13058
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_min_soc') | float * 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  unit: 247
+                  address: 40048
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_min_soc') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0850
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - action: system_log.write
+                data:
+                  message: "Fronius Min SOC setting not supported."
+                  level: warning
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_min_soc') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57352 # 0xE008 - Backup Reserve (min SoC)
+                  value: "{{ soc_value }}"
+  set_inverter_max_soc:
+    alias: "Set Inverter Max SOC"
+    description: "Sets maximum SOC based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_max_soc') | float * 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13057
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_max_soc') | float * 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  unit: 247
+                  address: 40047
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_max_soc') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0855
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - action: system_log.write
+                data:
+                  message: "Fronius Max SOC setting not supported."
+                  level: warning
+  set_inverter_reserved_soc_backup:
+    alias: "Set Inverter Reserved SOC for Backup"
+    description: "Sets reserved SOC for backup based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_reserved_soc_backup') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13099
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_reserved_soc_backup') | float * 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  unit: 247
+                  address: 40046
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_min_soc') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0850
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ (states('input_number.inverter_reserved_soc_backup') | float * 100) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40351 # MinRsvPct - Minimum reserve for storage
+                  value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  soc_value: "{{ states('input_number.inverter_min_soc') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57352 # 0xE008 - Backup Reserve (min SoC)
+                  value: "{{ soc_value }}"
+  set_inverter_charge_discharge_power:
+    alias: "Set Inverter Charge/Discharge Power"
+    description: "Sets charge/discharge power based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_charge_discharge_power') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13051
+                  value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_charge_discharge_power') | float }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40029
+                  value: 1 # Enable Remote EMS
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40032
+                  value:
+                    - "{{ (power_value // 65536) | int }}"
+                    - "{{ (power_value % 65536) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40034
+                  value:
+                    - "{{ (power_value // 65536) | int }}"
+                    - "{{ (power_value % 65536) | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              # AlphaESS uses time-based control rather than direct power setting Set dispatch mode for power control
+              - variables:
+                  power_value: "{{ states('input_number.inverter_charge_discharge_power') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0881 # Dispatch Active power (0881H-0882H)
+                  value:
+                    - "{{ (power_value + 32000) // 65536 }}"
+                    - "{{ (power_value + 32000) % 65536 }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_charge_discharge_power') | int }}"
+                  maximum_power: "{{ states('input_number.battery_charge_power_hardlimit') | int }}"
+                  power_percentage: "{{ (power_value / maximum_power * 100) }}"
+              - action: number.set_value
+                target:
+                  entity_id: number.goodwe_eco_mode_power
+                data:
+                  value: "{{ power_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  power_limit: "{{ states('input_number.inverter_charge_discharge_power') | float(0) }}"
+                  max_charge_hw: "{{ states('sensor.fronius_max_charging_power') | float(0) }}"
+                  max_discharge_hw: "{{ states('sensor.fronius_max_discharging_power') | float(0) }}"
+                  max_user_set_power: "{{ states('input_number.inverter_max_charge_power') | float(0) }}"
+                  # overall HW/user cap (ignore zeros)
+                  hw_limit: >
+                    {% set vals = [max_charge_hw, max_discharge_hw, max_user_set_power]
+                                  | map('float') | list %}
+                    {% set vals = vals | select('gt', 0) | list %}
+                    {{ vals | min if vals | length > 0 else 0 }}
+                  clamped_power: "{{ [power_limit, hw_limit] | min }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ power_limit != clamped_power }}"
+                then:
+                  - action: system_log.write
+                    data:
+                      message: "Power limit {{ power_limit }}W exceeds hardware/user limit {{ hw_limit }}W, clamped to {{ clamped_power }}W"
+                      level: warning
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40365 # OutWRte (HA address)
+                  value: >
+                    {% set denom = max_discharge_hw | float(0) %}
+                    {% set pct = (clamped_power / denom * 100) if denom > 0 else 0 %}
+                    {% set pct = [pct, 0] | max %}
+                    {% set pct = [pct, 100] | min %}
+                    {# InOutWRte_SF = -2 -> raw = pct * 100 #}
+                    {{ (pct * 100) | int }}
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40366 # InWRte (HA address)
+                  value: >
+                    {% set denom = max_charge_hw | float(0) %}
+                    {% set pct = (clamped_power / denom * 100) if denom > 0 else 0 %}
+                    {% set pct = [pct, 0] | max %}
+                    {% set pct = [pct, 100] | min %}
+                    {{ (pct * 100) | int }}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_charge_discharge_power') | float }}"
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57358 # 0xE00E - Remote Control Charge Limit (Float32, W)
+                  value: "{{ power_value }}"
+
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57360 # 0xE010 - Remote Control Discharge Limit (Float32, W)
+                  value: "{{ power_value }}"
+  set_inverter_max_charge_power:
+    alias: "Set Inverter Max Charge Power"
+    description: "Sets maximum charge power based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ (states('input_number.inverter_max_charge_power') | float / 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 33046
+                  value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_charge_power') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40032
+                  value:
+                    - "{{ power_value // 65536}}"
+                    - "{{ power_value % 65536 }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_charge_power') | int }}"
+                  dispatch_value: "{{ 32000 - power_value }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0881 # Set charge power limit
+                  value: "{{ dispatch_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_charge_power') | int }}"
+                  maximum_power: "{{ states('input_number.battery_charge_power_hardlimit') | int }}"
+                  power_percentage: "{{ (power_value / maximum_power * 100) }}"
+              - action: number.set_value
+                target:
+                  entity_id: number.goodwe_eco_mode_power
+                data:
+                  value: "{{ power_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  max_power: "{{ states('input_number.inverter_max_charge_power') | float(0) }}"
+                  hardlimit: "{{ states('input_number.battery_charge_power_hardlimit') | float(1) }}"
+                  pct: >
+                    {% set val = (max_power / hardlimit * 100) %}
+                    {% set val = [val, 0] | max %}
+                    {% set val = [val, 100] | min %}
+                    {{ val }}
+                  raw: "{{ (pct * 100) | int }}" # SF = -2 → ×100
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40366 # InWRte (sheet 40367)
+                  value: "{{ raw }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_charge_power') | float }}"
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57358 # 0xE00E - Remote Control Charge Limit (Float32, W)
+                  value: "{{ power_value }}"
+  set_inverter_max_discharge_power:
+    alias: "Set Inverter Max Discharge Power"
+    description: "Sets maximum discharge power based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ (states('input_number.inverter_max_discharge_power') | float / 10) | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 33047
+                  value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_discharge_power') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40034
+                  value:
+                    - "{{ power_value // 65536 }}"
+                    - "{{ power_value % 65536 }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_discharge_power') | int }}"
+                  dispatch_value: "{{ 32000 + power_value }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0881 # Set discharge power limit
+                  value: "{{ dispatch_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_discharge_power') | int }}"
+                  maximum_power: "{{ states('input_number.battery_discharge_power_hardlimit') | int }}"
+                  power_percentage: "{{ (power_value / maximum_power * 100) }}"
+              - action: number.set_value
+                target:
+                  entity_id: number.goodwe_eco_mode_power
+                data:
+                  value: "{{ power_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  max_power: "{{ states('input_number.inverter_max_discharge_power') | float(0) }}"
+                  hardlimit: "{{ states('input_number.battery_discharge_power_hardlimit') | float(1) }}"
+                  pct: >
+                    {% set val = (max_power / hardlimit * 100) %}
+                    {% set val = [val, 0] | max %}
+                    {% set val = [val, 100] | min %}
+                    {{ val }}
+                  raw: "{{ (pct * 100) | int }}" # SF = -2 → ×100
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40365 # OutWRte (sheet 40366)
+                  value: "{{ raw }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_max_discharge_power') | float }}"
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57360 # 0xE010 - Remote Control Discharge Limit (Float32, W)
+                  value: "{{ power_value }}"
+  set_inverter_pv_power_limit:
+    alias: "Set Inverter PV Power Limit"
+    description: "Sets maximum PV power limit based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_pv_power_limit') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40036
+                  value:
+                    - "{{ power_value // 65536 }}"
+                    - "{{ power_value % 65536 }}"
+  set_inverter_export_power_limit:
+    alias: "Set Inverter Export Power Limit"
+    description: "Sets export power limit based on selected inverter brand"
+    sequence:
+      - condition: template
+        value_template: "{{ states('input_number.inverter_export_power_limit_input') != 'unknown' }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_export_power_limit_input') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13073
+                  value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              # Sigenergy uses plant-level grid point maximum export limitation
+              - variables:
+                  power_value: "{{ states('input_number.inverter_export_power_limit_input') | int }}"
+              - action: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: 247
+                  address: 40038
+                  value:
+                    - "{{ power_value // 65536 }}"
+                    - "{{ power_value % 65536 }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - variables:
+                  power_watts: "{{ states('input_number.inverter_export_power_limit_input') | int }}"
+                  max_export_power: "{{ states('input_number.inverter_export_power_hardlimit') | int }}"
+                  # Safety: Cap the input at the hard limit
+                  safe_power_watts: "{{ [power_watts, max_export_power] | min }}"
+                  # Convert watts to percentage
+                  power_percentage: "{{ ((safe_power_watts / max_export_power) * 100) | round(0) | int }}"
+                  # Ensure percentage is between 0-100 (should be 0-100 now due to safety cap)
+                  final_percentage: "{{ [0, [power_percentage, 100] | min] | max }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0800 # MAX Feed into grid percent (0800H)
+                  value: "{{ final_percentage }}"
+              - action: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  unit: !secret modbus_slave
+                  address: 0x0700 # Feed into grid percent (0700H)
+                  value: "{{ final_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+            sequence:
+              - variables:
+                  power_value: "{{ states('input_number.inverter_export_power_limit_input') | int }}"
+              - action: number.set_value
+                target:
+                  entity_id: number.goodwe_grid_export_limit
+                data:
+                  value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  soft_limit: "{{ states('input_number.inverter_export_power_limit_input') | float(0) }}"
+                  hard_limit: "{{ states('input_number.inverter_export_power_hardlimit') | float(0) }}"
+
+                  target_export: >
+                    {% set soft = soft_limit | float(0) %}
+                    {% set hard = hard_limit | float(0) %}
+                    {% if hard > 0 %}
+                      {{ [soft, hard] | min }}
+                    {% else %}
+                      {{ soft }}
+                    {% endif %}
+
+                  grid_sign: 1
+
+                  grid_power_raw: "{{ states('sensor.fronius_grid_active_power') | float(0) }}"
+                  grid_power: >
+                    {% set s = grid_sign | float(1) %}
+                    {{ (grid_power_raw | float(0)) * s }}
+
+                  export_power: >
+                    {% set g = grid_power | float(0) %}
+                    {{ (0 - g) if g < 0 else 0 }}
+
+                  current_limit_pct: "{{ states('input_number.wmaxlimpct') | float(100) }}"
+
+                  tolerance_w: 100.0
+                  step_pct: 1.0
+
+                  wmaxlim_sf: "{{ states('sensor.fronius_power_output_sf') | int(-2) }}"
+
+                  raw_100pct: >
+                    {% set sf = wmaxlim_sf | int(-2) %}
+                    {{ (100 * (10 ** (-sf))) | int }}
+
+              - variables:
+                  limit_enable: "{{ 1 if (target_export | float(0)) > 0 else 0 }}"
+
+                  new_limit_pct: >
+                    {% set limit = current_limit_pct | float(100) %}
+                    {% set base_step = step_pct | float(5) %}
+                    {% set g = grid_power | float(0) %}
+                    {% set tgt_export = target_export | float(0) %}
+
+                    {% set leak_export_w = 80.0 %}
+                    {% set deadband_w = 150.0 %}
+                    {% set max_step = 5.0 %}
+
+                    {% if tgt_export <= 0 %}
+                      100
+                    {% else %}
+
+                      {% set leak = [leak_export_w, tgt_export] | min %}
+                      {% set setpoint = 0 - leak %}
+
+                      {% set err = g - setpoint %}
+
+                      {% set exp = (0 - g) if g < 0 else 0 %}
+
+                      {% set step = base_step + (((err | float(0)) | abs) / 300.0) %}
+                      {% if step > max_step %}{% set step = max_step %}{% endif %}
+
+                      {% if exp > (tgt_export + deadband_w) %}
+                        {{ [limit - step, 0] | max }}
+
+                      {% else %}
+                        {% if err > deadband_w %}
+                          {{ [limit + step, 100] | min }}
+                        {% elif err < -deadband_w %}
+                          {{ [limit - step, 0] | max }}
+                        {% else %}
+                          {{ limit }}
+                        {% endif %}
+                      {% endif %}
+
+                    {% endif %}
+
+                  new_limit_raw: >
+                    {% set pct = new_limit_pct | float(0) %}
+                    {% set pct = [pct, 0] | max %}
+                    {% set pct = [pct, 100] | min %}
+                    {% set raw_100 = raw_100pct | float(10000) %}
+                    {% set raw = (pct / 100.0 * raw_100) %}
+                    {% set raw = [raw, 0] | max %}
+                    {% set raw = [raw, raw_100] | min %}
+                    {{ raw | round(0) | int }}
+
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.wmaxlimpct
+                data:
+                  value: "{{ new_limit_pct | float(0) }}"
+
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40245
+                  value: 20
+
+              - delay: "00:00:01"
+
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40246
+                  value: "{{ limit_enable | int(0) }}"
+
+              - delay: "00:00:01"
+
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40242
+                  value: "{{ new_limit_raw | int(0) }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  w: "{{ states('input_number.inverter_export_power_limit_input') | int(0) }}"
+
+              # One-time setup (safe to repeat)
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 61762 # 0xF142 AdvancedPwrControlEn (Int32)
+                  value: [0, 1] # write 2 regs via FC16 (0x10)
+              - delay: "00:00:01"
+
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 63232 # 0xF700 Export Control Mode (mirror of E000)
+                  value: 1 # Direct export limitation
+              - delay: "00:00:01"
+
+              # Dynamic Export Control Site Limit (Float32 W) via lookup table
+              - choose:
+                  - conditions: "{{ w == 0 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346 # 0xE002 Export Control Site Limit (Float32, W)
+                          value: [0, 0]
+
+                  - conditions: "{{ w == 100 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [0, 17096]
+
+                  - conditions: "{{ w == 500 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17402, 0]
+
+                  - conditions: "{{ w == 1000 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17530, 0]
+
+                  - conditions: "{{ w == 2500 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17692, 16384]
+
+                  - conditions: "{{ w == 3150 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17732, 57344]
+
+                  - conditions: "{{ w == 5000 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17820, 16384]
+
+                  - conditions: "{{ w == 6300 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17860, 57344]
+
+                  - conditions: "{{ w == 7500 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17898, 24576]
+
+                  - conditions: "{{ w == 10000 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [17948, 16384]
+
+                  - conditions: "{{ w == 15000 }}"
+                    sequence:
+                      - action: modbus.write_register
+                        data:
+                          hub: solaredge_inverter
+                          unit: !secret modbus_slave
+                          address: 57346
+                          value: [18026, 24576]
+
+                default:
+                  # If input_number is set to an unsupported value, do nothing (safer than forcing 0W)
+                  - stop: "Unsupported SolarEdge export limit value"
+
+              - delay: "00:00:01"
+
+              # Commit (required)
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 61696 # 0xF100 Commit
+                  value: 1
+  set_inverter_export_power_limit_enabled:
+    alias: "Set Inverter Export Power Limit Enabled"
+    description: "Enables/disables export power limit based on selected inverter brand"
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  enabled_value: >
+                    {% if is_state('input_boolean.inverter_export_power_limit_enabled_input', 'on') %}
+                      170
+                    {% else %}
+                      85
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  unit: !secret modbus_slave
+                  address: 13086
+                  value: "{{ enabled_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              # Sigenergy export power limits are always active when set The enable/disable is implicit through setting the limit value
+              - action: system_log.write
+                data:
+                  message: "Sigenergy export power limit enable/disable is implicit through limit value setting"
+                  level: info
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe')}}"
+            sequence:
+              - variables:
+                  enabled_state: "{{ states('input_boolean.inverter_export_power_limit_enabled_input') }}"
+              - action: "switch.turn_{{ enabled_state }}"
+                target:
+                  entity_id: switch.goodwe_grid_export_limit_switch
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - variables:
+                  enabled_value: >
+                    {% if is_state('input_boolean.inverter_export_power_limit_enabled_input', 'on') %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40246 # WMaxLim_Ena - Throttle enable/disable control
+                  value: "{{ enabled_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - variables:
+                  enabled_value: >
+                    {% if is_state('input_boolean.inverter_export_power_limit_enabled_input', 'on') %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+              - action: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  unit: !secret modbus_slave
+                  address: 57345
+                  value: "{{ enabled_value | int }}"
+  inverter_stop_export:
+    alias: "Inverter: Stop Export & Set Self-Consumption"
+    description: "Stops battery discharge and switches to self-consumption mode."
+    sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.inverter_charge_discharge_mode
+        data:
+          option: "Stop"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.inverter_ems_mode
+        data:
+          option: "Self-Consumption mode"
+    mode: single
+  goodwe_eh_reset_all_8slots:
+    alias: "GoodWe EH: Reset all 8 schedule slots"
+    sequence:
+      - repeat:
+          count: 8
+          sequence:
+            - variables:
+                i: "{{ repeat.index }}"
+                base8: "{{ 47547 + (i - 1) * 6 }}"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base8 + 0 }}"
+                value: 0
+            - delay: "00:00:01"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base8 + 1 }}"
+                value: 1
+            - delay: "00:00:01"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base8 + 2 }}"
+                value: 0
+            - delay: "00:00:01"
+  goodwe_reset_all_4slots:
+    alias: "GoodWe ET/ESA: Reset all 4 schedule slots"
+    sequence:
+      - action: modbus.write_register
+        data:
+          hub: goodwe_inverter
+          unit: !secret modbus_slave
+          address: 47612
+          value: 0
+      - delay: "00:00:01"
+      - repeat:
+          count: 4
+          sequence:
+            - variables:
+                i: "{{ repeat.index }}"
+                base4: "{{ 47515 + (i - 1) * 4 }}"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base4 + 3 }}"
+                value: 0
+            - delay: "00:00:01"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base4 + 2 }}"
+                value: 0
+            - delay: "00:00:01"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base4 + 0 }}"
+                value: 0
+            - delay: "00:00:01"
+            - action: modbus.write_register
+              data:
+                hub: goodwe_inverter
+                unit: !secret modbus_slave
+                address: "{{ base4 + 1 }}"
+                value: 1
+            - delay: "00:00:01"
+  debug_modbus_files:
+    alias: "Debug Modbus Files"
+    description: "Check what modbus files exist and their contents"
+    sequence:
+      - action: shell_command.list_modbus_files
+      - delay: "00:00:02"
+      - action: persistent_notification.create
+        data:
+          title: "Modbus Files Debug Complete"
+          message: >
+            File list has been saved to /config/modbus_files_list.txt
+            You can check this file in the File Editor to see what modbus files exist.
+  test_shell_commands:
+    alias: "Test Shell Commands"
+    description: "Test if shell commands work"
+    sequence:
+      - action: shell_command.test_shell
+      - delay: "00:00:02"
+      - action: persistent_notification.create
+        data:
+          title: "Shell Test Complete"
+          message: >
+            Check if file /config/shell_test.txt was created.
+            If it exists, shell commands are working.
+          notification_id: "shell_test"
+  publish_inverter_data:
+    alias: "Publish Inverter Data to MQTT"
+    description: "Reads modbus data and publishes to MQTT every 10 seconds"
+    sequence:
+      - variables:
+          brand: "{{ states('input_select.inverter_brand') }}"
+      - condition: template
+        value_template: "{{ brand in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'fronius', 'solaredge'] }}"
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/pv_power/state"
+          payload: >
+            {% set additional = states('sensor.additional_pv_power') | float(0) %}
+            {% if brand == 'sungrow' %}
+              {{ (states('sensor.sungrow_pv_power') | float(0) + additional) | round(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ (states('sensor.sigenergy_pv_power') | float(0) + additional) | round(0) }}
+            {% elif brand == 'alphaess' %}
+              {% if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.alphaess_pv_power') | float(0) + additional) | round(0) }}
+              {% elif states('sensor.alphaess_total_active_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.alphaess_total_active_pv_power') | float(0) + additional) | round(0) }}
+              {% else %}
+                {{ additional | round(0) }}
+              {% endif %}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.goodwe_pv_power') | float(0) + additional) | round(0) }}
+              {% elif states('sensor.pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.pv_power') | float(0) + additional) | round(0) }}
+              {% else %}
+                {{ additional | round(0) }}
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set pv1 = states('sensor.fronius_pv1_power_raw') | float(0) %}
+              {% set pv2 = states('sensor.fronius_pv2_power_raw') | float(0) %}
+              {% set sf = states('sensor.fronius_dcpower_sf') | int(0) %}
+              {% set pvsum_raw = pv1 + pv2 %}
+              {% set pvsum = (pvsum_raw * (10 ** sf)) | round(0) %}
+              {{ (pvsum | float(0)  + additional) | round(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set ap = states('sensor.solaredge_inv_active_power') | float(0) %}
+              {% set ap_sf = states('sensor.solaredge_inv_active_power_sf') | float(0) %} 
+              {% set batt = states('sensor.solaredge_battery_power') | float(0) %}
+              {% set real_ap = ap * (10 ** ap_sf) %}
+              {{ (real_ap + batt  + additional) | round(0) }}
+            {% else %}
+              {{ additional | round(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/pv_power_limit/state"
+          payload: >
+            {% if brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_pv_max_power_limit') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/grid_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_grid_active_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_grid_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_total_active_power_grid_meter') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_active_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_active_power') | float(0) }}
+              {% elif states('sensor.active_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.active_power') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_ac_power') | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_meter_power') | float(0)
+                 * (10 ** (states('sensor.solaredge_meter_power_sf') | int(0))) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_battery_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_power') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_power') | float(0) }}
+              {% elif states('sensor.battery_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_power') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_battery_power') | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_power') | float(0) }}
+            {% endif %}
+          retain: true
+      - variables:
+          pv_power: >
+            {% set additional = states('sensor.additional_pv_power') | float(0) %}
+            {% if brand == 'sungrow' %}
+              {{ (states('sensor.sungrow_pv_power') | float(0) + additional) | round(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ (states('sensor.sigenergy_pv_power') | float(0) + additional) | round(0) }}
+            {% elif brand == 'alphaess' %}
+              {% if states('sensor.alphaess_total_active_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.alphaess_total_active_pv_power') | float(0) + additional) | round(0) }}
+              {% elif states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.alphaess_pv_power') | float(0) + additional) | round(0) }}
+              {% else %}
+                {{ additional | round(0) }}
+              {% endif %}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.goodwe_pv_power') | float(0) + additional) | round(0) }}
+              {% elif states('sensor.pv_power') not in ['unknown', 'unavailable'] %}
+                {{ (states('sensor.pv_power') | float(0) + additional) | round(0) }}
+              {% else %}
+                {{ additional | round(0) }}
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set pv1 = states('sensor.fronius_pv1_power_raw') | float(0) %}
+              {% set pv2 = states('sensor.fronius_pv2_power_raw') | float(0) %}
+              {% set sf = states('sensor.fronius_dcpower_sf') | int(0) %}
+              {% set pvsum_raw = pv1 + pv2 %}
+              {% set pvsum = (pvsum_raw * (10 ** sf)) | round(0) %}
+              {{ (pvsum | float(0) + additional) | round(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set ap = states('sensor.solaredge_inv_active_power') | float(0) %}
+              {% set ap_sf = states('sensor.solaredge_inv_active_power_sf') | float(0) %}
+              {% set batt = states('sensor.solaredge_battery_power') | float(0) %}
+              {% set real_ap = ap * (10 ** ap_sf) %}
+              {{ (real_ap + batt + additional) | round(0) }}
+            {% else %}
+              {{ additional | round(0) }}
+            {% endif %}
+          grid_power: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_grid_active_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_plant_active_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_grid_power') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_active_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_active_power') | float(0) }}
+              {% elif states('sensor.active_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.active_power') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_ac_power') | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_meter_power') | float(0)
+                 * (10 ** (states('sensor.solaredge_meter_power_sf') | int(0))) }}
+            {% endif %}
+          battery_power: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_battery_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_power') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_power') | float(0) }}
+              {% elif states('sensor.battery_power') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_power') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_battery_power') | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_power') | float(0) }}
+            {% endif %}
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/load_power/state"
+          payload: >
+            {% set additional = states('sensor.additional_pv_power') | float(0) %}
+            {% set ev_is_upstream = is_state('input_boolean.em_ev_circuit_upstream', 'on') %}
+            {% set ev_amps_state = states('sensor.charger_current_import') %}
+            {% set ev_amps = ev_amps_state | float(0)
+               if ev_amps_state not in ['unknown', 'unavailable', 'none'] else 0 %}
+            {% set ev_phases = states('input_select.em_ev_site_phases') | int(1) %}
+            {% set ev_w = ev_amps * 230 * ev_phases %}
+            {% set ev_to_add = ev_w if ev_is_upstream else 0 %}
+            {% if brand == 'sungrow' %}
+              {{ (states('sensor.sungrow_load_power') | float(0) + ev_to_add) | round(0) }}
+            {% elif brand == 'sigenergy' %}
+              {% set pv_power = states('sensor.sigenergy_pv_power') | float(0) + additional %}
+              {% set battery_power = states('sensor.sigenergy_battery_power') | float(0) %}
+              {% set grid_power = states('sensor.sigenergy_grid_power') | float(0) %}
+              {{ (pv_power - battery_power + grid_power + ev_to_add) | round(0) }}
+            {% elif brand == 'alphaess' %}
+              {% set pv_base =
+                  states('sensor.alphaess_pv_power')
+                    if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable']
+                    else states('sensor.alphaess_total_active_pv_power') %}
+              {% set pv_power = (pv_base | float(0)) + additional %}
+              {% set grid_power = states('sensor.alphaess_grid_power') | float(0) %}
+              {% set battery_power = states('sensor.alphaess_battery_power') | float(0) %}
+              {{ (pv_power + grid_power + battery_power + ev_to_add) | round(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ (pv_power + battery_power - grid_power + ev_to_add) | round(0) }}
+            {% elif brand == 'fronius' %}
+              {% set pv1 = states('sensor.fronius_pv1_power_raw') | float(0) %}
+              {% set pv2 = states('sensor.fronius_pv2_power_raw') | float(0) %}
+              {% set sf_dc = states('sensor.fronius_dcpower_sf') | int(0) %}
+              {% set pv_power = ((pv1 + pv2) * (10 ** sf_dc)) | float(0) + additional %}
+              {% set grid_power = states('sensor.fronius_grid_active_power') | float(0) %}
+              {% set sf_chg = states('sensor.fronius_battery_charge_rate_sf') | int(0) %}
+              {% set battery_charge_power =
+                  (states('sensor.fronius_battery_charge_power') | float(0))
+                  * (10 ** sf_chg) %}
+              {% set sf_dis = states('sensor.fronius_battery_charge_rate_sf') | int(0) %}
+              {% set battery_discharge_power =
+                  (states('sensor.fronius_battery_discharge_power') | float(0))
+                  * (10 ** sf_dis) %}
+              {{ (pv_power + grid_power - battery_charge_power
+                  + battery_discharge_power + ev_to_add) | round(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set sf_grid = states('sensor.solaredge_meter_power_sf') | float(0) %}
+              {% set sf_inv = states('sensor.solaredge_inv_active_power_sf') | float(0) %}
+              {% set grid_power_raw = states('sensor.solaredge_meter_power') | float(0) %}
+              {% set inv_power_raw = states('sensor.solaredge_inv_active_power') | float(0) %}
+              {{ (((inv_power_raw * (10 ** sf_inv)) + additional)
+                  - (grid_power_raw * (10 ** sf_grid))
+                  + ev_to_add) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/import_power/state"
+          payload: >
+            {% set ev_is_upstream = is_state('input_boolean.em_ev_circuit_upstream', 'on') %}
+            {% set ev_amps_state = states('sensor.charger_current_import') %}
+            {% set ev_amps = ev_amps_state | float(0)
+               if ev_amps_state not in ['unknown', 'unavailable', 'none'] else 0 %}
+            {% set ev_phases = states('input_select.em_ev_site_phases') | int(1) %}
+            {% set ev_w = ev_amps * 230 * ev_phases %}
+            {% set ev_w = ev_w if ev_is_upstream else 0 %}
+            {% if brand == 'sungrow' %}
+              {% set raw_import = states('sensor.sungrow_current_import_power') | float(0) %}
+              {% set raw_export = states('sensor.sungrow_current_export_power') | float(0) %}
+              {% set net_grid = raw_import - raw_export + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% elif brand == 'sigenergy' %}
+              {% set grid_power = states('sensor.sigenergy_grid_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% elif brand == 'alphaess' %}
+              {% set grid_power = states('sensor.alphaess_grid_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% set net_grid = -grid_power + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% elif brand == 'fronius' %}
+              {% set grid_power = states('sensor.fronius_grid_active_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set sf = states('sensor.solaredge_meter_power_sf') | int(0) %}
+              {% set grid_power = states('sensor.solaredge_meter_power') | float(0)
+                 * (10 ** sf) %}
+              {% set net_grid = -grid_power + ev_w %}
+              {{ max(0, net_grid) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/export_power/state"
+          payload: >
+            {% set ev_is_upstream = is_state('input_boolean.em_ev_circuit_upstream', 'on') %}
+            {% set ev_amps_state = states('sensor.charger_current_import') %}
+            {% set ev_amps = ev_amps_state | float(0)
+               if ev_amps_state not in ['unknown', 'unavailable', 'none'] else 0 %}
+            {% set ev_phases = states('input_select.em_ev_site_phases') | int(1) %}
+            {% set ev_w = ev_amps * 230 * ev_phases %}
+            {% set ev_w = ev_w if ev_is_upstream else 0 %}
+            {% if brand == 'sungrow' %}
+              {% set raw_import = states('sensor.sungrow_current_import_power') | float(0) %}
+              {% set raw_export = states('sensor.sungrow_current_export_power') | float(0) %}
+              {% set net_grid = raw_import - raw_export + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% elif brand == 'sigenergy' %}
+              {% set grid_power = states('sensor.sigenergy_grid_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% elif brand == 'alphaess' %}
+              {% set grid_power = states('sensor.alphaess_grid_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% set net_grid = -grid_power + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% elif brand == 'fronius' %}
+              {% set grid_power = states('sensor.fronius_grid_active_power') | float(0) %}
+              {% set net_grid = grid_power + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set sf = states('sensor.solaredge_meter_power_sf') | float(0) %}
+              {% set grid_raw = states('sensor.solaredge_meter_power') | float(0) %}
+              {% set grid_power = grid_raw * (10 ** sf) %}
+              {% set net_grid = -grid_power + ev_w %}
+              {{ max(0, -net_grid) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_charging_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_power') | float(0) if states('sensor.sungrow_battery_charging') == 'True' else 0 }}
+            {% elif brand == 'sigenergy' %}
+              {% set battery_power = states('sensor.sigenergy_battery_power') | float(0) %}
+              {{ max(0, battery_power) }}
+            {% elif brand == 'alphaess' %}
+              {{ (states('sensor.alphaess_battery_power') | float(0) * -1) if states('sensor.alphaess_battery_power') | float(0) < 0 else 0 }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ max(0, -battery_power) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_battery_charge_rate_sf') | int(0) %}
+              {{ (states('sensor.fronius_battery_charge_power') | float(0) * (10 ** sf)) | int(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set battery_power = states('sensor.solaredge_battery_power') | float(0) %}
+              {{ max(0, battery_power) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_discharging_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_power') | float(0) if states('sensor.sungrow_battery_discharging') == 'True' else 0 }}
+            {% elif brand == 'sigenergy' %}
+              {% set battery_power = states('sensor.sigenergy_battery_power') | float(0) %}
+              {{ max(0, -battery_power) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_power') | float(0) if states('sensor.alphaess_battery_power') | float(0) > 0 else 0 }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ max(0, battery_power) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_battery_charge_rate_sf') | int(0) %}
+              {{ (states('sensor.fronius_battery_discharge_power') | float(0) * (10 ** sf)) | int(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set battery_power = states('sensor.solaredge_battery_power') | float(0) %}
+              {{ max(0, -battery_power) }}
+            {% endif %}
+          retain: true
+      # Publish Battery Data
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_level/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_soc') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_plant_battery_soc') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_soc') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_state_of_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_state_of_charge') | float(0) }}
+              {% elif states('sensor.battery_state_of_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_state_of_charge') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_percent_sf') | float(0) %}
+              {{ (states('sensor.fronius_battery_soc') | float(0) * (10 ** sf)) | round(2) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_soe') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_capacity/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_rated_battery_capacity') | float(0) * 10 }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_rated_battery_capacity') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_capacity') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_capacity') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_capacity') | float(0) }}
+              {% elif states('sensor.battery_capacity') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_capacity') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_rating_sf') | float(0) %}
+              {{ ((states('sensor.fronius_battery_capacity') | float(0) / 1000) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_max_energy') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_soh/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_soh') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_battery_soh') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_soh') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_state_of_health') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_state_of_health') | float(0) }}
+              {% elif states('sensor.battery_state_of_health') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_state_of_health') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              0
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_soh') | float(0) }}
+            {% endif %}
+          # Fronius does not support SOH through their modbus implementation
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/internal_temperature/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_internal_temperature') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_internal_temperature') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_internal_temperature') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_inverter_temperature_radiator') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_inverter_temperature_radiator') | float(0) }}
+              {% elif states('sensor.inverter_temperature_radiator') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.inverter_temperature_radiator') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_internal_temperature') | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {% set sf_temp = states('sensor.solaredge_heatsink_temperature_sf') | float(0) %}
+              {% set temp_raw = states('sensor.solaredge_heatsink_temperature') | float(0) %}
+              {{ (temp_raw * (10 ** sf_temp)) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_temperature/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_temperature') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_battery_temperature') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_max_cell_temperature') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.battery_temperature') | float(0) }}
+            {% elif brand == 'fronius' %}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_avg_temp') | float(0) }}
+            {% endif %}
+          retain: true
+      # Calculate and publish battery charge (SOC * Capacity / 100)
+      - variables:
+          soc: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_battery_soc') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_plant_battery_soc') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_soc') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_battery_state_of_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_battery_state_of_charge') | float(0) }}
+              {% elif states('sensor.battery_state_of_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.battery_state_of_charge') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_percent_sf') | float(0) %}
+              {{ (states('sensor.fronius_battery_soc') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_soe') | float(0) }}
+            {% endif %}
+          capacity: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_rated_battery_capacity') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_rated_battery_capacity') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_capacity') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('input_number.battery_capacity') | float(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_rating_sf') | float(0) %}
+              {{ (states('sensor.fronius_battery_capacity') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_battery_max_energy') | float(0) }}
+            {% endif %}
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_charge/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ (soc | float * capacity | float / 10 ) | round(2) }}
+            {% elif brand == 'sigenergy' %}
+              {{ (soc | float * capacity | float / 100 ) | round(2) }}
+            {% elif brand == 'alphaess' %}
+              {{ (soc | float * capacity | float / 100 ) | round(2) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ (soc | float * capacity | float / 100) | round(2) }}
+            {% elif brand == 'fronius' %}
+              {{ (soc | float * capacity | float / 100000 ) | round(2) }}
+            {% elif brand == 'solaredge' %}
+              {{ (soc | float * capacity | float / 100000) | round(2) }}
+            {% endif %}
+          retain: true
+      # Publish Energy Data (Daily)
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/daily_battery_charge/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_daily_charge_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_daily_charge_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_charge_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.today_battery_charge') | float(0) }}
+            {% elif brand == 'fronius' %}
+              0
+            {% endif %}
+          retain: true
+          # Fronius does not track daily battery charge
+          # SolarEdge does not track daily battery charge
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/daily_battery_discharge/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_daily_discharge_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_daily_discharge_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_discharge_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_today_battery_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_today_battery_charge') | float(0) }}
+              {% elif states('sensor.today_battery_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.today_battery_charge') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              0
+            {% endif %}
+          retain: true
+          # Fronius does not track daily battery discharge
+          # SolarEdge does not track daily battery discharge
+      # Publish Energy Data (Total)
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/total_battery_charge/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_accumulated_charge_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_accumulated_charge_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_charge_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.total_battery_charge') | float(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_dcpower_sf') | float(0) %}
+              {{ (( states('sensor.fronius_total_charge_energy') | float(0) / 1000) * (10 ** sf)) }}
+            {% endif %}
+          # SolarEdge does not track total battery charge
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/total_battery_discharge/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_accumulated_discharge_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_accumulated_discharge_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_battery_discharge_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_total_battery_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_total_battery_charge') | float(0) }}
+              {% elif states('sensor.total_battery_charge') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.total_battery_charge') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_battery_charge_rate_sf') | float(0) %}
+              {{ ((states('sensor.fronius_total_discharge_energy') | float(0) / 1000) * (10 ** sf)) }}
+            {% endif %}
+          # SolarEdge does not track total battery discharge
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/total_generated_energy/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_total_pv_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_total_pv_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_inverter_total_pv_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_total_pv_generation') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_total_pv_generation') | float(0) }}
+              {% elif states('sensor.total_pv_generation') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.total_pv_generation') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_dcpower_sf') | float(0) %}
+              {{ ((states('sensor.fronius_total_pv_energy') | float(0) / 1000) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_total_pv_energy') | float(0) }}
+            {% endif %}
+          retain: true
+          # Goodwe does not track total generated energy
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/daily_pv_generation/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_daily_pv_energy') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_daily_pv_energy') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_daily_pv_energy') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_today_s_pv_generation') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_today_s_pv_generation') | float(0) }}
+              {% elif states('sensor.today_s_pv_generation') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.today_s_pv_generation') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              0
+            {% endif %}
+          # SolarEdge does not support daily pv generation total
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/model/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_device_type') | string }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_device_type_code') | string }}
+            {% elif brand == 'alphaess' %}
+              Not Supported
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.goodwe_device_type') | string }}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.sensor.fronius_inverter_model') | string }}
+            {% elif brand == 'solaredege' %}
+              {{ states('sensor.solaredge_device_model') | string }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/serial/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_inverter_serial') | string }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_inverter_serial') | string }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_inverter_serial') | string }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.goodwe_inverter_serial') | string }}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_inverter_serial') | string }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_inverter_serial_number') | string }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/firmware/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_firmware_version') | string }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_firmware_version') | string }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_firmware_version') | string }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('sensor.goodwe_firmware_version') | string }}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_firmware_version') | string }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_firmware_version') | string }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/ems_mode_text/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_ems_mode_text') | string }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_ems_mode') | string }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_system_mode_text') | string }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% if states('sensor.goodwe_work_mode') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.goodwe_work_mode') | float(0) }}
+              {% elif states('sensor.work_mode') not in ['unknown', 'unavailable'] %}
+                {{ states('sensor.work_mode') | float(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_ems_mode') | string }}
+            {% endif %}
+          # SolarEdge does not support the EMS Mode description
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/ems_charge_discharge_command/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_charge_discharge_command') }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_charge_discharge_power') }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_charge_discharge_command') }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+               Debug: unknown
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_ems_mode') }}
+            {% elif brand == 'solaredge' %}
+              {% set v = states('sensor.solaredge_charge_discharge_command') | int %}
+              {% if v == 65535 %}
+                self-consumption
+              {% else %}
+                {{ v }}
+              {% endif %}
+            {% endif %}
+          retain: true
+      # Publish Current Control Settings (from input helpers - user adjustable)
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/max_soc/state"
+          payload: "{{ states('input_number.inverter_max_soc') | float(100) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/min_soc/state"
+          payload: "{{ states('input_number.inverter_min_soc') | float(10) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/battery_forced_power/state"
+          payload: "{{ states('input_number.inverter_charge_discharge_power') | float(0) }}"
+          retain: true
+      # Additional control settings
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/reserved_soc_backup/state"
+          payload: "{{ states('input_number.inverter_reserved_soc_backup') | float(0) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/max_charge_power/state"
+          payload: "{{ states('input_number.inverter_max_charge_power') | float(0) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/max_discharge_power/state"
+          payload: "{{ states('input_number.inverter_max_discharge_power') | float(0) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/export_power_limit/state"
+          payload: "{{ states('input_number.inverter_export_power_limit_input') | float(0) }}"
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/export_power_limit_enabled/state"
+          payload: "{{ 'true' if is_state('input_boolean.inverter_export_power_limit_enabled', 'on') else 'false' }}"
+          retain: true
+      # Publish actual inverter values for comparison (read-only from modbus)
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_min_soc/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_min_soc') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_min_soc') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_ups_reserve_soc') | float(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_percent_sf') | float(0) %}
+              {{ (states('sensor.fronius_reserved_soc_backup') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_reserved_soc') | float(0) }}
+            {% endif %}
+          retain: true
+          # Goodwe has no min or max SoC, just a target
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_max_soc/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_max_soc') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_max_soc') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_charge_cut_soc') | float(0) }}
+            {% elif brand == 'fronius' %}
+              100
+            {% elif brand == 'solaredge' %}
+              100
+            {% endif %}
+          retain: true
+          # Fronius does not support a max soc modbus setting
+          # Goodwe has no min or max SoC, just a target
+          # SolarEdge has no min or max SoC, only SoE
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_charge_discharge_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_charge_discharge_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_charge_discharge_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ (states('sensor.alphaess_dispatch_active_power') | int(32000) - 32000) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_discharge_rate_sf') | float(0) %}
+              {{ (states('sensor.fronius_current_charge_discharge_power') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.solaredge_battery_power') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_reserved_soc_backup/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_reserved_soc_backup') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_reserved_soc_backup') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_ups_reserve_soc') | float(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_energy_percent_sf') | float(0) %}
+              {{ (states('sensor.fronius_reserved_soc_backup') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_reserved_soc') | float(0) }}
+            {% endif %}
+          retain: true
+          # Goodwe, not supported
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_max_charge_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_max_charging_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_max_charging_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {% set dispatch_value = states('sensor.alphaess_dispatch_active_power') | float(0) %}
+              {% if dispatch_value < 32000 %}
+                {{ 32000 - dispatch_value }}
+              {% elif dispatch_value > 32000 %}
+                {{ dispatch_value - 32000 }}
+              {% else %}
+                0
+              {% endif %}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% set v = 
+                  states('sensor.goodwe_battery_voltage') 
+                  if states('sensor.goodwe_battery_voltage') not in ['unknown', 'unavailable'] 
+                  else states('sensor.battery_voltage')
+              %}
+              {% set i = 
+                  states('sensor.goodwe_battery_current') 
+                  if states('sensor.goodwe_battery_current') not in ['unknown', 'unavailable'] 
+                  else states('sensor.battery_current')
+              %}
+              {{ ( (v | float(0)) * (i | float(0)) ) | round(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_charge_rate_sf') | float(0) %}
+              {{ (states('sensor.fronius_max_charging_power') | float(0) * (10 ** sf)) | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_storage_charge_limit') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_max_discharge_power/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_max_discharging_power') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_max_discharging_power') | float(0) }}
+            {% elif brand == 'alphaess' %}
+            # Only one setting for AlphaESS, using current_max_charge_power instead
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {% set v = 
+                  states('sensor.goodwe_battery_voltage') 
+                  if states('sensor.goodwe_battery_voltage') not in ['unknown', 'unavailable'] 
+                  else states('sensor.battery_voltage')
+              %}
+              {% set i = 
+                  states('sensor.goodwe_battery_current') 
+                  if states('sensor.goodwe_battery_current') not in ['unknown', 'unavailable'] 
+                  else states('sensor.battery_current')
+              %}
+              {{ ( (v | float(0)) * (i | float(0)) ) | round(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_discharge_rate_sf') | float(0) %}
+              {{ (states('sensor.fronius_max_discharging_power') | float(0) * (10 ** sf)) | float(0) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_storage_discharge_limit') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_export_power_limit/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_export_power_limit') | float(0) }}
+            {% elif brand == 'sigenergy' %}
+              {{ states('sensor.sigenergy_export_power_limit') | float(0) }}
+            {% elif brand == 'alphaess' %}
+              {{ states('sensor.alphaess_feed_into_grid_percent') | float(0) }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+              {{ states('number.goodwe_grid_export_limit') | float(0) }}
+            {% elif brand == 'fronius' %}
+              {% set sf = states('sensor.fronius_export_power_limit_sf') | float(0) %}
+              {{ (states('sensor.fronius_export_power_limit') | float(0) * (10 ** sf)) }}
+            {% elif brand == 'solaredge' %}
+              {{ states('sensor.solaredge_export_power_limit') | float(0) }}
+            {% endif %}
+          retain: true
+      - action: mqtt.publish
+        data:
+          topic: "homeassistant/sensor/inverter/current_export_power_limit_enabled/state"
+          payload: >
+            {% if brand == 'sungrow' %}
+              {{ states('sensor.sungrow_export_power_limit_enabled_text') | string }}
+            {% elif brand == 'sigenergy' %}
+              {{ 'true' if states('sensor.sigenergy_export_power_limit_enabled') | float(0) > 0 else 'false' }}
+            {% elif brand == 'alphaess' %}
+              {{ 'true' if states('sensor.alphaess_max_feed_into_grid_percent') | float(0) > 0 else 'false' }}
+            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
+                {{ states('switch.goodwe_grid_export_limit_switch') }}
+            {% elif brand == 'fronius' %}
+              {{ states('sensor.fronius_export_power_limit_enabled') | string }}
+            {% elif brand == 'solaredge' %}
+                true
+            {% endif %}
+          retain: true
+  manual_activate_sungrow:
+    alias: "Manual Activate Sungrow"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting Sungrow Activation"
+          message: "Activating Sungrow configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_sungrow
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "sungrow"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual Sungrow Activation Complete"
+          message: >
+            Sungrow configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_sigenergy:
+    alias: "Manual Activate Sigenergy"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting Sigenergy Activation"
+          message: "Activating Sigenergy configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_sigenergy
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "sigenergy"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual Sigenergy Activation Complete"
+          message: >
+            Sigenergy configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_alphaess:
+    alias: "Manual Activate AlphaESS"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting AlphaESS Activation"
+          message: "Activating AlphaESS configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_alphaess
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "alphaess"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual AlphaESS Activation Complete"
+          message: >
+            AlphaESS configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_goodwe:
+    alias: "Manual Activate Goodwe"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting Goodwe Activation"
+          message: "Activating Goodwe configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_goodwe
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "goodwe"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual Goodwe Activation Complete"
+          message: >
+            Goodwe configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_goodwe_et:
+    alias: "Manual Activate Goodwe_ET"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting Goodwe ET Activation"
+          message: "Activating Goodwe ET configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_goodwe_et
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "goodwe_et"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual Goodwe ET Activation Complete"
+          message: >
+            Goodwe ET configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_fronius:
+    alias: "Manual Activate Fronius"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting Fronius Activation"
+          message: "Activating Fronius configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_fronius
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "fronius"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual Fronius Activation Complete"
+          message: >
+            Fronius configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  manual_activate_solaredge:
+    alias: "Manual Activate SolarEdge"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting SolarEdge Activation"
+          message: "Activating SolarEdge configuration... Please wait."
+          notification_id: manual_activation_progress
+      - delay: "00:00:02"
+      - action: shell_command.switch_to_solaredge
+      - delay: "00:00:05"
+      - action: shell_command.check_config_files
+      - delay: "00:00:02"
+      - action: input_select.select_option
+        data:
+          entity_id: input_select.inverter_brand
+          option: "solaredge"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual SolarEdge Activation Complete"
+          message: >
+            SolarEdge configuration has been manually activated.
+            ⚠️ MANUAL RESTART REQUIRED
+            Go to Settings → System → Restart when ready.
+          notification_id: manual_config_change
+  check_config_status:
+    alias: "Check Configuration Status"
+    icon: mdi:file-check
+    sequence:
+      - action: shell_command.check_config_files
+      - delay: "00:00:03"
+      - action: persistent_notification.create
+        data:
+          title: "📋 Configuration Status Check"
+          message: >
+            Configuration status checked. See Home Assistant logs for file details.
+            📊 Current Status:
+            • Brand setting: {{ states('input_select.inverter_brand') }}
+            • Restart required: {{ states('input_boolean.restart_required') }}
+            • Sungrow active: {{ states('binary_sensor.sungrow_active') }}
+            • Sigenergy active: {{ states('binary_sensor.sigenergy_active') }}
+            • AlphaESS active: {{ states('binary_sensor.alphaess_active') }}
+            • Goodwe active: {{ states('binary_sensor.goodwe_active') }}
+            • Goodwe_ET active: {{ states('binary_sensor.goodwe_et_active') }}
+            • Fronius active: {{ states('binary_sensor.fronius_active') }}
+            • SolarEdge active: {{ states('binary_sensor.solaredge_active') }}
+          notification_id: config_check
+  notify_restart_needed:
+    alias: "Notify Restart Needed"
+    icon: mdi:information
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "🔄 Configuration Updated - Restart Required"
+          message: >
+            ✅ Configuration files have been successfully updated.
+            **Next Steps:**
+            1. Go to Settings → System
+            2. Click "Restart"
+            3. Wait for Home Assistant to come back online
+            Current brand: {{ states('input_select.inverter_brand') }}
+          notification_id: restart_instructions
+  check_for_energy_manager_updates:
+    alias: "Check for Energy Manager Updates"
+    icon: mdi:update
+    sequence:
+      - action: automation.trigger
+        target:
+          entity_id: automation.energy_manager_manual_update_check
+  update_energy_manager:
+    alias: "Update Energy Manager"
+    icon: mdi:download
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "🔄 Energy Manager Update Starting"
+          message: "Starting Energy Manager update process. Do not restart Home Assistant during this process."
+          notification_id: "em_updating"
+      - action: shell_command.perform_energy_manager_update
+        response_variable: update_result
+      - delay:
+          seconds: 10
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "em_updating"
+      - if:
+          - condition: template
+            value_template: "{{ update_result.returncode == 0 }}"
+        then:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.energy_manager_update_available
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.energy_manager_current_version
+          - delay:
+              seconds: 2
+          - action: persistent_notification.create
+            data:
+              title: "✅ Energy Manager Update Complete"
+              message: "Successfully updated to version {{ states('input_text.energy_manager_available_version') }}. Please reboot Home Assistant."
+              notification_id: "em_update_complete"
+        else:
+          - action: persistent_notification.create
+            data:
+              title: "❌ Energy Manager Update Failed"
+              message: "Update failed. Check the logs for details."
+              notification_id: "em_update_failed"
+  update_energy_manager_force:
+    alias: "Update Energy Manager Reinstall"
+    icon: mdi:download
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "🔄 Energy Manager Reinstall Starting"
+          message: "Starting Energy Manager reinstall process. Do not restart Home Assistant during this process."
+          notification_id: "em_updating"
+      - action: shell_command.perform_energy_manager_update_force
+        response_variable: update_result
+      - delay:
+          seconds: 10
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "em_updating"
+      - if:
+          - condition: template
+            value_template: "{{ update_result.returncode == 0 }}"
+        then:
+          - action: persistent_notification.create
+            data:
+              title: "✅ Energy Manager Reinstall Complete"
+              message: "Successfully reinstalled update. Ensure you reboot Home Assistant."
+              notification_id: "em_update_complete"
+        else:
+          - action: persistent_notification.create
+            data:
+              title: "❌ Energy Manager Reinstall Failed"
+              message: "Reinstall failed. Check the logs for details."
+              notification_id: "em_update_failed"
+
+  # === ENERGY_MANAGER_SCRIPTS_END ===

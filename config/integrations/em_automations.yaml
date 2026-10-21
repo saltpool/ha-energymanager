@@ -1,0 +1,1841 @@
+# === ENERGY_MANAGER_AUTOMATIONS_START v1.3.0 ===
+automation:
+  - id: "solcast_update"
+    alias: Solcast update
+    description: ""
+    triggers:
+      - trigger: time
+        at: 05:00:00
+    conditions: []
+    actions:
+      - action: solcast_solar.update_forecasts
+        data: {}
+    mode: single
+  - id: "electricity_5_minute_import_cost_export_price"
+    alias: "Electricity: 5 Minute Import Cost & Export Price"
+    trigger:
+      - platform: time_pattern
+        minutes: "/1"
+        seconds: "02"
+    condition:
+      - condition: template
+        value_template: "{{ (now().minute % 5) == 0 }}"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.electricity_provider
+                state:
+                  - "LocalVolts"
+                  - "Amber Electric"
+            sequence:
+              - variables:
+                  import_total_now: "{{ states('sensor.imported_energy_total')|float(0) }}"
+                  import_total_prev: "{{ states('input_number.prev_imported_energy_total')|float(0) }}"
+                  import_kwh_5m: >-
+                    {% if import_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = import_total_now - import_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+                  export_total_now: "{{ states('sensor.exported_energy_total')|float(0) }}"
+                  export_total_prev: "{{ states('input_number.prev_exported_energy_total')|float(0) }}"
+                  export_kwh_5m: >-
+                    {% if export_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = export_total_now - export_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_import_price
+                data:
+                  value: "{{ states('sensor.grid_buy_price')|float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_export_price
+                data:
+                  value: "{{ states('sensor.grid_sell_price')|float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_5_minutes
+                data:
+                  value: "{{ import_kwh_5m * states('sensor.grid_buy_price')|float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_total
+                data:
+                  value: "{{ states('input_number.electricity_import_cost_total')|float(0) + (import_kwh_5m * states('sensor.grid_buy_price')|float(0)) + (states('input_number.electricity_provider_daily_charge')|float(0) / 288) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_export_profit_5_minutes
+                data:
+                  value: "{{ export_kwh_5m * states('sensor.grid_sell_price')|float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_import_energy_5_minutes
+                data:
+                  value: "{{ import_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_energy_5_minutes
+                data:
+                  value: "{{ export_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_imported_energy_total
+                data:
+                  value: "{{ import_total_now }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_exported_energy_total
+                data:
+                  value: "{{ export_total_now }}"
+          - conditions:
+              - condition: state
+                entity_id: input_select.electricity_provider
+                state: "Flow Power"
+            sequence:
+              - variables:
+                  start_time: "{{ states('input_datetime.flowpower_peak_start_time') }}"
+                  end_time: "{{ states('input_datetime.flowpower_peak_end_time') }}"
+                  current_time: "{{ now().strftime('%H:%M:%S') }}"
+                  is_peak: >-
+                    {% set s = today_at(states('input_datetime.flowpower_peak_start_time')) %}
+                    {% set e = today_at(states('input_datetime.flowpower_peak_end_time')) %}
+                    {% set n = now() %}
+                    {{ (s <= n) and (n < e) }}
+                  buy_price: "{{ states('input_number.flowpower_buy_price')|float(0) }}"
+                  sell_price: >-
+                    {{ states('input_number.flowpower_peak_feedin_price')|float(0)
+                       if is_peak
+                       else states('input_number.flowpower_offpeak_feedin_price')|float(0) }}
+                  import_total_now: "{{ states('sensor.imported_energy_total')|float(0) }}"
+                  import_total_prev: "{{ states('input_number.prev_imported_energy_total')|float(0) }}"
+                  import_kwh_5m: >-
+                    {% if import_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = import_total_now - import_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+                  export_total_now: "{{ states('sensor.exported_energy_total')|float(0) }}"
+                  export_total_prev: "{{ states('input_number.prev_exported_energy_total')|float(0) }}"
+                  export_kwh_5m: >-
+                    {% if export_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = export_total_now - export_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_import_price
+                data:
+                  value: "{{ buy_price / 100 }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_export_price
+                data:
+                  value: "{{ sell_price / 100 }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_import_energy_5_minutes
+                data:
+                  value: "{{ import_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_energy_5_minutes
+                data:
+                  value: "{{ export_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_5_minutes
+                data:
+                  value: "{{ import_kwh_5m * (buy_price/100) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_total
+                data:
+                  value: "{{ states('input_number.electricity_import_cost_total')|float(0) + (import_kwh_5m * (buy_price/100)) + (states('input_number.electricity_provider_daily_charge')|float(0) / 288) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_export_profit_5_minutes
+                data:
+                  value: "{{ export_kwh_5m * (sell_price/100) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_imported_energy_total
+                data:
+                  value: "{{ import_total_now }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_exported_energy_total
+                data:
+                  value: "{{ export_total_now }}"
+          - conditions:
+              - condition: state
+                entity_id: input_select.electricity_provider
+                state: "Globird"
+            sequence:
+              - variables:
+                  is_peak_buy: >-
+                    {% set s = today_at(states('input_datetime.globird_peak_buy_start')) %}
+                    {% set e = today_at(states('input_datetime.globird_peak_buy_end')) %}
+                    {% set n = now() %}
+                    {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                  is_free_buy: >-
+                    {% set s = today_at(states('input_datetime.globird_free_buy_start')) %}
+                    {% set e = today_at(states('input_datetime.globird_free_buy_end')) %}
+                    {% set n = now() %}
+                    {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                  is_super_sell: >-
+                    {% set s = today_at(states('input_datetime.globird_super_start')) %}
+                    {% set e = today_at(states('input_datetime.globird_super_end')) %}
+                    {% set n = now() %}
+                    {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                  is_std_sell: >-
+                    {% set s = today_at(states('input_datetime.globird_std_start')) %}
+                    {% set e = today_at(states('input_datetime.globird_std_end')) %}
+                    {% set n = now() %}
+                    {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                  buy_price: >-
+                    {% if is_peak_buy %}
+                      {{ states('input_number.globird_peak_buy_price')|float(0) }}
+                    {% elif is_free_buy %}
+                      {{ states('input_number.globird_free_buy_price')|float(0) }}
+                    {% else %}
+                      {{ states('input_number.globird_other_buy_price')|float(0) }}
+                    {% endif %}
+                  sell_price: >-
+                    {% if is_super_sell %}
+                      {{ states('input_number.globird_super_sell')|float(0) }}
+                    {% elif is_std_sell %}
+                      {{ states('input_number.globird_std_sell')|float(0) }}
+                    {% else %}
+                      {{ states('input_number.globird_other_sell')|float(0) }}
+                    {% endif %}
+                  import_total_now: "{{ states('sensor.imported_energy_total')|float(0) }}"
+                  import_total_prev: "{{ states('input_number.prev_imported_energy_total')|float(0) }}"
+                  import_kwh_5m: >-
+                    {% if import_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = import_total_now - import_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+                  export_total_now: "{{ states('sensor.exported_energy_total')|float(0) }}"
+                  export_total_prev: "{{ states('input_number.prev_exported_energy_total')|float(0) }}"
+                  export_kwh_5m: >-
+                    {% if export_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = export_total_now - export_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_import_price
+                data:
+                  value: "{{ buy_price / 100 }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_export_price
+                data:
+                  value: "{{ sell_price / 100 }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_import_energy_5_minutes
+                data:
+                  value: "{{ import_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_energy_5_minutes
+                data:
+                  value: "{{ export_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_5_minutes
+                data:
+                  value: "{{ import_kwh_5m * buy_price / 100}}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_total
+                data:
+                  value: "{{ states('input_number.electricity_import_cost_total')|float(0) + (import_kwh_5m * buy_price / 100) + (states('input_number.electricity_provider_daily_charge')|float(0) / 288) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_export_profit_5_minutes
+                data:
+                  value: "{{ export_kwh_5m * sell_price / 100}}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_imported_energy_total
+                data:
+                  value: "{{ import_total_now }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_exported_energy_total
+                data:
+                  value: "{{ export_total_now }}"
+          - conditions:
+              - condition: state
+                entity_id: input_select.electricity_provider
+                state: "Other"
+            sequence:
+              - variables:
+                  current_time: "{{ now() }}"
+                  is_free_1: >-
+                    {% if is_state('input_boolean.other_free_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_free_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_free_1_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_peak_1: >-
+                    {% if is_state('input_boolean.other_peak_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_peak_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_peak_1_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_peak_2: >-
+                    {% if is_state('input_boolean.other_peak_2', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_peak_2_start')) %}
+                      {% set e = today_at(states('input_datetime.other_peak_2_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_peak_3: >-
+                    {% if is_state('input_boolean.other_peak_3', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_peak_3_start')) %}
+                      {% set e = today_at(states('input_datetime.other_peak_3_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_offpeak_1: >-
+                    {% if is_state('input_boolean.other_offpeak_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_offpeak_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_offpeak_1_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_offpeak_2: >-
+                    {% if is_state('input_boolean.other_offpeak_2', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_offpeak_2_start')) %}
+                      {% set e = today_at(states('input_datetime.other_offpeak_2_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_offpeak_3: >-
+                    {% if is_state('input_boolean.other_offpeak_3', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_offpeak_3_start')) %}
+                      {% set e = today_at(states('input_datetime.other_offpeak_3_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_shoulder_1: >-
+                    {% if is_state('input_boolean.other_shoulder_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_shoulder_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_shoulder_1_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_shoulder_2: >-
+                    {% if is_state('input_boolean.other_shoulder_2', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_shoulder_2_start')) %}
+                      {% set e = today_at(states('input_datetime.other_shoulder_2_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_shoulder_3: >-
+                    {% if is_state('input_boolean.other_shoulder_3', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_shoulder_3_start')) %}
+                      {% set e = today_at(states('input_datetime.other_shoulder_3_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_additional_1: >-
+                    {% if is_state('input_boolean.other_additional_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_additional_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_additional_1_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  buy_price: >-
+                    {% if is_free_1 | bool %}
+                      0
+                    {% elif (is_peak_1 | bool) or (is_peak_2 | bool) or (is_peak_3 | bool) %}
+                      {{ states('input_number.other_peak_tariff')|float(0) }}
+                    {% elif (is_offpeak_1 | bool) or (is_offpeak_2 | bool) or (is_offpeak_3 | bool) %}
+                      {{ states('input_number.other_offpeak_tariff')|float(0) }}
+                    {% elif (is_shoulder_1 | bool) or (is_shoulder_2 | bool) or (is_shoulder_3 | bool) %}
+                      {{ states('input_number.other_shoulder_tariff')|float(0) }}
+                    {% elif (is_additional_1 | bool) %}
+                      {{ states('input_number.other_additional_tariff')|float(0) }}
+                    {% else %}
+                      0
+                    {% endif %}
+                  is_export_1: >-
+                    {% if is_state('input_boolean.other_export_1', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_export_1_start')) %}
+                      {% set e = today_at(states('input_datetime.other_export_1_end')) %}
+                      {% set n = now() %}
+                      {{ s == e or (s < e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_export_2: >-
+                    {% if is_state('input_boolean.other_export_2', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_export_2_start')) %}
+                      {% set e = today_at(states('input_datetime.other_export_2_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  is_export_3: >-
+                    {% if is_state('input_boolean.other_export_3', 'on') %}
+                      {% set s = today_at(states('input_datetime.other_export_3_start')) %}
+                      {% set e = today_at(states('input_datetime.other_export_3_end')) %}
+                      {% set n = now() %}
+                      {{ (s <= e and s <= n and n < e) or (s > e and (n >= s or n < e)) }}
+                    {% else %}
+                      {{ false }}
+                    {% endif %}
+                  sell_price: >-
+                    {% if is_export_1 | bool %}
+                      {{ states('input_number.other_export_1_tariff')|float(0) }}
+                    {% elif is_export_2 | bool %}
+                      {{ states('input_number.other_export_2_tariff')|float(0) }}
+                    {% elif is_export_3 | bool %}
+                      {{ states('input_number.other_export_3_tariff')|float(0) }}
+                    {% else %}
+                      0
+                    {% endif %}
+                  import_total_now: "{{ states('sensor.imported_energy_total')|float(0) }}"
+                  import_total_prev: "{{ states('input_number.prev_imported_energy_total')|float(0) }}"
+                  import_kwh_5m: >-
+                    {% if import_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = import_total_now - import_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+                  export_total_now: "{{ states('sensor.exported_energy_total')|float(0) }}"
+                  export_total_prev: "{{ states('input_number.prev_exported_energy_total')|float(0) }}"
+                  export_kwh_5m: >-
+                    {% if export_total_prev == 0 %}
+                      0
+                    {% else %}
+                      {% set d = export_total_now - export_total_prev %}
+                      {{ d if d > 0 else 0 }}
+                    {% endif %}
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ (is_peak_1 | bool) or (is_peak_2 | bool) or (is_peak_3 | bool) }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_peak
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_peak
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ (is_offpeak_1 | bool) or (is_offpeak_2 | bool) or (is_offpeak_3 | bool) }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_offpeak
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_offpeak
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ (is_shoulder_1 | bool) or (is_shoulder_2 | bool) or (is_shoulder_3 | bool) }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_shoulder
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_shoulder
+              - if:
+                  - condition: template
+                    value_template: "{{ is_free_1 | bool }}"
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_free
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_free
+              - if:
+                  - condition: template
+                    value_template: "{{ is_additional_1 | bool }}"
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_additional_import
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_additional_import
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ is_export_1 | bool }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_export_1
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_export_1
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ is_export_2 | bool }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_export_2
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_export_2
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ is_export_3 | bool }}
+                then:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.other_in_export_3
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.other_in_export_3
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_import_price
+                data:
+                  value: "{{ buy_price}}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_closing_export_price
+                data:
+                  value: "{{ sell_price  }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_import_energy_5_minutes
+                data:
+                  value: "{{ import_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_energy_5_minutes
+                data:
+                  value: "{{ export_kwh_5m }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_5_minutes
+                data:
+                  value: "{{ import_kwh_5m * (buy_price) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_import_cost_total
+                data:
+                  value: >-
+                    {{ states('input_number.electricity_import_cost_total')|float(0) + (import_kwh_5m * buy_price) + (states('input_number.electricity_provider_daily_charge')|float(0) / 288) }}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.electricity_export_profit_5_minutes
+                data:
+                  value: "{{ export_kwh_5m * (sell_price) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_imported_energy_total
+                data:
+                  value: "{{ import_total_now }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.prev_exported_energy_total
+                data:
+                  value: "{{ export_total_now }}"
+  - id: "electricity_import_cost_monthly_reset"
+    alias: "Electricity: Reset import Cost Monthly"
+    trigger:
+      - platform: time
+        at: "00:30:00"
+    condition:
+      - condition: template
+        value_template: >
+          {% set billing_day = states('input_number.billing_day') | int(1) %}
+          {% set today = now().day %}
+          {% set yesterday = (now() - timedelta(days=1)).day %}
+          {{ today == billing_day or (today == 1 and yesterday < billing_day) }}
+    action:
+      - event: "reset_monthly_electricity_cost"
+    mode: single
+  - id: "electricity_export_profit_monthly_reset"
+    alias: "Electricity: Reset Export Profit Monthly"
+    trigger:
+      - platform: time
+        at: "00:00:30"
+    condition:
+      - condition: template
+        value_template: >
+          {% set billing_day = states('input_number.billing_day') | int(1) %}
+          {% set today = now().day %}
+          {% set yesterday = (now() - timedelta(days=1)).day %}
+          {{ today == billing_day or (today == 1 and yesterday < billing_day) }}
+    action:
+      - service: utility_meter.calibrate
+        target:
+          entity_id: sensor.electricity_export_profit_monthly
+        data:
+          value: 0
+    mode: single
+  - id: "electricity_energy_monthly_reset"
+    alias: "Electricity: Reset Import and Export Energy Monthly"
+    trigger:
+      - platform: time
+        at: "00:00:30"
+    condition:
+      - condition: template
+        value_template: >
+          {% set billing_day = states('input_number.billing_day') | int(1) %}
+          {% set today = now().day %}
+          {% set yesterday = (now() - timedelta(days=1)).day %}
+          {{ today == billing_day or (today == 1 and yesterday < billing_day) }}
+    action:
+      - service: utility_meter.calibrate
+        target:
+          entity_id: sensor.monthly_imported_energy
+        data:
+          value: 0
+      - service: utility_meter.calibrate
+        target:
+          entity_id: sensor.monthly_exported_energy
+        data:
+          value: 0
+    mode: single
+  - id: "create_inverter_mqtt_sensors"
+    alias: "Create Inverter MQTT Sensors"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - repeat:
+          for_each:
+            - topic: "pv_power"
+              name: "PV Power"
+              unit: "W"
+              class: "power"
+            - topic: "grid_power"
+              name: "Grid Power"
+              unit: "W"
+              class: "power"
+            - topic: "battery_power"
+              name: "Battery Power"
+              unit: "W"
+              class: "power"
+            - topic: "load_power"
+              name: "Load Power"
+              unit: "W"
+              class: "power"
+            - topic: "import_power"
+              name: "Import Power"
+              unit: "W"
+              class: "power"
+            - topic: "export_power"
+              name: "Export Power"
+              unit: "W"
+              class: "power"
+            - topic: "battery_charging_power"
+              name: "Battery Charging Power"
+              unit: "W"
+              class: "power"
+            - topic: "battery_discharging_power"
+              name: "Battery Discharging Power"
+              unit: "W"
+              class: "power"
+            - topic: "battery_level"
+              name: "Battery Level"
+              unit: "%"
+              class: "battery"
+            - topic: "battery_capacity"
+              name: "Battery Capacity"
+              unit: "kWh"
+              class: "energy_storage"
+            - topic: "battery_soh"
+              name: "Battery SOH"
+              unit: "%"
+              class: null
+            - topic: "battery_temperature"
+              name: "Battery Temperature"
+              unit: "°C"
+              class: "temperature"
+            - topic: "battery_charge"
+              name: "Battery Charge"
+              unit: "kWh"
+              class: "energy_storage"
+            - topic: "daily_battery_charge"
+              name: "Daily Battery Charge"
+              unit: "kWh"
+              class: "energy"
+            - topic: "daily_battery_discharge"
+              name: "Daily Battery Discharge"
+              unit: "kWh"
+              class: "energy"
+            - topic: "total_battery_charge"
+              name: "Total Battery Charge"
+              unit: "kWh"
+              class: "energy"
+            - topic: "total_battery_discharge"
+              name: "Total Battery Discharge"
+              unit: "kWh"
+              class: "energy"
+            - topic: "total_generated_energy"
+              name: "Total Generated Energy"
+              unit: "kWh"
+              class: "energy"
+            - topic: "model"
+              name: "Model"
+              unit: null
+              class: null
+            - topic: "serial"
+              name: "Serial"
+              unit: null
+              class: null
+            - topic: "ems_mode_text"
+              name: "EMS Mode Text"
+              unit: null
+              class: null
+            - topic: "ems_charge_discharge_command"
+              name: "ems Charge Discharge Command"
+              unit: null
+              class: null
+            - topic: "running_state"
+              name: "Running State"
+              unit: null
+              class: null
+            - topic: "ems_charge_discharge_text"
+              name: "EMS Charge Discharge Text"
+              unit: null
+              class: null
+            - topic: "max_soc"
+              name: "Max SOC"
+              unit: "%"
+              class: "battery"
+            - topic: "min_soc"
+              name: "Min SOC"
+              unit: "%"
+              class: "battery"
+            - topic: "battery_forced_power"
+              name: "Battery Forced Power"
+              unit: "W"
+              class: "power"
+            - topic: "reserved_soc_backup"
+              name: "Reserved SOC Backup"
+              unit: "%"
+              class: "battery"
+            - topic: "max_charge_power"
+              name: "Max Charge Power"
+              unit: "W"
+              class: "power"
+            - topic: "max_discharge_power"
+              name: "Max Discharge Power"
+              unit: "W"
+              class: "power"
+            - topic: "export_power_limit"
+              name: "Export Power Limit"
+              unit: "W"
+              class: "power"
+            - topic: "export_power_limit_enabled"
+              name: "Export Power Limit Enabled"
+              unit: null
+              class: null
+            - topic: "current_min_soc"
+              name: "Current Min SOC"
+              unit: "%"
+              class: "battery"
+            - topic: "current_max_soc"
+              name: "Current Max SOC"
+              unit: "%"
+              class: "battery"
+            - topic: "current_charge_discharge_power"
+              name: "Current Charge Discharge Power"
+              unit: "W"
+              class: "power"
+            - topic: "current_reserved_soc_backup"
+              name: "Current Reserved SOC Backup"
+              unit: "%"
+              class: "battery"
+            - topic: "current_max_charge_power"
+              name: "Current Max Charge Power"
+              unit: "W"
+              class: "power"
+            - topic: "current_max_discharge_power"
+              name: "Current Max Discharge Power"
+              unit: "W"
+              class: "power"
+            - topic: "current_export_power_limit"
+              name: "Current Export Power Limit"
+              unit: "W"
+              class: "power"
+            - topic: "current_export_power_limit_enabled"
+              name: "Current Export Power Limit Enabled"
+              unit: null
+              class: null
+          sequence:
+            - service: mqtt.publish
+              data:
+                topic: "homeassistant/sensor/inverter/{{ repeat.item.topic }}/config"
+                payload: >
+                  {
+                    "name": "Inverter {{ repeat.item.name }}",
+                    "state_topic": "homeassistant/sensor/inverter/{{ repeat.item.topic }}/state",
+                    {% if repeat.item.unit -%}
+                    "unit_of_measurement": "{{ repeat.item.unit }}",
+                    {%- endif %}
+                    {% if repeat.item.class -%}
+                    "device_class": "{{ repeat.item.class }}",
+                    {%- endif %}
+                    "unique_id": "inverter_{{ repeat.item.topic }}"
+                  }
+                retain: true
+  - id: "inverter_brand_changed"
+    alias: "Inverter Brand Changed"
+    description: "Automatically switch modbus configuration when inverter brand is changed"
+    trigger:
+      - platform: state
+        entity_id: input_select.inverter_brand
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.switch_inverter_brand
+    mode: single
+  - id: force_charge_limit_to_max_safety
+    alias: "Force Charge Limit to Max Safety"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id:
+          - input_number.inverter_max_charge_power
+          - input_number.safety_max_charge_power
+    condition:
+      - condition: template
+        value_template: >
+          {{ states('input_number.inverter_max_charge_power') | float(0) > states('input_number.safety_max_charge_power') | float(0) }}
+    action:
+      - delay: "00:00:00.5"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.inverter_max_charge_power
+        data:
+          value: "{{ states('input_number.safety_max_charge_power') | float(0) | int }}"
+  - id: force_discharge_limit_to_max_safety
+    alias: "Force Discharge Limit to Max Safety"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id:
+          - input_number.inverter_max_discharge_power
+          - input_number.safety_max_discharge_power
+    condition:
+      - condition: template
+        value_template: >
+          {{ states('input_number.inverter_max_discharge_power') | float(0) > states('input_number.safety_max_discharge_power') | float(0) }}
+    action:
+      - delay: "00:00:00.5"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.inverter_max_discharge_power
+        data:
+          value: "{{ states('input_number.safety_max_discharge_power') | float(0) | int }}"
+  - id: "check_inverter_connection"
+    alias: "Check Inverter Connection"
+    description: "Monitor inverter connection and notify if offline"
+    trigger:
+      - platform: state
+        entity_id: sensor.inverter_state
+        to: "unavailable"
+        for: "00:05:00"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Inverter Connection Lost"
+          message: >
+            The {{ states('input_select.inverter_brand') | title }} inverter appears to be offline.
+            Please check your network connection and modbus settings.
+          notification_id: "inverter_offline"
+    mode: restart
+  - id: "clear_inverter_connection_notification"
+    alias: "Clear Inverter Connection Notification"
+    description: "Clear offline notification when inverter comes back online"
+    trigger:
+      - platform: state
+        entity_id: sensor.inverter_state
+        from: "unavailable"
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state not in ['unavailable', 'unknown'] }}"
+    action:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: "inverter_offline"
+    mode: single
+  - id: "publish_inverter_data_to_mqtt"
+    alias: "Publish Inverter Data to MQTT"
+    description: "Reads modbus data and publishes to MQTT every 10 seconds"
+    trigger:
+      - platform: time_pattern
+        seconds: "/10"
+    condition:
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: input_select.inverter_brand
+            state: "unknown"
+    action:
+      - service: script.publish_inverter_data
+    mode: single
+  - id: restart_reminder
+    alias: "Restart Reminder"
+    trigger:
+      - platform: time_pattern
+        minutes: "/30"
+    condition:
+      - condition: state
+        entity_id: input_boolean.restart_required
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Restart Required"
+          message: >
+            Home Assistant restart is required to apply inverter configuration changes.
+            Current selected brand: {{ states('input_select.inverter_brand') }}
+          notification_id: restart_reminder
+  - id: sync_inverter_controls_on_startup
+    alias: "Sync Inverter Controls on Startup"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: state
+        entity_id: input_select.inverter_brand
+    condition:
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: input_select.inverter_brand
+            state:
+              - unavailable
+              - unknown
+      - condition: template
+        value_template: "{{ states('input_select.inverter_brand') in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'fronius', 'solaredege'] }}"
+    action:
+      - delay: "00:00:10" # Wait for modbus to initialize
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_ems_mode
+                data:
+                  option: >
+                    {% set mode = states('sensor.sungrow_ems_mode_text') %}
+                    {% if mode in ['Self-Consumption mode', 'Forced Mode', 'External EMS', 'VPP'] %}
+                      {{ mode }}
+                    {% else %}
+                      Self-Consumption mode
+                    {% endif %}
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_charge_discharge_mode
+                data:
+                  option: >
+                    {% set mode = states('sensor.sungrow_forced_charge_command') %}
+                    {% if mode in ['Stop', 'Forced Charge', 'Forced Discharge'] %}
+                      {{ mode }}
+                    {% else %}
+                      Stop
+                    {% endif %}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_min_soc
+                data:
+                  value: "{{ states('sensor.sungrow_min_soc') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_soc
+                data:
+                  value: "{{ states('sensor.sungrow_max_soc') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_reserved_soc_backup
+                data:
+                  value: "{{ states('sensor.sungrow_reserved_soc_backup') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_charge_discharge_power
+                data:
+                  value: "{{ states('sensor.sungrow_charge_discharge_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_charge_power
+                data:
+                  value: "{{ states('sensor.sungrow_max_charging_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_discharge_power
+                data:
+                  value: "{{ states('sensor.sungrow_max_discharging_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_power_limit_input
+                data:
+                  value: "{{ states('sensor.sungrow_export_power_limit') | float(0) }}"
+              - service: input_boolean.turn_{{ 'on' if is_state('sensor.sungrow_export_power_limit_enabled_text', 'true') else 'off' }}
+                target:
+                  entity_id: input_boolean.inverter_export_power_limit_enabled_input
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_ems_mode
+                data:
+                  option: "Self-Consumption mode"
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_charge_discharge_mode
+                data:
+                  option: "Stop"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_min_soc
+                data:
+                  value: "{{ states('sensor.sigenergy_min_soc') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_soc
+                data:
+                  value: "{{ states('sensor.sigenergy_max_soc') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_reserved_soc_backup
+                data:
+                  value: "{{ states('sensor.sigenergy_reserved_soc_backup') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_charge_power
+                data:
+                  value: "{{ states('sensor.sigenergy_max_charging_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_discharge_power
+                data:
+                  value: "{{ states('sensor.sigenergy_max_discharging_power') | float(0) }}"
+              # Note: Sigenergy export power limits are handled differently through plant-level controls Individual inverter export limits would need to be implemented via plant registers
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_min_soc
+                data:
+                  value: "{{ states('sensor.alphaess_ups_reserve_soc') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_soc
+                data:
+                  value: "{{ states('sensor.alphaess_charge_cut_soc') | float(0) }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_ems_mode
+                data:
+                  option: >
+                    {% set mode = states('sensor.fronius_ems_mode') %}
+                    {% if mode in ['Self-Consumption mode', 'Forced Mode', 'External EMS', 'VPP'] %}
+                      {{ mode }}
+                    {% else %}
+                      Self-Consumption mode
+                    {% endif %}
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_reserved_soc_backup
+                data:
+                  value: "{{ states('sensor.fronius_reserved_soc_backup') | float(0) / 100 }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_charge_power
+                data:
+                  value: "{{ states('sensor.fronius_max_charging_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_max_discharge_power
+                data:
+                  value: "{{ states('sensor.fronius_max_discharging_power') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_export_power_limit_input
+                data:
+                  value: "{{ states('sensor.fronius_export_power_limit') | float(0) }}"
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.wmaxlimpct
+                data:
+                  value: 100
+              - service: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  unit: !secret modbus_slave
+                  address: 40242
+                  value: 100
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.inverter_reserved_soc_backup
+                data:
+                  value: "{{ states('sensor.solaredge_reserved_soc') | float(0) }}"
+  - id: inverter_ems_mode_changed
+    alias: "Inverter EMS Mode Changed"
+    trigger:
+      - platform: state
+        entity_id: input_select.inverter_ems_mode
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_ems_mode
+        data:
+          option: "{{ states('input_select.inverter_ems_mode') }}"
+  - id: inverter_charge_discharge_mode_changed
+    alias: "Inverter Charge/Discharge Mode Changed"
+    trigger:
+      - platform: state
+        entity_id: input_select.inverter_charge_discharge_mode
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_charge_discharge_mode
+        data:
+          option: "{{ states('input_select.inverter_charge_discharge_mode') }}"
+  - id: inverter_min_soc_changed
+    alias: "Inverter Min SOC Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_min_soc
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_min_soc
+        data:
+          value: "{{ states('input_number.inverter_min_soc') | float }}"
+  - id: inverter_max_soc_changed
+    alias: "Inverter Max SOC Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_max_soc
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_max_soc
+        data:
+          value: "{{ states('input_number.inverter_max_soc') | float }}"
+  - id: inverter_reserved_soc_backup_changed
+    alias: "Inverter Reserved SOC Backup Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_reserved_soc_backup
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_reserved_soc_backup
+        data:
+          value: "{{ states('input_number.inverter_reserved_soc_backup') | float }}"
+  - id: inverter_charge_discharge_power_changed
+    alias: "Inverter Charge/Discharge Power Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_charge_discharge_power
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_charge_discharge_power
+        data:
+          value: "{{ states('input_number.inverter_charge_discharge_power') | float }}"
+  - id: inverter_max_charge_power_changed
+    alias: "Inverter Max Charge Power Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_max_charge_power
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_max_charge_power
+        data:
+          value: "{{ states('input_number.inverter_max_charge_power') | float }}"
+  - id: inverter_max_discharge_power_changed
+    alias: "Inverter Max Discharge Power Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_max_discharge_power
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_max_discharge_power
+        data:
+          value: "{{ states('input_number.inverter_max_discharge_power') | float }}"
+  - id: inverter_max_power_limit_changed
+    alias: "Inverter Max Power Limit Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_max_power_limit
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_max_power_limit
+        data:
+          value: "{{ states('input_number.inverter_max_power_limit') | float }}"
+  - id: inverter_export_power_limit_changed
+    alias: "Inverter Export Power Limit Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_export_power_limit_input
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.state != 'unknown' }}"
+    action:
+      - service: script.set_inverter_export_power_limit
+        data:
+          value: "{{ states('input_number.inverter_export_power_limit_input') | float }}"
+  - id: inverter_export_power_limit_enabled_changed
+    alias: "Inverter Export Power Limit Enabled Changed"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.inverter_export_power_limit_enabled_input
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    action:
+      - service: script.set_inverter_export_power_limit_enabled
+        data:
+          enabled: "{{ is_state('input_boolean.inverter_export_power_limit_enabled_input', 'on') }}"
+  - id: inverter_battery_cutoff_protection
+    alias: "Inverter: Battery Cutoff Protection"
+    description: "Triggers the stop script when the battery level hits or drops below the reserve cutoff."
+    trigger:
+      - platform: state
+        entity_id: sensor.inverter_battery_level
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.inverter_battery_level
+        below: input_number.battery_reserve_export_cutoff
+      - condition: state
+        entity_id: input_select.inverter_charge_discharge_mode
+        state: "Forced Discharge"
+    action:
+      - action: script.inverter_stop_export
+    mode: single
+  - id: inverter_pv_power_limit_changed
+    alias: "Inverter PV Power Limit Changed"
+    trigger:
+      - platform: state
+        entity_id: input_number.inverter_pv_power_limit
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.state != 'unknown' }}"
+    action:
+      - service: script.set_inverter_pv_power_limit
+        data:
+          value: "{{ states('input_number.inverter_pv_power_limit') | float }}"
+  - id: inverter_export_power_limit_follow
+    alias: "Inverter Export Power Limit - Follow House Load"
+    trigger:
+      - platform: time_pattern
+        seconds: "/20"
+    condition:
+      - condition: template
+        value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+      - condition: state
+        entity_id: switch.energy_control_on_off
+        state: "on"
+    action:
+      - service: script.set_inverter_export_power_limit
+  - id: save_inverter_brand_selection
+    alias: "Save Inverter Brand Selection"
+    trigger:
+      - platform: state
+        entity_id: input_select.inverter_brand
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
+    action:
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.saved_inverter_brand
+        data:
+          value: "{{ states('input_select.inverter_brand') }}"
+  - id: restore_inverter_brand_on_startup
+    alias: "Restore Inverter Brand on Startup"
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: template
+        value_template: "{{ states('input_text.saved_inverter_brand') in ['sungrow', 'sigenergy', 'alphaess','goodwe', 'goodwe_et', 'fronius', 'solaredge'] }}"
+    action:
+      - delay: "00:00:05"
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.inverter_brand
+        data:
+          option: "{{ states('input_text.saved_inverter_brand') }}"
+  - id: "inverter_run_mode_changed"
+    alias: "Inverter Run Mode Changed"
+    description: "Starts and stops the inverter based on brand"
+    trigger:
+      - platform: state
+        entity_id: input_select.inverter_run_mode
+    action:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sungrow' }}"
+            sequence:
+              - variables:
+                  inverter_start: 0xCF
+                  inverter_stop: 0xCE
+              - service: modbus.write_register
+                data:
+                  hub: sungrow_inverter
+                  slave: !secret modbus_slave
+                  address: 12999
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      {{ inverter_start }}
+                    {% else %}
+                      {{ inverter_stop }}
+                    {% endif %}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
+            sequence:
+              - service: modbus.write_register
+                data:
+                  hub: sigenergy_inverter
+                  slave: !secret modbus_slave
+                  address: 40500
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'alphaess' }}"
+            sequence:
+              # AlphaESS doesn't have direct start/stop This would typically be handled through dispatch mode
+              - service: modbus.write_register
+                data:
+                  hub: alphaess_inverter
+                  slave: !secret modbus_slave
+                  address: 2176 # Dispatch Start (0880H)
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+            sequence:
+              - service: modbus.write_register
+                data:
+                  hub: goodwe_inverter
+                  slave: !secret modbus_slave
+                  address: 0x056E
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      0x01 # Auto mode
+                    {% else %}
+                      0xff # Stopped
+                    {% endif %}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
+            sequence:
+              - service: modbus.write_register
+                data:
+                  hub: fronius_inverter
+                  slave: !secret modbus_slave
+                  address: 40232
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      1
+                    {% else %}
+                      0
+                    {% endif %}
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_select.inverter_brand') == 'solaredge' }}"
+            sequence:
+              - service: modbus.write_register
+                data:
+                  hub: solaredge_inverter
+                  slave: !secret modbus_slave
+                  address: 57345
+                  value: >
+                    {% if is_state('input_select.inverter_run_mode', "Start") %}
+                      3 # Resume
+                    {% else %}
+                      2 # Shutdown
+                    {% endif %}
+    mode: single
+  - id: "energy_manager_scheduled_update_check"
+    alias: "Energy Manager - Scheduled Update Check"
+    description: "Check for Energy Manager updates daily at 6 AM"
+    trigger:
+      - platform: time
+        at: "06:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.energy_manager_auto_update_check
+        state: "on"
+    action:
+      - service: shell_command.check_energy_manager_updates
+        response_variable: update_check_result
+      - delay:
+          seconds: 3
+      # Create notification based on shell command exit code
+      - if:
+          - condition: template
+            value_template: "{{ update_check_result.returncode == 1 }}"
+        then:
+          - service: persistent_notification.create
+            data:
+              title: "✅ Energy Manager Update Available"
+              message: "A new version is available for download. Scheduled check found updates at {{ now().strftime('%H:%M') }}."
+              notification_id: "em_scheduled_update_result"
+        else:
+          - if:
+              - condition: template
+                value_template: "{{ update_check_result.returncode == 2 }}"
+            then:
+              - service: persistent_notification.create
+                data:
+                  title: "❌ Energy Manager Scheduled Check Failed"
+                  message: "Failed to check for updates during scheduled check at {{ now().strftime('%H:%M') }}."
+                  notification_id: "em_scheduled_update_result"
+      # Note: No notification for "up to date" on scheduled checks to avoid spam
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.energy_manager_last_update_check
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+    mode: single
+  - id: "energy_manager_manual_update_check"
+    alias: "Energy Manager - Manual Update Check"
+    description: "Manual trigger for checking updates"
+    trigger:
+      - platform: event
+        event_type: call_service
+        event_data:
+          domain: automation
+          service: trigger
+          service_data:
+            entity_id: automation.energy_manager_manual_update_check
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Checking for Updates"
+          message: "Checking for Energy Manager updates..."
+          notification_id: "em_checking_updates"
+      - service: shell_command.check_energy_manager_updates
+        response_variable: update_check_result
+      - delay:
+          seconds: 5
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: "em_checking_updates"
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.energy_manager_last_update_check
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: shell_command.em_read_update_status
+        response_variable: status_result
+      - if:
+          - condition: template
+            value_template: "{{ status_result.stdout | trim == 'update_available' }}"
+        then:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.energy_manager_update_available
+          - service: shell_command.em_read_update_version
+            response_variable: version_result
+          - service: input_text.set_value
+            target:
+              entity_id: input_text.energy_manager_available_version
+            data:
+              value: "{{ version_result.stdout | trim }}"
+          - service: shell_command.em_read_update_changelog
+            response_variable: changelog_result
+          - service: input_text.set_value
+            target:
+              entity_id: input_text.energy_manager_changelog
+            data:
+              value: "{{ changelog_result.stdout }}"
+          - service: persistent_notification.create
+            data:
+              title: "✅ Energy Manager Update Available"
+              message: "A new version is available for download. Check the dashboard for changelog details."
+              notification_id: "em_update_result"
+        else:
+          - if:
+              - condition: template
+                value_template: "{{ status_result.stdout | trim == 'no_updates' }}"
+            then:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.energy_manager_update_available
+              - service: input_text.set_value
+                target:
+                  entity_id: input_text.energy_manager_available_version
+                data:
+                  value: "unknown"
+              - service: persistent_notification.create
+                data:
+                  title: "ℹ️ Energy Manager Up to Date"
+                  message: "Energy Manager is running the latest version."
+                  notification_id: "em_update_result"
+            else:
+              - if:
+                  - condition: template
+                    value_template: "{{ status_result.stdout | trim == 'unauthorised' }}"
+                then:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.energy_manager_update_available
+                  - service: input_text.set_value
+                    target:
+                      entity_id: input_text.energy_manager_available_version
+                    data:
+                      value: "unauthorised"
+                  - service: persistent_notification.create
+                    data:
+                      title: "🔒 Energy Manager Update Unauthorised"
+                      message: "This system is not authorised to access updates. Ensure your Energy Manager API key has been set."
+                      notification_id: "em_update_result"
+                else:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.energy_manager_update_available
+                  - service: input_text.set_value
+                    target:
+                      entity_id: input_text.energy_manager_available_version
+                    data:
+                      value: "unknown"
+                  - service: persistent_notification.create
+                    data:
+                      title: "❌ Energy Manager Update Check Failed"
+                      message: "Failed to check for updates. Check the logs for details."
+                      notification_id: "em_update_result"
+  - id: "energy_manager_perform_update"
+    alias: "Energy Manager - Perform Update"
+    description: "Perform Energy Manager update when triggered"
+    trigger:
+      - platform: event
+        event_type: call_service
+        event_data:
+          domain: automation
+          service: trigger
+          service_data:
+            entity_id: automation.energy_manager_perform_update
+    condition:
+      - condition: state
+        entity_id: input_boolean.energy_manager_update_available
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Update Starting"
+          message: "Energy Manager update is starting. Please do not restart Home Assistant during this process."
+          notification_id: "em_update_starting"
+      - service: shell_command.perform_energy_manager_update
+    mode: single
+  - id: generate_ssh_key_shell
+    alias: "Generate SSH Key (Shell)"
+    trigger: []
+    action:
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ssh_key_status
+        data:
+          value: "generating"
+      - service: shell_command.generate_ssh_key
+      - delay: "00:00:01"
+      - service: shell_command.read_ssh_key
+        response_variable: key_result
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ssh_public_key
+        data:
+          value: "{{ key_result.stdout.strip() }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ssh_key_status
+        data:
+          value: "success"
+  - id: ssh_key_check
+    alias: "Check SSH Key Periodically"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/5"
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: binary_sensor.ssh_key_exists
+  - id: update_em_api_decision_sensor
+    alias: "Update Energy Manager Decision Sensor"
+    description: "Updates the sensor when the trigger boolean changes"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.em_api_decision_trigger
+    condition: []
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.energy_manager_decision
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.energy_manager_decision_timestamp
+  - id: sellbuy_mode_enabled
+    alias: "Sell-Buy Mode Enabled"
+    description: "Turn off High-Sell mode if Sell-Buy Mode is enabled"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.sellbuy_mode_enabled
+        to: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.high_sell_price_toggle
+    mode: single
+  - id: highsell_mode_enabled
+    alias: "High-Sell Mode Enabled"
+    description: "Turn off Sell-Buy mode if High-Sell Mode is enabled"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.high_sell_price_toggle
+        to: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.sellbuy_mode_enabled
+    mode: single
+  - id: flowpower_peak_enable
+    alias: "Flow Power in Peak Period"
+    description: "Turn on toggle if in Flow Power peak period"
+    trigger:
+      - platform: time
+        at: input_datetime.flowpower_peak_start_time
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.flowpower_in_peak
+    mode: single
+  - id: flowpower_peak_disable
+    alias: "Flow Power in Offpeak Period"
+    description: "Turn off toggle if not in Flow Power peak period"
+    trigger:
+      - platform: time
+        at: input_datetime.flowpower_peak_end_time
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.flowpower_in_peak
+    mode: single
+  - id: start_energy_control_timer_when_switch_turns_off
+    alias: "Start Energy Control Timer When Switch Turns Off"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.energy_control_on_off
+        from: "on"
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: input_boolean.energy_control_auto_reenable
+        state: "on"
+    action:
+      - service: timer.start
+        target:
+          entity_id: timer.energy_control
+        data:
+          duration: "{{ states('input_text.energy_control_duration') }}"
+  - id: turn_energy_control_switch_on_when_timer_finishes
+    alias: Turn Energy Control Switch On When Timer Finishes
+    mode: single
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.energy_control
+    condition:
+      - condition: state
+        entity_id: input_boolean.energy_control_auto_reenable
+        state: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.energy_control_on_off
+  - id: goodwe_eh_reset_slots
+    alias: "GoodWe EH: Reset all slots when slot selection changes"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_number.goodwe_schedule_8slot
+    action:
+      - service: script.goodwe_eh_reset_all_8slots
+  - id: goodwe_et_reset_slots
+    alias: "GoodWe ET/ESA: Reset all slots when 4-slot selection changes"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_number.goodwe_schedule_4slot
+    action:
+      - service: script.goodwe_reset_all_4slots
+  - id: force_discharge_hardlimit_to_inverter_rating
+    alias: Force discharge hard limit to inverter rating
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: input_number.battery_discharge_power_hardlimit
+    condition:
+      - condition: template
+        value_template: >
+          {{ states('input_number.battery_discharge_power_hardlimit') | float(0) >
+            (states('input_number.inverter_import_limit') | float(0) * 1000) }}
+    action:
+      - delay: "00:00:00.5"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.battery_discharge_power_hardlimit
+        data:
+          value: "{{ (states('input_number.inverter_import_limit') | float(0) * 1000) | int }}"
+  - id: ev_schedule_mode_enabled
+    alias: "EV Schedule Mode Enabled"
+    description: "Turn off Ready-by mode if Schedule Mode is enabled"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.em_ev_schedule_enabled
+        to: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.em_ev_ready_by_enabled
+  - id: ev_readyby_mode_enabled
+    alias: "EV Readyby Mode Enabled"
+    description: "Turn off Schedule mode if Ready-by Mode is enabled"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.em_ev_ready_by_enabled
+        to: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.em_ev_schedule_enabled
+
+  - id: em_victoriametrics_first_boot
+    alias: "EM: VictoriaMetrics first-boot setup"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/1"
+    action:
+      - service: shell_command.em_victoriametrics_setup
+        response_variable: vm_setup_result
+      - condition: template
+        value_template: >
+          {{
+            vm_setup_result.returncode | default(1) == 0
+            and
+            'EM_VICTORIAMETRICS_MIGRATION_COMPLETE'
+            in (vm_setup_result.stdout | default(''))
+          }}
+      - service: persistent_notification.create
+        data:
+          notification_id: em_victoriametrics_migration_complete
+          title: "Energy Manager database update complete"
+          message: >
+            VictoriaMetrics has been installed and configured, the
+            VictoriaMetrics Grafana plugin has been installed, and
+            InfluxDB has been removed.
+    mode: single
+  # === ENERGY_MANAGER_AUTOMATIONS_END ===

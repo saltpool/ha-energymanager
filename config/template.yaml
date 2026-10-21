@@ -1,0 +1,20 @@
+# === ENERGY_MANAGER_TEMPLATES_START v1.3.0 ===
+# Moved to packages (integrations/em_templates.yaml)
+
+- sensor:
+
+# === ENERGY_MANAGER_TEMPLATES_END ===
+
+# User customisations below this line are preserved during updates
+# Add your personal templates here
+
+    - name: "Additional PV Power"
+      unique_id: em_additional_pv_power_total
+      unit_of_measurement: W
+      device_class: power
+      state_class: measurement
+      state: >
+        {% set p1 = states('sensor.SECONDARY_PV_POWER_1') | float(0) %}
+        {% set p2 = states('sensor.SECONDARY_PV_POWER_2') | float(0) %}
+        {% set p3 = states('sensor.SECONDARY_PV_POWER_3') | float(0) %}
+        {{ (p1 + p2 + p3) | round(0) }}

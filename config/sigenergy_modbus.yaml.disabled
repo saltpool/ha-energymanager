@@ -1,0 +1,399 @@
+# sigenergy_modbus.yaml v2.0.0
+- name: "sigenergy_inverter"
+  type: tcp
+  host: !secret modbus_host_ip
+  port: !secret modbus_port
+  sensors:
+    - name: "sigenergy_device_type_code"
+      device_address: !secret modbus_slave
+      address: 30500 # (Model type)
+      input_type: input
+      data_type: string
+      count: 15
+      scan_interval: 600
+
+    - name: "sigenergy_inverter_serial"
+      device_address: !secret modbus_slave
+      address: 30515
+      input_type: input
+      data_type: string
+      count: 10
+      scan_interval: 600
+
+    - name: "sigenergy_firmware_version"
+      device_address: !secret modbus_slave
+      address: 30525
+      input_type: input
+      data_type: string
+      count: 15
+      scan_interval: 600
+
+    - name: "sigenergy_max_active_power"
+      device_address: 247
+      address: 30010 # (max active power)
+      input_type: input
+      data_type: uint32
+      precision: 3
+      scale: 1
+      unit_of_measurement: "W"
+      scan_interval: 60
+
+    - name: "sigenergy_daily_pv_energy"
+      device_address: 247
+      address: 30272   #31509
+      input_type: input
+      data_type: uint32
+      scale: 0.01
+      precision: 2
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sigenergy_total_pv_energy"
+      device_address: 247
+      address: 30088
+      input_type: input
+      data_type: uint64
+      scale: 0.01
+      precision: 3
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sigenergy_total_battery_energy_charged"
+      device_address: 247
+      address: 30244
+      input_type: input
+      data_type: uint64
+      scale: 0.01
+      precision: 3
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sigenergy_total_battery_energy_discharged"
+      device_address: 247
+      address: 30248
+      input_type: input
+      data_type: uint64
+      scale: 0.01
+      precision: 3
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 60
+
+    - name: "sigenergy_internal_temperature"
+      unique_id: sigenergy_internal_temperature
+      device_address: !secret modbus_slave
+      address: 31003 # (PCS Internal temperature)
+      input_type: input
+      data_type: int16
+      precision: 1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scale: 0.1
+      scan_interval: 10
+
+    - name: "sigenergy_plant_active_power"
+      device_address: 247
+      address: 30031
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_reactive_power"
+      device_address: 247
+      address: 30033 # (Reactive power)
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "var"
+      device_class: reactive_power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_power_factor"
+      device_address: !secret modbus_slave
+      address: 31023 # (Power factor)
+      input_type: input
+      data_type: uint16
+      scale: 0.001
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_grid_frequency"
+      device_address: !secret modbus_slave
+      address: 31002 # (Grid frequency)
+      input_type: input
+      data_type: uint16
+      scale: 0.01
+      unit_of_measurement: "Hz"
+      device_class: frequency
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_rated_battery_capacity"
+      device_address: 247
+      address: 30083 # (Rated battery capacity)
+      input_type: input
+      data_type: uint32
+      precision: 2
+      scale: 0.01
+      unit_of_measurement: "kWh"
+      device_class: energy_storage
+      scan_interval: 600
+
+    - name: "sigenergy_battery_soh"
+      device_address: 247
+      address: 30087 # (ESS Battery SOH)
+      input_type: input
+      data_type: uint16
+      scale: 0.1
+      precision: 1
+      unit_of_measurement: "%"
+      state_class: measurement
+      scan_interval: 600
+
+    - name: "sigenergy_battery_temperature"
+      device_address: 247
+      address: 30286   # (ESS plant cell temperature)
+      input_type: input
+      data_type: int16
+      scale: 0.1
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sigenergy_daily_charge_energy"
+      device_address: !secret modbus_slave
+      address: 30566
+      input_type: input
+      data_type: uint32
+      precision: 2
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scale: 0.01
+      scan_interval: 10
+
+    - name: "sigenergy_daily_discharge_energy"
+      device_address: !secret modbus_slave
+      address: 30572
+      input_type: input
+      data_type: uint32
+      scale: 0.01
+      precision: 2
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      scan_interval: 10
+
+    - name: "sigenergy_battery_voltage"
+      device_address: !secret modbus_slave
+      address: 30604 # (ESS Average cell voltage)
+      input_type: input
+      data_type: uint16
+      scale: 0.001
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      scan_interval: 60
+
+    - name: "sigenergy_ems_mode"
+      device_address: 247
+      address: 30003 # (EMS work mode)
+      input_type: input
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_remote_ems_control_mode"
+      device_address: 247
+      address: 40031 # (Remote EMS control mode)
+      input_type: holding
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_charge_discharge_power"
+      device_address: 247
+      address: 40034 # (ESS max discharging limit)
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_max_charging_power"
+      device_address: 247
+      address: 40032 # (ESS max charging limit)
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_max_discharging_power"
+      device_address: 247
+      address: 40034 # (ESS max discharging limit)
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_running_state"
+      device_address: 247
+      address: 30051
+      input_type: input
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_pv_power"
+      device_address: 247
+      address: 30035 # (PV power) 
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_thirdparty_power"
+      device_address: 247
+      address: 30194 # (Third party active power)
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_battery_power"
+      device_address: 247
+      address: 30037 # (ESS power)
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_grid_power"
+      device_address: 247
+      address: 30005
+      input_type: input
+      data_type: int32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_plant_battery_soc"
+      device_address: 247
+      address: 30014 # ([ESS] SOC)
+      input_type: holding 
+      data_type: uint16
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 30
+
+    - name: "sigenergy_remote_ems_enable"
+      device_address: 247
+      address: 40029
+      input_type: input
+      data_type: uint16
+      state_class: measurement
+      scan_interval: 30
+      # 0 : Disabled
+      # 1 : Enabled
+
+    - name: "sigenergy_pv_max_power_limit"
+      device_address: 247
+      address: 40036 
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_export_power_limit"
+      device_address: 247
+      address: 40038
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_import_power_limit"
+      device_address: 247
+      address: 40040
+      input_type: input
+      data_type: uint32
+      scale: 1
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      scan_interval: 10
+
+    - name: "sigenergy_reserved_soc_backup"
+      device_address: 247
+      address: 40046
+      input_type: holding
+      data_type: uint16
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 30
+
+    - name: "sigenergy_max_soc"
+      device_address: 247
+      address: 40047
+      input_type: input
+      data_type: uint16
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 30
+
+    - name: "sigenergy_min_soc"
+      device_address: 247
+      address: 40048
+      input_type: input
+      data_type: uint16
+      precision: 1
+      scale: 0.1
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      scan_interval: 30
