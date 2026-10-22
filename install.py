@@ -5,6 +5,9 @@ Run in Advanced SSH & Web Terminal on dedicated Home Assistant OS.
 Rerunnable: never overwrites existing SSH key material or version tracking.
 """
 import argparse
+import uuid
+import shutil
+from datetime import datetime
 import importlib.util
 import json
 import urllib.error
@@ -150,6 +153,177 @@ def install_apps():
     log('App stage complete; no SSH authentication or SSH App restart requested')
 
 
+
+def _download_text(source):
+    from update_checker import manifest_source_path
+    safe = manifest_source_path(source)
+    url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/{safe}'
+    with urllib.request.urlopen(url, timeout=90) as response:
+        return response.read().decode('utf-8')
+
+
+def _backup_file(path, label):
+    if not path.is_file():
+        return
+    backup_dir = STATE / 'backups' / ('installer_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    backup = backup_dir / (label + '.bak')
+    shutil.copy2(path, backup)
+    log(f'Backup: {path} -> {backup}')
+
+
+def _write_atomic(path, contents):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + '.em-install-temp')
+    try:
+        temp.write_text(contents, encoding='utf-8')
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _merge_flows(old_content, new_content):
+    # Same EnergyManager- tab selection and referenced-subflow semantics
+    # as _merge_energy_manager_tabs in perform_energy_manager_update.py.
+    old = json.loads(old_content)
+    new = json.loads(new_content)
+    if not isinstance(old, list) or not isinstance(new, list):
+        raise ValueError('Node-RED flows must be JSON arrays')
+    def tab(node):
+        return (isinstance(node, dict) and node.get('type') == 'tab'
+                and isinstance(node.get('label'), str) and 'id' in node)
+    old_tabs = {n['id'] for n in old if tab(n) and n['label'].startswith('EnergyManager-')}
+    new_tabs = {n['id'] for n in new if tab(n) and n['label'].startswith('EnergyManager-')}
+    if not new_tabs:
+        raise RuntimeError('Downloaded flows contain no EnergyManager- tabs; refusing replacement')
+    retained = [n for n in old if not (tab(n) and n['id'] in old_tabs)
+                and n.get('z') not in old_tabs]
+    incoming = [n for n in new if (tab(n) and n['id'] in new_tabs)
+                or n.get('z') in new_tabs]
+    subflows = {n['type'].split(':', 1)[1] for n in incoming
+                if isinstance(n.get('type'), str) and n['type'].startswith('subflow:')}
+    if subflows:
+        retained = [n for n in retained if not (n.get('type') == 'subflow'
+                    and n.get('id') in subflows)]
+        retained += [n for n in new if n.get('type') == 'subflow'
+                     and n.get('id') in subflows]
+    ids = {n.get('id') for n in retained}
+    retained.extend(n for n in incoming if n.get('id') not in ids)
+    log(f'Flow merge: replaced {len(old_tabs)} EM tabs with {len(new_tabs)} EM tabs')
+    return json.dumps(retained, separators=(',', ':'))
+
+
+def deploy():
+    """Use existing manifest and file merger; no SSH or SSH App restarts."""
+    if not (SCRIPTS / 'file_merger.py').is_file():
+        raise RuntimeError('Bootstrap files missing; run --step prepare')
+    if not Path('/addon_configs/a0d7b954_nodered').is_dir():
+        raise RuntimeError('Node-RED missing; run --step install-apps')
+    sys.path.insert(0, str(SCRIPTS))
+    from file_merger import EnergyManagerFileMerger
+    from update_checker import safe_repo_path
+
+    manifest_path = STATE / 'install-manifest.json'
+    log(f'Downloading current manifest from {REPO} ({BRANCH})')
+    url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/manifest/manifest.json'
+    with urllib.request.urlopen(url, timeout=60) as response:
+        manifest = json.load(response)
+    if not isinstance(manifest.get('files'), dict):
+        raise RuntimeError('Invalid manifest files map')
+    # Download and validate all file content before changing any installed files.
+    downloads = {}
+    for name, entry in manifest['files'].items():
+        path = safe_repo_path(name)
+        if not isinstance(entry, dict) or entry.get('action', 'merge') not in ('merge', 'replace', 'create'):
+            raise ValueError(f'Invalid manifest file entry: {name}')
+        downloads[name] = _download_text(name)
+    flow_config = manifest.get('nodered_flows') or {}
+    if not flow_config.get('download_url'):
+        raise RuntimeError('Manifest lacks Node-RED flows download URL')
+    flows = _download_text(flow_config['download_url'])
+    fresh_flows = json.loads(flows)
+    if not isinstance(fresh_flows, list):
+        raise RuntimeError('Downloaded flows are not a JSON array')
+    log(f'Validated {len(downloads)} manifest files and Node-RED flows')
+
+    merger = EnergyManagerFileMerger()
+    errors = []
+    for name, info in manifest['files'].items():
+        rel = safe_repo_path(name)
+        destination = Path('/') / rel if rel.startswith('share/') else ROOT / rel
+        action = info.get('action', 'merge')
+        log(f'{action}: {destination}')
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            content = downloads[name]
+            if action == 'replace':
+                result = merger.replace_file(str(destination), content, manifest['version'])
+            elif action == 'create':
+                result = True if destination.exists() else merger.replace_file(str(destination), content, manifest['version'])
+            else:
+                result = merger.update_file(str(destination), content, info.get('sections', []), manifest['version'])
+            if not result:
+                raise RuntimeError('File merger returned failure')
+        except Exception as exc:
+            errors.append(f'{name}: {exc}')
+            log(f'ERROR: {errors[-1]}')
+    if errors:
+        raise RuntimeError('Manifest deployment incomplete: ' + '; '.join(errors))
+    log('Manifest file deployment complete')
+
+    flow_path = Path('/addon_configs/a0d7b954_nodered/flows.json')
+    old_flows = flow_path.read_text(encoding='utf-8') if flow_path.exists() else '[]'
+    merged_flows = _merge_flows(old_flows, flows)
+    if not flow_path.exists() or merged_flows != old_flows:
+        _backup_file(flow_path, 'nodered-flows.json')
+        _write_atomic(flow_path, merged_flows)
+        log('Node-RED flows deployed directly')
+        log('Restarting Node-RED through Supervisor to load deployed flows')
+        try:
+            supervisor_request('POST', '/addons/a0d7b954_nodered/restart', {}, timeout=45)
+        except (TimeoutError, urllib.error.URLError) as exc:
+            log(f'Node-RED restart request interrupted: {exc}; checking App status')
+        status = supervisor_request('GET', '/addons/a0d7b954_nodered/info')
+        log(f'Node-RED Supervisor state: {status.get("state", "unknown")}')
+    else:
+        log('Node-RED flows already current')
+
+    # Resource entries follow the existing updater's structure and matching-by-URL.
+    resources = manifest.get('lovelace_resources') or []
+    if resources:
+        if not isinstance(resources, list):
+            raise RuntimeError('Unexpected Lovelace resource manifest format')
+        resource_path = ROOT / '.storage/lovelace_resources'
+        if resource_path.is_file():
+            data = json.loads(resource_path.read_text(encoding='utf-8'))
+        else:
+            data = {'version': 1, 'minor_version': 1,
+                    'key': 'lovelace_resources', 'data': {'items': []}}
+        items = data.setdefault('data', {}).setdefault('items', [])
+        changed = False
+        for entry in resources:
+            resource_url = entry['url']
+            resource_type = entry.get('type', 'module')
+            existing = next((item for item in items if item.get('url') == resource_url), None)
+            if existing is None:
+                items.append({'id': uuid.uuid4().hex, 'url': resource_url,
+                              'type': resource_type})
+                changed = True
+                log(f'Added Lovelace resource: {resource_url}')
+            elif existing.get('type') != resource_type:
+                existing['type'] = resource_type
+                changed = True
+                log(f'Updated Lovelace resource: {resource_url}')
+        if changed:
+            _backup_file(resource_path, 'lovelace_resources.json')
+            _write_atomic(resource_path, json.dumps(data, indent=2))
+            log('Lovelace resources registered locally (Home Assistant may need a restart to reload them)')
+        else:
+            log('Lovelace resources already registered')
+
+    log('Deployment stage complete: files, Node-RED flows, Lovelace resources')
+    log('Inverter-specific configuration, HACS and Home Assistant reload remain separate installation stages')
+
 def configure_ssh():
     """Authorise the existing key, retaining all SSH App options and credentials."""
     public_file = STATE / 'ssh_key.pub'
@@ -205,7 +379,7 @@ def check_ssh():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'install-apps', 'configure-ssh', 'check-ssh'], default='prepare')
+    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'configure-ssh', 'check-ssh'], default='prepare')
     args = parser.parse_args()
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
@@ -216,6 +390,8 @@ def main():
         prepare()
     elif args.step == 'install-apps':
         install_apps()
+    elif args.step == 'deploy':
+        deploy()
     elif args.step == 'configure-ssh':
         configure_ssh()
     else:
