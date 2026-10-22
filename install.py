@@ -10,6 +10,7 @@ import shutil
 from datetime import datetime
 import importlib.util
 import json
+import re
 import urllib.error
 import os
 from pathlib import Path
@@ -183,6 +184,75 @@ def _write_atomic(path, contents):
         temp.unlink(missing_ok=True)
 
 
+def _install_base_yaml(name, downloaded):
+    """Initialise HA's pre-existing files that have no Energy Manager markers.
+
+    Normal managed-section upgrades still use EnergyManagerFileMerger; this
+    fallback is only for first-time installation on an unmodified HA instance.
+    """
+    path = ROOT / name
+    original = path.read_text(encoding='utf-8') if path.exists() else ''
+    if 'ENERGY_MANAGER_' in original:
+        return False  # The existing file merger has already handled it.
+    if name == 'configuration.yaml':
+        # Avoid silently destroying unrelated YAML from a configured instance.
+        vanilla_lines = {
+            'default_config:', 'frontend:', 'themes: !include_dir_merge_named themes',
+            'automation: !include automations.yaml', 'script: !include scripts.yaml',
+            'scene: !include scenes.yaml',
+        }
+        active = [line.strip() for line in original.splitlines()
+                  if line.strip() and not line.lstrip().startswith('#')]
+        unexpected = [line for line in active if line not in vanilla_lines]
+        if unexpected:
+            raise RuntimeError('Existing configuration.yaml contains custom settings and '
+                               'no Energy Manager markers; refusing to overwrite: '
+                               + ', '.join(unexpected[:5]))
+        result = downloaded
+    elif name == 'automations.yaml':
+        # HA's default empty list is often [] or an empty file.
+        active = [line.strip() for line in original.splitlines()
+                  if line.strip() and not line.lstrip().startswith('#')]
+        if active and active != ['[]']:
+            # Existing user automations should not be silently discarded.
+            if not all(line.startswith('- ') or line.startswith(' ') for line in
+                       original.splitlines() if line.strip() and not line.lstrip().startswith('#')):
+                raise RuntimeError('Existing automations.yaml cannot be safely merged on first install')
+            result = downloaded.rstrip() + '\n\n' + original.strip() + '\n'
+        else:
+            result = downloaded
+    else:
+        raise ValueError(name)
+    if original == result:
+        return True
+    _backup_file(path, name)
+    _write_atomic(path, result)
+    log(f'Initialised /config/{name} with Energy Manager configuration')
+    return True
+
+
+def _ensure_modbus_secrets():
+    """Append missing Modbus values only, keeping all existing secrets intact."""
+    path = ROOT / 'secrets.yaml'
+    existing = path.read_text(encoding='utf-8') if path.exists() else ''
+    values = (
+        ('modbus_host_ip', '"REPLACE_WITH_INVERTER_IP"  # Set during inverter onboarding; no default'),
+        ('modbus_port', '502  # Default Modbus port'),
+        ('modbus_slave', '1  # Default Modbus slave address'),
+    )
+    additions = [(key, value) for key, value in values
+                 if not re.search(r'^\s*' + re.escape(key) + r'\s*:', existing, flags=re.MULTILINE)]
+    if not additions:
+        log('Existing Modbus secrets preserved; no changes needed')
+        return
+    _backup_file(path, 'secrets.yaml')
+    separator = '' if not existing or existing.endswith('\n') else '\n'
+    addition = '\n'.join(f'{key}: {value}' for key, value in additions) + '\n'
+    _write_atomic(path, existing + separator + addition)
+    log('Added missing Modbus secrets: ' + ', '.join(key for key, _ in additions))
+    log('Inverter IP must be configured during onboarding (no IP address assumed)')
+
+
 def _merge_flows(old_content, new_content):
     # Same EnergyManager- tab selection and referenced-subflow semantics
     # as _merge_energy_manager_tabs in perform_energy_manager_update.py.
@@ -270,6 +340,14 @@ def deploy():
             log(f'ERROR: {errors[-1]}')
     if errors:
         raise RuntimeError('Manifest deployment incomplete: ' + '; '.join(errors))
+    # Vanilla Home Assistant already contains these files but no EM markers.
+    # The normal merger only replaces existing marked sections, so initialise
+    # them explicitly on first install and leave subsequent upgrades unchanged.
+    for base_name in ('configuration.yaml', 'automations.yaml'):
+        if base_name not in downloads:
+            raise RuntimeError(f'Manifest missing required {base_name}')
+        _install_base_yaml(base_name, downloads[base_name])
+    _ensure_modbus_secrets()
     log('Manifest file deployment complete')
 
     flow_path = Path('/addon_configs/a0d7b954_nodered/flows.json')
