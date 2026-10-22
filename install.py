@@ -2,7 +2,6 @@
 """Energy Manager bootstrap installer (development).
 
 Run in Advanced SSH & Web Terminal on dedicated Home Assistant OS.
-Rerunnable: never overwrites existing SSH key material or version tracking.
 """
 import argparse
 import uuid
@@ -90,7 +89,7 @@ def prepare():
         log('Generating SSH keypair')
         run(['ssh-keygen', '-t', 'ed25519', '-f', str(private), '-N', '', '-C', 'energy_manager_automation'])
     log('SSH keypair ready')
-    log('Preparation complete. Next: run --step configure-ssh.')
+    log('Preparation complete. SSH authorisation is not required for initial deployment.')
 
 
 
@@ -116,7 +115,6 @@ def supervisor_request(method, path, payload=None, timeout=30):
 
 
 def install_apps():
-    """Install/configure required Apps from the fork manifest, without SSH."""
     manager = SCRIPTS / 'em_apps_manager.py'
     if not manager.is_file():
         raise RuntimeError('App manager missing; run --step prepare first')
@@ -187,11 +185,6 @@ def _write_atomic(path, contents):
 
 
 def _install_base_yaml(name, downloaded):
-    """Initialise HA's pre-existing files that have no Energy Manager markers.
-
-    Normal managed-section upgrades still use EnergyManagerFileMerger; this
-    fallback is only for first-time installation on an unmodified HA instance.
-    """
     path = ROOT / name
     original = path.read_text(encoding='utf-8') if path.exists() else ''
     if 'ENERGY_MANAGER_' in original:
@@ -234,7 +227,6 @@ def _install_base_yaml(name, downloaded):
 
 
 def _ensure_modbus_secrets():
-    """Append missing Modbus values only, keeping all existing secrets intact."""
     path = ROOT / 'secrets.yaml'
     existing = path.read_text(encoding='utf-8') if path.exists() else ''
     values = (
@@ -256,7 +248,6 @@ def _ensure_modbus_secrets():
 
 
 def _ensure_prometheus():
-    """Enable the built-in Prometheus YAML integration without duplicating it."""
     import re
     path = ROOT / 'configuration.yaml'
     content = path.read_text(encoding='utf-8')
@@ -270,8 +261,6 @@ def _ensure_prometheus():
 
 
 def _merge_flows(old_content, new_content):
-    # Same EnergyManager- tab selection and referenced-subflow semantics
-    # as _merge_energy_manager_tabs in perform_energy_manager_update.py.
     old = json.loads(old_content)
     new = json.loads(new_content)
     if not isinstance(old, list) or not isinstance(new, list):
@@ -301,7 +290,6 @@ def _merge_flows(old_content, new_content):
 
 
 def deploy():
-    """Use existing manifest and file merger; no SSH or SSH App restarts."""
     if not (SCRIPTS / 'file_merger.py').is_file():
         raise RuntimeError('Bootstrap files missing; run --step prepare')
     if not Path('/addon_configs/a0d7b954_nodered').is_dir():
@@ -356,9 +344,7 @@ def deploy():
             log(f'ERROR: {errors[-1]}')
     if errors:
         raise RuntimeError('Manifest deployment incomplete: ' + '; '.join(errors))
-    # Vanilla Home Assistant already contains these files but no EM markers.
-    # The normal merger only replaces existing marked sections, so initialise
-    # them explicitly on first install and leave subsequent upgrades unchanged.
+
     for base_name in ('configuration.yaml', 'automations.yaml'):
         if base_name not in downloads:
             raise RuntimeError(f'Manifest missing required {base_name}')
@@ -384,7 +370,6 @@ def deploy():
     else:
         log('Node-RED flows already current')
 
-    # Resource entries follow the existing updater's structure and matching-by-URL.
     resources = manifest.get('lovelace_resources') or []
     if resources:
         if not isinstance(resources, list):
@@ -423,7 +408,6 @@ def deploy():
 
 
 def core_request(method, endpoint, payload=None, timeout=45):
-    """Call Home Assistant's authenticated REST API through Supervisor."""
     token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
     if not token:
         raise RuntimeError('Supervisor token not available')
@@ -439,7 +423,6 @@ def core_request(method, endpoint, payload=None, timeout=45):
 
 
 def install_hacs():
-    """Install HACS files; GitHub authorisation is completed after reboot."""
     destination = ROOT / 'custom_components' / 'hacs'
     manifest_file = destination / 'manifest.json'
     if manifest_file.is_file():
@@ -455,7 +438,6 @@ def install_hacs():
     if destination.exists():
         raise RuntimeError('HACS destination exists but is incomplete; refusing to overwrite it')
 
-    # Download the official release, not a fork or a copy bundled with Energy Manager.
     url = 'https://github.com/hacs/integration/releases/latest/download/hacs.zip'
     log('Downloading official HACS release')
     request = urllib.request.Request(url, headers={'User-Agent': 'EnergyManagerBootstrap/1.0'})
@@ -496,7 +478,6 @@ def install_hacs():
 
 
 def finalise():
-    """Validate Home Assistant and request a full Home Assistant OS reboot."""
     if not (ROOT / 'configuration.yaml').is_file():
         raise RuntimeError('Home Assistant configuration missing; run --step deploy first')
     if not (Path('/addon_configs/a0d7b954_nodered') / 'flows.json').is_file():
@@ -517,8 +498,6 @@ def finalise():
         raise RuntimeError('Home Assistant configuration is not valid; OS will NOT be rebooted')
     log('Home Assistant configuration valid')
 
-    # Write a durable status *before* rebooting, since this Python process
-    # and its terminal are expected to be terminated by the host reboot.
     STATE.mkdir(parents=True, exist_ok=True)
     marker = STATE / 'install-status.json'
     marker_payload = {
@@ -554,7 +533,6 @@ def finalise():
 
 
 def configure_ssh():
-    """Authorise the existing key, retaining all SSH App options and credentials."""
     public_file = STATE / 'ssh_key.pub'
     private_file = STATE / 'ssh_key'
     if not public_file.is_file() or not private_file.is_file():
@@ -608,14 +586,28 @@ def check_ssh():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'install-hacs', 'finalise', 'configure-ssh', 'check-ssh'], default='prepare')
+    parser.add_argument('--step', choices=['all', 'prepare', 'install-apps', 'deploy', 'install-hacs', 'finalise', 'configure-ssh', 'check-ssh'], default='all', help='Installation stage (default: all); specific stages for troubleshooting')
     args = parser.parse_args()
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
     if not BRANCH or '/' in BRANCH or '..' in BRANCH:
         raise ValueError('Invalid branch')
     log(f'Repository: {REPO} ({BRANCH})')
-    if args.step == 'prepare':
+    if args.step == 'all':
+        log('Starting full Energy Manager installation')
+        log('Stage 1/5: Preparation')
+        prepare()
+        log('Stage 2/5: Supervisor Apps')
+        install_apps()
+        log('Stage 3/5: Energy Manager deployment')
+        deploy()
+        log('Stage 4/5: HACS integration files')
+        install_hacs()
+        log('Stage 5/5: Configuration validation and full OS reboot')
+        log('HACS authorisation and remaining integrations are configured after reboot.')
+        log('MQTT discovery must remain disabled; this installer does not alter it.')
+        finalise()
+    elif args.step == 'prepare':
         prepare()
     elif args.step == 'install-apps':
         install_apps()
