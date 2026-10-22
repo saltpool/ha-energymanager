@@ -1205,6 +1205,22 @@ try:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    if success and manifest.get('apps'):
+        print("Reconciling Supervisor Apps...")
+        update_dashboard_status("Reconciling Supervisor Apps...", "info")
+        try:
+            from em_apps_manager import reconcile
+            reconcile(manifest, repair=args.force_reinstall)
+        except Exception as e:
+            print(f"❌ App reconciliation failed: {e}")
+            success = False
+
+    if not success:
+        raise RuntimeError(
+            "Required files or Supervisor App reconciliation failed"
+        )
+
+   
     print("Processing special file operations...")
     update_dashboard_status("Processing special file operations...", "info")
     special_files_success = handle_special_files(selected_manifest)
@@ -1292,17 +1308,7 @@ try:
         except Exception as e:
             print(f"❌ Node-RED restart error: {e}")
             print("Please restart Node-RED manually")
-
-    if success and manifest.get('apps'):
-        print("Reconciling Supervisor Apps...")
-        update_dashboard_status("Reconciling Supervisor Apps...", "info")
-        try:
-            from em_apps_manager import reconcile
-            reconcile(manifest, repair=args.force_reinstall)
-        except Exception as e:
-            print(f"❌ App reconciliation failed: {e}")
-            success = False
-    
+  
     if success:
         print("Processing HACS dependencies...")
         update_dashboard_status(
