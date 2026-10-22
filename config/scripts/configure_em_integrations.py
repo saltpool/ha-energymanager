@@ -135,11 +135,42 @@ def ensure_mqtt_discovery_off(entry):
     log('MQTT discovery OFF, verified from refreshed options form')
 
 
+def dismiss_stale_mqtt_repair():
+    """Dismiss the expected MQTT setup warning after successful configuration."""
+    from hacs_manager import HAWebSocket
+
+    with HAWebSocket() as ws:
+        issues = ws.call('repairs/list_issues').get('issues', [])
+
+        issue = next((
+            item for item in issues
+            if item.get('domain') == 'mqtt'
+            and item.get('issue_id') == 'yaml_setup_without_active_setup'
+        ), None)
+
+        if issue is None:
+            log('No stale MQTT setup repair present')
+            return
+
+        if issue.get('ignored'):
+            log('MQTT setup repair already dismissed')
+            return
+
+        ws.call(
+            'repairs/ignore_issue',
+            domain='mqtt',
+            issue_id='yaml_setup_without_active_setup',
+            ignore=True
+        )
+        log('Stale MQTT setup repair dismissed')
+
+
 def main():
     log('Configuring Node-RED Companion and MQTT')
     configure_node_red()
     entry = configure_mqtt()
     ensure_mqtt_discovery_off(entry)
+    dismiss_stale_mqtt_repair()
     log('MQTT and Node-RED Companion configured successfully')
     log('Bureau of Meteorology and Solcast PV Forecast require manual onboarding')
 
