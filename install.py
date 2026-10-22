@@ -255,6 +255,20 @@ def _ensure_modbus_secrets():
     log('Inverter IP must be configured during onboarding (no IP address assumed)')
 
 
+def _ensure_prometheus():
+    """Enable the built-in Prometheus YAML integration without duplicating it."""
+    import re
+    path = ROOT / 'configuration.yaml'
+    content = path.read_text(encoding='utf-8')
+    if re.search(r'^prometheus\s*:', content, re.MULTILINE):
+        log('Existing Prometheus configuration preserved')
+        return
+    _backup_file(path, 'configuration-prometheus.yaml')
+    separator = '' if not content or content.endswith('\n') else '\n'
+    _write_atomic(path, content + separator + '\n# Energy Manager metrics for VictoriaMetrics\nprometheus:\n')
+    log('Enabled built-in Home Assistant Prometheus integration')
+
+
 def _merge_flows(old_content, new_content):
     # Same EnergyManager- tab selection and referenced-subflow semantics
     # as _merge_energy_manager_tabs in perform_energy_manager_update.py.
@@ -350,6 +364,7 @@ def deploy():
             raise RuntimeError(f'Manifest missing required {base_name}')
         _install_base_yaml(base_name, downloads[base_name])
     _ensure_modbus_secrets()
+    _ensure_prometheus()
     log('Manifest file deployment complete')
 
     flow_path = Path('/addon_configs/a0d7b954_nodered/flows.json')
