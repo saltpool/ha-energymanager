@@ -78,6 +78,131 @@ def ensure_key_for_new_ssh():
                     '-C', 'energy_manager_automation'], check=True)
     return pub.read_text(encoding='utf-8').strip()
 
+def reconcile_nodered_dependencies(manifest):
+    """Repair required Node-RED npm dependencies without replacing user files."""
+    required = manifest.get('nodered_dependencies', {})
+    if not required:
+        return
+
+    root = Path('/addon_configs/a0d7b954_nodered')
+    package_file = root / 'package.json'
+    modules = root / 'node_modules'
+
+    if not root.is_dir():
+        raise RuntimeError(f'Node-RED configuration directory missing: {root}')
+
+    if package_file.exists():
+        package = json.loads(package_file.read_text(encoding='utf-8'))
+    else:
+        package = {
+            'name': 'node-red-project',
+            'version': '0.0.1',
+            'private': True,
+            'dependencies': {}
+        }
+
+    dependencies = package.setdefault('dependencies', {})
+    declaration_changes = {}
+    missing_or_wrong = {}
+
+    for name, version in required.items():
+        if not isinstance(version, str) or not version:
+            raise ValueError(f'Invalid Node-RED version for {name}')
+        if not name.startswith('node-red-contrib-') or '/' in name:
+            raise ValueError(f'Invalid Node-RED package name: {name}')
+
+        installed_file = modules / name / 'package.json'
+        installed = None
+
+        if installed_file.exists():
+            try:
+                installed = json.loads(
+                    installed_file.read_text(encoding='utf-8')
+                ).get('version')
+            except (OSError, ValueError):
+                pass
+
+        if dependencies.get(name) != version:
+            declaration_changes[name] = version
+        if installed != version:
+            missing_or_wrong[name] = (installed, version)
+
+    if not declaration_changes and not missing_or_wrong:
+        print('[EM Apps] Node-RED npm dependencies verified', flush=True)
+        return
+
+    if declaration_changes:
+        dependencies.update(declaration_changes)
+
+        if package_file.exists():
+            backup = root / 'package.json.em-backup'
+            backup.write_bytes(package_file.read_bytes())
+
+        temporary = root / 'package.json.em-tmp'
+        try:
+            temporary.write_text(
+                json.dumps(package, indent=2) + '\n',
+                encoding='utf-8'
+            )
+            os.replace(temporary, package_file)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+        print(
+            f'[EM Apps] Node-RED dependency declarations repaired: '
+            f'{list(declaration_changes)}',
+            flush=True
+        )
+
+    print(
+        f'[EM Apps] Restarting Node-RED to reconcile npm dependencies: '
+        f'{list(missing_or_wrong)}',
+        flush=True
+    )
+
+    try:
+        request(
+            'POST', '/addons/a0d7b954_nodered/restart',
+            {}, timeout=60
+        )
+    except urllib.error.HTTPError:
+        raise
+    except (TimeoutError, urllib.error.URLError) as exc:
+        print(
+            f'[EM Apps] Node-RED restart request incomplete ({exc}); '
+            'checking installed packages...',
+            flush=True
+        )
+
+    deadline = time.monotonic() + 360
+    while time.monotonic() < deadline:
+        remaining = {}
+        for name, version in required.items():
+            installed_file = modules / name / 'package.json'
+            try:
+                installed = json.loads(
+                    installed_file.read_text(encoding='utf-8')
+                ).get('version')
+            except (OSError, ValueError):
+                installed = None
+            if installed != version:
+                remaining[name] = installed
+
+        if not remaining:
+            wait_for(
+                'a0d7b954_nodered',
+                lambda state: state.get('state') == 'started',
+                seconds=180
+            )
+            print('[EM Apps] Node-RED npm dependencies repaired', flush=True)
+            return
+
+        time.sleep(5)
+
+    raise RuntimeError(
+        f'Node-RED npm dependency repair timed out: {remaining}'
+    )
+
 
 def reconcile(manifest, repair=False):
     errors = []
@@ -243,6 +368,17 @@ def reconcile(manifest, repair=False):
         except Exception as exc:
             errors.append(f'{slug}: {exc}')
             print(f'[EM Apps] ERROR {errors[-1]}', flush=True)
+
+    if not any(
+        error.startswith('a0d7b954_nodered:')
+        for error in errors
+    ):
+        try:
+            reconcile_nodered_dependencies(manifest)
+        except Exception as exc:
+            errors.append(f'Node-RED npm dependencies: {exc}')
+            print(f'[EM Apps] ERROR {errors[-1]}', flush=True)
+
     if errors:
         raise RuntimeError('; '.join(errors))
 
