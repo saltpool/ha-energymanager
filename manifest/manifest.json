@@ -337,6 +337,12 @@
       "backup_current": true,
       "new_in_version": "1.3.0"
     },
+    "scripts/configure_em_integrations.py": {
+      "action": "replace",
+      "description": "Integration Configuration Script",
+      "backup_current": true,
+      "new_in_version": "1.3.0"
+    },
     "scripts/em_grafana_setup.py": {
       "action": "replace",
       "description": "Grafana Setup Script",
