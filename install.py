@@ -30,6 +30,7 @@ REQUIRED = (
     'file_merger.py',
     'hacs_manager.py',
     'em_apps_manager.py',
+    'configure_em_integrations.py',
     'perform_energy_manager_update.py',
 )
 SSH_HOST = 'a0d7b954-ssh.local.hass.io'
