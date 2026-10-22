@@ -12,6 +12,7 @@ import sys
 import urllib.request
 import urllib.error
 from datetime import datetime
+import shutil
 from pathlib import Path
 
 REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
@@ -70,6 +71,62 @@ def repair_missing_integrations(entries, ws_class):
         log(f'Verified on disk: {repo} -> custom_components/{domain}')
 
 
+def register_post_reboot():
+    """Stage post-HACS configuration and register one-shot SSH App start hook."""
+    repo = REPOSITORY
+    branch = BRANCH
+    state = Path('/config/.energy_manager')
+    state.mkdir(parents=True, exist_ok=True)
+    for source, target in (
+        ('configure_em_integrations.py', Path('/config/scripts/configure_em_integrations.py')),
+        ('em_post_hacs.py', Path('/config/scripts/em_post_hacs.py')),
+    ):
+        url = f'https://raw.githubusercontent.com/{repo}/{branch}/{source}'
+        log('Staging post-reboot script: ' + source)
+        with urllib.request.urlopen(url, timeout=60) as response:
+            content = response.read()
+        compile(content, str(target), 'exec')
+        temporary = target.with_name(target.name + '.download')
+        temporary.write_bytes(content)
+        os.replace(temporary, target)
+
+    token = os.environ['SUPERVISOR_TOKEN']
+    def supervisor(method, suffix, payload=None):
+        data = None if payload is None else json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request('http://supervisor/addons/a0d7b954_ssh/' + suffix,
+            method=method, data=data,
+            headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=60) as response:
+            obj = json.load(response)
+        if obj.get('result') == 'error':
+            raise RuntimeError(obj.get('message', 'Supervisor error'))
+        return obj.get('data', obj)
+
+    info = supervisor('GET', 'info')
+    options = dict(info.get('options') or {})
+    commands = list(options.get('init_commands') or [])
+    # The hook returns immediately; processing runs in the background, after boot.
+    hook = "sh -c 'nohup python3 /config/scripts/em_post_hacs.py > /config/.energy_manager/post-hacs.log 2>&1 < /dev/null &'"
+    if hook not in commands:
+        commands.append(hook)
+        options['init_commands'] = commands
+        supervisor('POST', 'options', {'options': options})
+        refreshed = supervisor('GET', 'info')
+        if hook not in (refreshed.get('options') or {}).get('init_commands', []):
+            raise RuntimeError('SSH App did not retain post-reboot init_commands hook')
+        log('Post-reboot SSH App startup hook registered (no SSH App restart)')
+    else:
+        log('Post-reboot startup hook already installed')
+
+    status = state / 'post-hacs-status.json'
+    temporary = status.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'status': 'pending',
+        'detail': 'Waiting for the Home Assistant OS reboot'}) + '\n', encoding='utf-8')
+    os.replace(temporary, status)
+    log('Post-reboot status: /config/.energy_manager/post-hacs-status.json')
+    log('Post-reboot log: /config/.energy_manager/post-hacs.log')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Install Energy Manager HACS components after GitHub authorisation')
     parser.add_argument('--repository', default=REPOSITORY)
@@ -115,6 +172,7 @@ def main():
         log(f"{change['action']}: {change['repository']} ({change.get('version') or 'n/a'})")
     log(f'Completed: {len(changes)} changes. Manifest contains {len(entries)} entries.')
     log('All HACS component operations completed successfully.')
+    register_post_reboot()
     log('The full Home Assistant OS will now reboot to load custom integrations.')
     log('The terminal will disconnect; this is expected. Finish integration setup after reboot.')
     token = os.environ['SUPERVISOR_TOKEN']
