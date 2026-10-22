@@ -464,6 +464,11 @@
   {"slug":"1bd4a9fb_victoria_metrics", "version":"1.153.0", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"retention":"60d","additionalArguments":"","enableHTTPAuth":false, "enablePrometheusScrape":true,"prometheusScrapeHTTPS":false, "prometheusScrapeInterval":"15s","prometheusScrapeTimeout":"10s", "homeassistantUrl":"homeassistant:8123"}},
   {"slug":"a0d7b954_grafana", "version":"13.0.3", "boot":"auto", "watchdog":true, "auto_update":false, "options":{"plugins":["victoriametrics-metrics-datasource"],"custom_plugins":[], "env_vars":[{"name":"GF_SECURITY_ALLOW_EMBEDDING","value":"true"}, {"name":"GF_PATHS_PROVISIONING","value":"/share/grafana/provisioning"}], "ssl":true,"certfile":"fullchain.pem","keyfile":"privkey.pem"}}
 ],
+  "nodered_dependencies": {
+    "node-red-contrib-sun-position": "3.0.0-alpha2",
+    "node-red-contrib-time-switch": "1.1.7",
+    "node-red-contrib-traffic": "0.2.1"
+  },
   "hacs_components": [
     {
       "repository": "thomasloven/lovelace-state-switch",
