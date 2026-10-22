@@ -10,7 +10,6 @@ from datetime import datetime
 
 sys.path.insert(0, '/config/scripts')
 from update_checker import EnergyManagerUpdateChecker
-from hacs_manager import sync_hacs_components_via_ssh
 
 EM_DIR = '/config/.energy_manager'
 
@@ -48,27 +47,7 @@ def main():
             write_outputs('update_available', result['remote_version'], notes, checker.branch)
             print(f"Update available on {checker.branch}: {result['current_version']} -> {result['remote_version']}")
             return 1
-        else:
-            hacs_changes = sync_hacs_components_via_ssh(
-                result['manifest'].get('hacs_components', []),
-                dry_run=True
-            )
-
-            if hacs_changes:
-                print(f"HACS dependency changes required: {len(hacs_changes)}")
-                for change in hacs_changes:
-                    print(
-                        f"  {change['action']}: "
-                        f"{change['repository']} "
-                        f"{change.get('version') or ''}"
-                    )
-
-                write_outputs(
-                    'no_updates',
-                    result['current_version'],
-                    branch=checker.branch
-                )
-                return 0            
+        else:       
             write_outputs('no_updates', result['current_version'], branch=checker.branch)
             print(f"No updates available on {checker.branch}")
         return 0
