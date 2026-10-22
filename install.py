@@ -2,6 +2,7 @@
 """Energy Manager bootstrap installer (development).
 
 Run in Advanced SSH & Web Terminal on dedicated Home Assistant OS.
+Rerunnable: never overwrites existing SSH key material or version tracking.
 """
 import argparse
 import importlib.util
@@ -35,7 +36,6 @@ def log(message):
 
 def run(command, **kwargs):
     return subprocess.run(command, check=True, **kwargs)
-
 
 
 def prepare():
@@ -107,6 +107,49 @@ def supervisor_request(method, path, payload=None, timeout=30):
     return result.get('data', result)
 
 
+
+def install_apps():
+    """Install/configure required Apps from the fork manifest, without SSH."""
+    manager = SCRIPTS / 'em_apps_manager.py'
+    if not manager.is_file():
+        raise RuntimeError('App manager missing; run --step prepare first')
+    if not (os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')):
+        raise RuntimeError('Supervisor token not available')
+
+    manifest_url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/manifest/manifest.json'
+    log(f'Downloading manifest from {REPO} ({BRANCH})')
+    with urllib.request.urlopen(manifest_url, timeout=60) as response:
+        manifest = json.load(response)
+    apps = manifest.get('apps')
+    if not isinstance(apps, list) or not apps:
+        raise RuntimeError('Manifest has no valid apps list; refusing to continue')
+    if not isinstance(manifest.get('nodered_dependencies', {}), dict):
+        raise RuntimeError('Invalid Node-RED dependency manifest')
+
+    manifest_file = STATE / 'install-manifest.json'
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    temporary = manifest_file.with_name(manifest_file.name + '.download')
+    temporary.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+    os.replace(temporary, manifest_file)
+
+    log(f'Reconciling {len(apps)} Supervisor Apps and Node-RED dependencies')
+    # Run in the foreground: all App manager output stays visible.
+    run([sys.executable, '-u', str(manager), '--manifest', str(manifest_file)])
+    log('Supervisor App installation and Node-RED dependencies complete')
+
+    nodered_dir = Path('/addon_configs/a0d7b954_nodered')
+    if nodered_dir.is_dir():
+        log(f'Node-RED configuration directory accessible: {nodered_dir}')
+        flow_path = nodered_dir / 'flows.json'
+        log(f'Node-RED flows.json exists: {flow_path.is_file()}')
+    else:
+        log(f'Node-RED configuration directory NOT accessible at {nodered_dir}')
+        log('Direct flow deployment cannot be assumed from this environment')
+    storage = ROOT / '.storage'
+    log(f'Home Assistant .storage accessible: {storage.is_dir()}')
+    log('App stage complete; no SSH authentication or SSH App restart requested')
+
+
 def configure_ssh():
     """Authorise the existing key, retaining all SSH App options and credentials."""
     public_file = STATE / 'ssh_key.pub'
@@ -162,7 +205,7 @@ def check_ssh():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'configure-ssh', 'check-ssh'], default='prepare')
+    parser.add_argument('--step', choices=['prepare', 'install-apps', 'configure-ssh', 'check-ssh'], default='prepare')
     args = parser.parse_args()
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
@@ -171,6 +214,8 @@ def main():
     log(f'Repository: {REPO} ({BRANCH})')
     if args.step == 'prepare':
         prepare()
+    elif args.step == 'install-apps':
+        install_apps()
     elif args.step == 'configure-ssh':
         configure_ssh()
     else:
