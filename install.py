@@ -534,7 +534,7 @@ def finalise():
     log('Full Home Assistant OS reboot requested successfully. The terminal may disconnect now.')
 
 
-def configure_ssh():
+def configure_ssh(restart=True):
     public_file = STATE / 'ssh_key.pub'
     private_file = STATE / 'ssh_key'
     if not public_file.is_file() or not private_file.is_file():
@@ -562,6 +562,9 @@ def configure_ssh():
     if public_key not in saved_keys:
         raise RuntimeError('Supervisor did not retain the Energy Manager SSH key')
     log('SSH public key authorised successfully')
+    if not restart:
+        log('SSH key will be activated by the final Home Assistant OS reboot')
+        return
     log('Restarting Advanced SSH & Web Terminal to activate the new key')
     log('This may disconnect this terminal. Reopen it and run --step check-ssh.')
     try:
@@ -605,6 +608,8 @@ def main():
         deploy()
         log('Stage 4/5: HACS integration files')
         install_hacs()
+        log('Authorising Energy Manager SSH key for future updates')
+        configure_ssh(restart=False)
         log('Stage 5/5: Configuration validation and full OS reboot')
         log('HACS authorisation and remaining integrations are configured after reboot.')
         log('MQTT discovery must remain disabled; this installer does not alter it.')
