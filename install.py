@@ -9,6 +9,8 @@ import uuid
 import shutil
 from datetime import datetime
 import importlib.util
+import io
+import zipfile
 import json
 import re
 import urllib.error
@@ -421,12 +423,72 @@ def core_request(method, endpoint, payload=None, timeout=45):
         return json.loads(response.read() or b'{}')
 
 
+def install_hacs():
+    """Install HACS files; GitHub authorisation is completed after reboot."""
+    destination = ROOT / 'custom_components' / 'hacs'
+    manifest_file = destination / 'manifest.json'
+    if manifest_file.is_file():
+        try:
+            metadata = json.loads(manifest_file.read_text(encoding='utf-8'))
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(f'Existing HACS installation needs attention: {exc}') from exc
+        if metadata.get('domain') != 'hacs':
+            raise RuntimeError('Existing custom_components/hacs is not a valid HACS integration')
+        log('HACS files already installed; leaving the existing installation unchanged')
+        log('GitHub authorisation will be completed through Home Assistant after reboot')
+        return
+    if destination.exists():
+        raise RuntimeError('HACS destination exists but is incomplete; refusing to overwrite it')
+
+    # Download the official release, not a fork or a copy bundled with Energy Manager.
+    url = 'https://github.com/hacs/integration/releases/latest/download/hacs.zip'
+    log('Downloading official HACS release')
+    request = urllib.request.Request(url, headers={'User-Agent': 'EnergyManagerBootstrap/1.0'})
+    with urllib.request.urlopen(request, timeout=120) as response:
+        archive = response.read(50 * 1024 * 1024 + 1)
+    if len(archive) > 50 * 1024 * 1024:
+        raise RuntimeError('HACS download exceeds expected size limit')
+
+    parent = destination.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    staged = parent / ('.hacs-em-install-' + uuid.uuid4().hex)
+    staged.mkdir()
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as z:
+            for member in z.infolist():
+                # Reject absolute paths, traversal and symlinks in third-party archives.
+                name = member.filename
+                parts = Path(name).parts
+                mode = (member.external_attr >> 16) & 0o170000
+                if not name or name.startswith('/') or '..' in parts or mode == 0o120000:
+                    raise RuntimeError(f'Unsafe HACS archive member: {name!r}')
+                resolved = (staged / name).resolve()
+                if not resolved.is_relative_to(staged.resolve()):
+                    raise RuntimeError(f'Unsafe HACS archive path: {name!r}')
+            z.extractall(staged)
+        candidate = staged / 'manifest.json'
+        if not candidate.is_file() or json.loads(candidate.read_text(encoding='utf-8')).get('domain') != 'hacs':
+            raise RuntimeError('Downloaded archive is not a valid HACS integration')
+        if destination.exists():
+            raise RuntimeError('HACS was installed concurrently; refusing to replace it')
+        staged.rename(destination)
+    finally:
+        if staged.exists():
+            shutil.rmtree(staged)
+    log('HACS integration files installed successfully')
+    log('After the final reboot: Settings > Devices & services > Add integration > HACS')
+    log('Complete GitHub authorisation during onboarding; no GitHub credentials are required here')
+
+
 def finalise():
     """Validate Home Assistant and request a full Home Assistant OS reboot."""
     if not (ROOT / 'configuration.yaml').is_file():
         raise RuntimeError('Home Assistant configuration missing; run --step deploy first')
     if not (Path('/addon_configs/a0d7b954_nodered') / 'flows.json').is_file():
         raise RuntimeError('Node-RED flows missing; run --step deploy first')
+
+    if not (ROOT / 'custom_components/hacs/manifest.json').is_file():
+        raise RuntimeError('HACS integration files missing; run --step install-hacs first')
 
     log('Validating Home Assistant configuration before reboot')
     try:
@@ -531,7 +593,7 @@ def check_ssh():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'finalise', 'configure-ssh', 'check-ssh'], default='prepare')
+    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'install-hacs', 'finalise', 'configure-ssh', 'check-ssh'], default='prepare')
     args = parser.parse_args()
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
@@ -544,6 +606,8 @@ def main():
         install_apps()
     elif args.step == 'deploy':
         deploy()
+    elif args.step == 'install-hacs':
+        install_hacs()
     elif args.step == 'finalise':
         finalise()
     elif args.step == 'configure-ssh':
