@@ -16,6 +16,7 @@ from pathlib import Path
 import subprocess
 import sys
 import urllib.request
+import time
 
 REPO = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
 BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
@@ -324,6 +325,79 @@ def deploy():
     log('Deployment stage complete: files, Node-RED flows, Lovelace resources')
     log('Inverter-specific configuration, HACS and Home Assistant reload remain separate installation stages')
 
+
+
+def core_request(method, endpoint, payload=None, timeout=45):
+    """Call Home Assistant's authenticated REST API through Supervisor."""
+    token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
+    if not token:
+        raise RuntimeError('Supervisor token not available')
+    data = None if payload is None else json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        'http://supervisor/core/api/' + endpoint.lstrip('/'),
+        data=data, method=method,
+        headers={'Authorization': 'Bearer ' + token,
+                 'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return json.loads(response.read() or b'{}')
+
+
+def finalise():
+    """Validate Home Assistant and request a full Home Assistant OS reboot."""
+    if not (ROOT / 'configuration.yaml').is_file():
+        raise RuntimeError('Home Assistant configuration missing; run --step deploy first')
+    if not (Path('/addon_configs/a0d7b954_nodered') / 'flows.json').is_file():
+        raise RuntimeError('Node-RED flows missing; run --step deploy first')
+
+    log('Validating Home Assistant configuration before reboot')
+    try:
+        result = core_request('POST', 'config/core/check_config', {}, timeout=120)
+    except urllib.error.HTTPError as exc:
+        reason = exc.read().decode('utf-8', errors='replace')
+        raise RuntimeError(f'Home Assistant configuration check HTTP {exc.code}: {reason}') from exc
+    status = str(result.get('result', '')).lower()
+    if status != 'valid':
+        log('Home Assistant configuration validation result: ' + json.dumps(result))
+        raise RuntimeError('Home Assistant configuration is not valid; OS will NOT be rebooted')
+    log('Home Assistant configuration valid')
+
+    # Write a durable status *before* rebooting, since this Python process
+    # and its terminal are expected to be terminated by the host reboot.
+    STATE.mkdir(parents=True, exist_ok=True)
+    marker = STATE / 'install-status.json'
+    marker_payload = {
+        'status': 'reboot_requested',
+        'repository': REPO,
+        'branch': BRANCH,
+        'requested_at': datetime.now().astimezone().isoformat(),
+        'note': 'Installation deployed and configuration validated; post-reboot verification pending.',
+    }
+    _write_atomic(marker, json.dumps(marker_payload, indent=2) + '\n')
+
+    log('Installation files deployed and Home Assistant configuration validated.')
+    log('A full Home Assistant OS reboot will now be requested.')
+    log('The SSH terminal will disconnect; this is expected.')
+    log('After Home Assistant is back, continue onboarding: HACS, inverter, Solcast, electricity provider and Energy Manager keys.')
+    log('Reboot request status saved to /config/.energy_manager/install-status.json')
+
+    try:
+        supervisor_request('POST', '/host/reboot', {}, timeout=10)
+    except urllib.error.HTTPError as exc:
+        # An HTTP response means the Supervisor explicitly rejected the request.
+        error = exc.read().decode('utf-8', errors='replace')
+        marker_payload['status'] = 'reboot_request_failed'
+        _write_atomic(marker, json.dumps(marker_payload, indent=2) + '\n')
+        raise RuntimeError(f'Host reboot rejected (HTTP {exc.code}): {error}') from exc
+    except (TimeoutError, OSError, urllib.error.URLError) as exc:
+        # The host may go down while the request is in flight. We cannot
+        # distinguish that from a network failure here; do not claim success.
+        log(f'Reboot connection interrupted: {exc}')
+        log('Reboot may be underway. Check whether Home Assistant restarts; if not, reboot it via Settings > System.')
+        return
+    log('Full Home Assistant OS reboot requested successfully. The terminal may disconnect now.')
+
+
 def configure_ssh():
     """Authorise the existing key, retaining all SSH App options and credentials."""
     public_file = STATE / 'ssh_key.pub'
@@ -379,7 +453,7 @@ def check_ssh():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'configure-ssh', 'check-ssh'], default='prepare')
+    parser.add_argument('--step', choices=['prepare', 'install-apps', 'deploy', 'finalise', 'configure-ssh', 'check-ssh'], default='prepare')
     args = parser.parse_args()
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
@@ -392,6 +466,8 @@ def main():
         install_apps()
     elif args.step == 'deploy':
         deploy()
+    elif args.step == 'finalise':
+        finalise()
     elif args.step == 'configure-ssh':
         configure_ssh()
     else:
