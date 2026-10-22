@@ -81,7 +81,7 @@ def register_post_reboot():
         ('configure_em_integrations.py', Path('/config/scripts/configure_em_integrations.py')),
         ('em_post_hacs.py', Path('/config/scripts/em_post_hacs.py')),
     ):
-        url = f'https://raw.githubusercontent.com/{repo}/{branch}/{source}'
+        url = f'https://raw.githubusercontent.com/{repo}/{branch}/config/scripts/{source}'
         log('Staging post-reboot script: ' + source)
         with urllib.request.urlopen(url, timeout=60) as response:
             content = response.read()
