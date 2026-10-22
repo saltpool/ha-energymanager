@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Configure Energy Manager MQTT and Node-RED Companion via HA's HTTP config-flow API.
+"""Set up MQTT and Node-RED Companion following the HACS component reboot.
 
-Run after installing HACS components and rebooting Home Assistant OS.
-Does not change .storage, alter broker credentials, or enable MQTT discovery.
+Uses Home Assistant's HTTP config flows. Never edits .storage directly.
+BOM and Solcast deliberately remain manual onboarding steps.
 """
 import json
 import os
@@ -48,33 +48,34 @@ def start_flow(domain):
 
 
 def submit_flow(flow, data):
-    if not flow.get('flow_id'):
+    flow_id = flow.get('flow_id')
+    if not flow_id:
         raise RuntimeError('Home Assistant returned a flow without flow_id: ' + repr(flow)[:700])
-    return request('POST', '/flow/' + flow['flow_id'], data)
+    return request('POST', '/flow/' + flow_id, data)
 
 
 def configure_node_red():
     if entries('nodered'):
-        log('Node-RED Companion already configured; leaving existing entry unchanged')
+        log('Node-RED Companion already configured; existing entry preserved')
         return
     if not Path('/config/custom_components/nodered/manifest.json').is_file():
-        raise RuntimeError('Node-RED Companion files absent; run HACS component installer first')
+        raise RuntimeError('Node-RED Companion files absent; run HACS component installer and reboot first')
     flow = start_flow('nodered')
-    log('Node-RED flow initial response: ' + str(flow.get('type')) + ' / ' + str(flow.get('step_id')))
+    log('Node-RED flow: ' + str(flow.get('type')) + ' / ' + str(flow.get('step_id')))
     if flow.get('type') == 'form' and flow.get('step_id') == 'user':
         flow = submit_flow(flow, {})
     if flow.get('type') != 'create_entry' or not entries('nodered'):
-        raise RuntimeError('Node-RED Companion setup unsuccessful: ' + json.dumps(flow)[:900])
+        raise RuntimeError('Node-RED Companion configuration unsuccessful: ' + json.dumps(flow)[:900])
     log('Node-RED Companion configuration entry created')
 
 
 def configure_mqtt():
     configured = entries('mqtt')
     if configured:
-        log('MQTT already configured; keeping existing broker credentials')
+        log('MQTT already configured; existing broker credentials preserved')
         return configured[0]
     flow = start_flow('mqtt')
-    log('MQTT flow initial response: ' + str(flow.get('type')) + ' / ' + str(flow.get('step_id')))
+    log('MQTT flow: ' + str(flow.get('type')) + ' / ' + str(flow.get('step_id')))
     if flow.get('type') == 'menu' and 'addon' in flow.get('menu_options', []):
         flow = submit_flow(flow, {'next_step_id': 'addon'})
     if flow.get('type') == 'form' and flow.get('step_id') == 'hassio_confirm':
@@ -83,23 +84,37 @@ def configure_mqtt():
         raise RuntimeError('MQTT broker setup needs attention: ' + json.dumps(flow)[:900])
     configured = entries('mqtt')
     if not configured:
-        raise RuntimeError('MQTT flow returned create_entry but MQTT entry is absent')
-    log('MQTT configured using installed broker')
+        raise RuntimeError('MQTT flow completed but no MQTT entry exists')
+    log('MQTT configured using installed Mosquitto broker')
     return configured[0]
 
 
-def disable_mqtt_discovery(entry):
-    if entry.get('options', {}).get('discovery') is False:
-        log('MQTT discovery OFF, verified')
+def _option_fields(flow):
+    return {f.get('name'): f for f in flow.get('data_schema', [])
+            if isinstance(f, dict) and isinstance(f.get('name'), str)}
+
+
+def _discovery_form(entry_id):
+    flow = request('POST', '/options/flow', {'handler': entry_id})
+    if flow.get('type') != 'form' or flow.get('step_id') != 'options':
+        raise RuntimeError('Unexpected MQTT options form: ' + json.dumps(flow)[:800])
+    fields = _option_fields(flow)
+    if 'discovery' not in fields:
+        raise RuntimeError('MQTT options form has no discovery switch')
+    return flow, fields
+
+
+def ensure_mqtt_discovery_off(entry):
+    # /config/config_entries/entry may omit options. Read the actual options form.
+    # The form defaults reflect the current MQTT options, as seen in the HA UI.
+    flow, fields = _discovery_form(entry['entry_id'])
+    if fields['discovery'].get('default') is False:
+        log('MQTT discovery OFF, verified from current options form')
         return
-    step = request('POST', '/options/flow', {'handler': entry['entry_id']})
-    if step.get('type') != 'form' or step.get('step_id') != 'options':
-        raise RuntimeError('Unexpected MQTT options form: ' + json.dumps(step)[:900])
-    fields = {f.get('name'): f for f in step.get('data_schema', []) if isinstance(f, dict)}
     required = {'discovery', 'discovery_prefix', 'discovery_qos', 'birth_enable', 'will_enable'}
     if not required.issubset(fields):
-        raise RuntimeError('Cannot safely disable MQTT discovery automatically with this form; '
-                           'disable in MQTT > Configure MQTT options. Fields: ' + ', '.join(fields))
+        raise RuntimeError('Cannot safely set MQTT discovery on this HA version; fields: '
+                           + ', '.join(fields))
     values = {}
     for name, field in fields.items():
         if name == 'discovery':
@@ -109,22 +124,24 @@ def disable_mqtt_discovery(entry):
         elif name in entry.get('options', {}):
             values[name] = entry['options'][name]
         elif field.get('required'):
-            raise RuntimeError('Required MQTT option lacks a safe value: ' + name)
-    result = request('POST', '/options/flow/' + step['flow_id'], values)
+            raise RuntimeError('Required MQTT option lacks existing value: ' + name)
+    result = request('POST', '/options/flow/' + flow['flow_id'], values)
     if result.get('type') != 'create_entry':
         raise RuntimeError('MQTT options update failed: ' + json.dumps(result)[:900])
-    configured = entries('mqtt')
-    if not configured or configured[0].get('options', {}).get('discovery') is not False:
-        raise RuntimeError('MQTT discovery OFF could not be verified after update')
-    log('MQTT discovery OFF, verified')
+    # A new flow reads back persisted MQTT options; entry listing may omit options.
+    _, verified_fields = _discovery_form(entry['entry_id'])
+    if verified_fields['discovery'].get('default') is not False:
+        raise RuntimeError('MQTT discovery OFF could not be verified in refreshed options form')
+    log('MQTT discovery OFF, verified from refreshed options form')
 
 
 def main():
-    log('Configuring Node-RED Companion and MQTT through Home Assistant HTTP API')
+    log('Configuring Node-RED Companion and MQTT')
     configure_node_red()
     entry = configure_mqtt()
-    disable_mqtt_discovery(entry)
-    log('Required integration entries configured; BOM and Solcast still need onboarding')
+    ensure_mqtt_discovery_off(entry)
+    log('MQTT and Node-RED Companion configured successfully')
+    log('Bureau of Meteorology and Solcast PV Forecast require manual onboarding')
 
 
 if __name__ == '__main__':
