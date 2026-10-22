@@ -10,6 +10,8 @@ import os
 import re
 import sys
 import urllib.request
+import urllib.error
+from datetime import datetime
 from pathlib import Path
 
 REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
@@ -61,7 +63,27 @@ def main():
     for change in changes:
         log(f"{change['action']}: {change['repository']} ({change.get('version') or 'n/a'})")
     log(f'Completed: {len(changes)} changes. Manifest contains {len(entries)} entries.')
-    log('Restart Home Assistant Core after component installation to load new custom integrations.')
+    log('All HACS component operations completed successfully.')
+    log('The full Home Assistant OS will now reboot to load custom integrations.')
+    log('The terminal will disconnect; this is expected. Finish integration setup after reboot.')
+    token = os.environ['SUPERVISOR_TOKEN']
+    request = urllib.request.Request(
+        'http://supervisor/host/reboot',
+        data=b'{}', method='POST',
+        headers={'Authorization': 'Bearer ' + token,
+                 'Content-Type': 'application/json'},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            payload = json.load(response)
+            if payload.get('result') == 'error':
+                raise RuntimeError('Supervisor rejected host reboot: ' + str(payload.get('message')))
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError('Supervisor refused host reboot: HTTP ' + str(exc.code)) from exc
+    except (TimeoutError, OSError, urllib.error.URLError) as exc:
+        log('Reboot request connection interrupted; Home Assistant may already be rebooting: ' + str(exc))
+        return
+    log('Home Assistant OS reboot requested successfully.')
 
 
 if __name__ == '__main__':
