@@ -1133,27 +1133,13 @@ try:
     installed_version = version_tuple(result['current_version'])
 
     if not should_update:
-        print("Checking HACS dependencies...")
-        update_dashboard_status("Checking HACS dependencies...", "info")
-
-        hacs_changes = sync_hacs_components_via_ssh(
-            result['manifest'].get('hacs_components', [])
+        print("No new Energy Manager version; no changes made")
+        update_dashboard_status(
+            "No updates available. System is up to date.",
+            "success"
         )
-
-        if hacs_changes:
-            print(f"✅ HACS dependencies reconciled: {len(hacs_changes)} changes")
-            update_dashboard_status(
-                f"HACS dependencies updated: {len(hacs_changes)} changes",
-                "success"
-            )
-        else:
-            print("No updates available")
-            update_dashboard_status(
-                "No updates available. System is up to date.",
-                "success"
-            )
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
-            f.write("success:hacs" if hacs_changes else "no_updates")
+            f.write("no_updates")
         sys.exit(0)
     
     manifest = result.get('manifest')
@@ -1174,8 +1160,7 @@ try:
     success = True
     selected_files = {}
     for filepath, file_info in manifest['files'].items():
-        if args.force_reinstall or version_tuple(file_info['new_in_version']) > installed_version:
-            selected_files[filepath] = file_info
+        selected_files[filepath] = file_info
     selected_manifest = dict(manifest, files=selected_files)
     for filepath, file_info in selected_files.items():
         local_path = filepath if filepath.startswith('/share/') else os.path.join('/config', filepath)
@@ -1210,7 +1195,7 @@ try:
         update_dashboard_status("Reconciling Supervisor Apps...", "info")
         try:
             from em_apps_manager import reconcile
-            reconcile(manifest, repair=args.force_reinstall)
+            reconcile(manifest, repair=True)
         except Exception as e:
             print(f"❌ App reconciliation failed: {e}")
             success = False
@@ -1235,11 +1220,10 @@ try:
     update_dashboard_status("Processing Lovelace resource updates...", "info")
     lovelace_success = update_lovelace_resources(dict(manifest, lovelace_resources=[
         resource for resource in manifest.get('lovelace_resources', [])
-        if args.force_reinstall or version_tuple(resource['new_in_version']) > installed_version]))
+        ]))
     success &= lovelace_success
     
-    update_flows = ('nodered_flows' in manifest and
-                    (args.force_reinstall or version_tuple(manifest['nodered_flows']['new_in_version']) > installed_version))
+    update_flows = ('nodered_flows' in manifest and True)
     if update_flows:
         flows_info = manifest['nodered_flows']
         download_url = flows_info.get('download_url')
@@ -1323,8 +1307,28 @@ try:
                 f"✅ HACS dependencies reconciled: "
                 f"{len(hacs_changes)} changes"
             )
+
+            # This file is deployed from the manifest earlier in the
+            # update. Only normal updates and Force Reinstall reach here.
+            integration_script = (
+                '/config/scripts/configure_em_integrations.py'
+            )
+
+            if not os.path.isfile(integration_script):
+                raise RuntimeError(
+                    'Required integration configuration script missing: '
+                    + integration_script
+                )
+
+            print("Reconciling MQTT and Node-RED Companion...")
+            subprocess.run(
+                [sys.executable, '-u', integration_script],
+                check=True
+            )
+
+            print("✅ Required Home Assistant integrations reconciled")
         except Exception as e:
-            print(f"❌ HACS dependency update failed: {e}")
+            print(f"❌ Dependency reconciliation failed: {e}")
             update_dashboard_status(
                 f"HACS dependency update failed: {e}",
                 "error"
