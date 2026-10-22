@@ -23,6 +23,53 @@ def log(message):
     print(f'[EM HACS] {message}', flush=True)
 
 
+# Verify the actual integration directories, not only HACS metadata.
+# These paths are defined by the upstream integration repositories.
+REQUIRED_INTEGRATIONS = {
+    'zachowj/hass-node-red': 'nodered',
+    'bremor/bureau_of_meteorology': 'bureau_of_meteorology',
+    'BJReplay/ha-solcast-solar': 'solcast_solar',
+}
+
+
+def repair_missing_integrations(entries, ws_class):
+    """Ask HACS to download again if its metadata says installed but files are absent."""
+    wanted = {entry['repository'].lower() for entry in entries
+              if entry.get('action') == 'install'}
+    required = {repo: domain for repo, domain in REQUIRED_INTEGRATIONS.items()
+                if repo.lower() in wanted}
+    missing = {
+        repo: domain for repo, domain in required.items()
+        if not (Path('/config/custom_components') / domain / 'manifest.json').is_file()
+    }
+    if missing:
+        log('Missing integration files: ' + ', '.join(missing.values()))
+        with ws_class() as ws:
+            info = ws.call('hacs/info')
+            if info.get('stage') != 'running':
+                raise RuntimeError('HACS is not running; complete GitHub authorisation first')
+            repos = ws.call('hacs/repositories/list')
+            lookup = {str(item.get('full_name', '')).lower(): item for item in repos}
+            for repo, domain in missing.items():
+                item = lookup.get(repo.lower())
+                if not item:
+                    raise RuntimeError(f'HACS does not list {repo}; cannot download {domain}')
+                if item.get('category') != 'integration':
+                    raise RuntimeError(f'Unexpected HACS category for {repo}')
+                log(f'Re-downloading {repo} because custom_components/{domain} is missing')
+                ws.call('hacs/repository/download', repository=str(item['id']))
+
+    still_missing = [
+        f'{repo} -> /config/custom_components/{domain}/manifest.json'
+        for repo, domain in required.items()
+        if not (Path('/config/custom_components') / domain / 'manifest.json').is_file()
+    ]
+    if still_missing:
+        raise RuntimeError('HACS download did not install required files: ' + '; '.join(still_missing))
+    for repo, domain in required.items():
+        log(f'Verified on disk: {repo} -> custom_components/{domain}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Install Energy Manager HACS components after GitHub authorisation')
     parser.add_argument('--repository', default=REPOSITORY)
@@ -41,7 +88,7 @@ def main():
         raise RuntimeError('Energy Manager HACS manager is missing. Run install.py --step prepare first.')
 
     sys.path.insert(0, str(SCRIPTS))
-    from hacs_manager import sync_hacs_components, validate_components
+    from hacs_manager import HAWebSocket, sync_hacs_components, validate_components
 
     url = f'https://raw.githubusercontent.com/{args.repository}/{args.branch}/manifest/manifest.json'
     log(f'Reading manifest: {args.repository} ({args.branch})')
@@ -60,6 +107,10 @@ def main():
         if any(marker in details.lower() for marker in ('hacs is not running', 'hacs/info', 'unknown_command', 'not_found', 'websocket auth')):
             raise RuntimeError('HACS does not appear to be fully set up. In Home Assistant, add the HACS integration and complete GitHub authorisation, then rerun this script. Details: ' + details) from exc
         raise
+    # HACS can report a repository as installed even when its component directory
+    # is absent. Never accept that as a successful fresh installation.
+    repair_missing_integrations(entries, HAWebSocket)
+
     for change in changes:
         log(f"{change['action']}: {change['repository']} ({change.get('version') or 'n/a'})")
     log(f'Completed: {len(changes)} changes. Manifest contains {len(entries)} entries.')
