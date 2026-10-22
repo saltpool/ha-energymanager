@@ -5,6 +5,8 @@ Run in Advanced SSH & Web Terminal on dedicated Home Assistant OS.
 """
 import argparse
 import importlib.util
+import json
+import urllib.error
 import os
 from pathlib import Path
 import subprocess
@@ -79,45 +81,15 @@ def prepare():
     else:
         log('Generating SSH keypair')
         run(['ssh-keygen', '-t', 'ed25519', '-f', str(private), '-N', '', '-C', 'energy_manager_automation'])
-    log('SSH public key (add to Advanced SSH & Web Terminal authorized_keys):')
-    print(public.read_text(encoding='utf-8').strip())
-    log('Preparation complete. Next: configure SSH authorized_keys, then run --step check-ssh.')
+    log('SSH keypair ready')
+    log('Preparation complete. Next: run --step configure-ssh.')
 
 
-def check_ssh():
-    private = STATE / 'ssh_key'
-    if not private.is_file():
-        raise RuntimeError('SSH private key missing; run --step prepare first')
-    command = [
-        'ssh', '-i', str(private), '-o', 'BatchMode=yes',
-        '-o', 'ConnectTimeout=10', '-o', 'StrictHostKeyChecking=accept-new',
-        f'{SSH_USER}@{SSH_HOST}', 'echo EM_SSH_OK',
-    ]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=25)
-    if result.returncode != 0 or 'EM_SSH_OK' not in result.stdout:
-        raise RuntimeError('SSH key authentication failed: ' + (result.stderr.strip() or result.stdout.strip()))
-    log('SSH key authentication successful')
-    log('Next step: run the existing updater after first-run prerequisites are reviewed.')
 
-
-def main():
-    parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['prepare', 'check-ssh'], default='prepare')
-    args = parser.parse_args()
-    if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
-        raise ValueError('Invalid repository name')
-    if not BRANCH or '/' in BRANCH or '..' in BRANCH:
-        raise ValueError('Invalid branch')
-    log(f'Repository: {REPO} ({BRANCH})')
-    if args.step == 'prepare':
-        prepare()
-    else:
-        check_ssh()
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except Exception as exc:
-        log(f'ERROR: {exc}')
-        sys.exit(1)
+def supervisor_request(method, path, payload=None, timeout=30):
+    token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
+    if not token:
+        raise RuntimeError('Supervisor token not available')
+    data = None if payload is None else json.dumps(payload).encode('utf-8')
+    request = urllib.request.Request(
+        'http://supervisor' + path, data=data, method=method,
