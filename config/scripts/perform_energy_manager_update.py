@@ -495,18 +495,27 @@ def update_flows_via_ssh(flows_content, manifest_version):
     
     local_flows_file = '/config/.energy_manager/new_flows.json'
     try:
+        remote_str = _read_remote_text_via_ssh(
+            '/addon_configs/a0d7b954_nodered/flows.json'
+        )
+        if not remote_str:
+            raise RuntimeError(
+                'Cannot read existing Node-RED flows; refusing to overwrite'
+            )
+
+        merged_str = _merge_energy_manager_tabs(
+            remote_str,
+            flows_content,
+            prefix='EnergyManager-'
+        )
+        if merged_str is None:
+            raise RuntimeError(
+                'Node-RED flow merge failed; refusing to overwrite'
+            )
         with open(local_flows_file, 'w') as f:
-            flows_to_write = flows_content
-            try:
-                remote_str = _read_remote_text_via_ssh('/addon_configs/a0d7b954_nodered/flows.json')
-                if remote_str:
-                    merged_str = _merge_energy_manager_tabs(remote_str, flows_content, prefix='EnergyManager-')
-                    if merged_str:
-                        flows_to_write = merged_str
-                        print('Using selective EnergyManager- tab merge for flows.json')
-            except Exception:
-                pass
-            f.write(flows_to_write)
+            f.write(merged_str)
+
+        print('Using selective EnergyManager- tab merge for flows.json')
         
         source_size = os.path.getsize(local_flows_file)
         print(f"Source flows file: {source_size} bytes")
