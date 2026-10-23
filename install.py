@@ -557,7 +557,7 @@ def finalise():
     log('Installation files deployed and Home Assistant configuration validated.')
     log('A full Home Assistant OS reboot will now be requested.')
     log('The SSH terminal will disconnect; this is expected.')
-    log('After Home Assistant is back, continue onboarding: HACS, inverter, Solcast, electricity provider and Energy Manager keys.')
+    log('After Home Assistant is back, continue onboarding: HACS, inverter, BOM, Solcast, electricity provider and Energy Manager keys.')
     log('Reboot request status saved to /config/.energy_manager/install-status.json')
 
     try:
