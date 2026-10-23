@@ -431,6 +431,48 @@ def _merge_energy_manager_tabs(current_flows_str, new_flows_str, prefix='EnergyM
                     merged.append(d)
         existing_ids = {n.get('id') for n in merged}
         merged.extend([n for n in to_add if n.get('id') not in existing_ids])
+
+        global_configs = {
+            node['id']: node
+            for node in new
+            if isinstance(node, dict)
+            and node.get('id')
+            and not node.get('z')
+            and node.get('type') != 'tab'
+        }
+
+        def referenced_ids(value):
+            if isinstance(value, str):
+                if value in global_configs:
+                    yield value
+            elif isinstance(value, dict):
+                for child in value.values():
+                    yield from referenced_ids(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from referenced_ids(child)
+
+        required = set()
+        pending = list(to_add)
+
+        while pending:
+            node = pending.pop()
+            for ref in referenced_ids(node):
+                if ref not in required:
+                    required.add(ref)
+                    pending.append(global_configs[ref])
+
+        existing_ids = {node.get('id') for node in merged}
+        added_configs = 0
+
+        for ref in sorted(required):
+            if ref not in existing_ids:
+                merged.append(global_configs[ref])
+                existing_ids.add(ref)
+                added_configs += 1
+
+        print(f'EM-merge: added {added_configs} missing configuration nodes')
+        
         try:
             print(f"EM-merge: removed {len(cur_em_tab_ids)} tabs; added {len(new_em_tab_ids)} tabs; result nodes={len(merged)}")
         except Exception:
