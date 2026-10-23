@@ -34,8 +34,138 @@ from update_checker import EnergyManagerUpdateChecker, version_tuple
 from file_merger import EnergyManagerFileMerger
 from hacs_manager import sync_hacs_components_via_ssh
 
-def cleanup_old_backups():
+def prepare_post_update_reboot():
+    """Register post-reboot checks and arm the one-time update task."""
+    from pathlib import Path
+    import urllib.request
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError('Supervisor token unavailable for reboot')
+
+    required_scripts = (
+        '/config/scripts/em_post_hacs.py',
+        '/config/scripts/configure_em_integrations.py',
+    )
+    for path in required_scripts:
+        if not os.path.isfile(path):
+            raise RuntimeError(
+                'Required post-reboot script missing: ' + path
+            )
+
+    def supervisor(method, endpoint, payload=None):
+        data = (
+            None if payload is None
+            else json.dumps(payload).encode('utf-8')
+        )
+        request = urllib.request.Request(
+            'http://supervisor/' + endpoint,
+            data=data,
+            method=method,
+            headers={
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.load(response)
+        if result.get('result') == 'error':
+            raise RuntimeError(
+                result.get('message', 'Supervisor request failed')
+            )
+        return result.get('data', result)
+
+    addon = 'addons/a0d7b954_ssh/'
+    info = supervisor('GET', addon + 'info')
+    options = dict(info.get('options') or {})
+    commands = list(options.get('init_commands') or [])
+
+    hook = (
+        "sh -c 'nohup python3 "
+        "/config/scripts/em_post_hacs.py > "
+        "/config/.energy_manager/post-hacs.log "
+        "2>&1 < /dev/null &'"
+    )
+
+    if hook not in commands:
+        commands.append(hook)
+        options['init_commands'] = commands
+        supervisor('POST', addon + 'options', {'options': options})
+
+    # Confirm that the SSH App retained the startup command.
+    verified = supervisor('GET', addon + 'info')
+    saved_commands = (
+        (verified.get('options') or {}).get('init_commands') or []
+    )
+    if hook not in saved_commands:
+        raise RuntimeError(
+            'SSH App did not retain the post-reboot startup hook'
+        )
+
+    state = Path('/config/.energy_manager')
+    state.mkdir(parents=True, exist_ok=True)
+    status = state / 'post-hacs-status.json'
+    temporary = state / 'post-hacs-status.json.tmp'
+
+    temporary.write_text(
+        json.dumps({
+            'status': 'pending',
+            'kind': 'update',
+            'detail': 'Waiting for Home Assistant OS reboot'
+        }) + '\n',
+        encoding='utf-8'
+    )
+    os.replace(temporary, status)
+
+    print('Post-reboot integration checks registered')
+    return token
+
+
+def reboot_home_assistant_os(token):
+    """Force a full Home Assistant OS reboot after successful update."""
+    import urllib.request
+    import urllib.error
+
+    request = urllib.request.Request(
+        'http://supervisor/host/reboot',
+        data=b'{}',
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    print('Requesting full Home Assistant OS reboot...', flush=True)
     try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            result = json.load(response)
+            if result.get('result') == 'error':
+                raise RuntimeError(
+                    'Supervisor refused OS reboot: '
+                    + str(result.get('message'))
+                )
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f'Supervisor refused OS reboot: HTTP {exc.code}'
+        ) from exc
+    except (TimeoutError, ConnectionError, urllib.error.URLError) as exc:
+        # Supervisor may disconnect while restarting the host.
+        print(
+            'Reboot request connection interrupted; '
+            'the host may already be rebooting: ' + str(exc),
+            flush=True
+        )
+        return
+
+    print('Home Assistant OS reboot requested successfully', flush=True)
+
+
+try:
+    cleanup_old_backups()
         backup_dir = '/config/.energy_manager/backups'
         if not os.path.exists(backup_dir):
             return
