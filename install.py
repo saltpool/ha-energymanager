@@ -379,7 +379,17 @@ def deploy():
             if action == 'replace':
                 result = merger.replace_file(str(destination), content, manifest['version'])
             elif action == 'create':
-                result = True if destination.exists() else merger.replace_file(str(destination), content, manifest['version'])
+                if name == 'em_initial_states.csv':
+                    result = merger.replace_file(
+                        str(destination), content, manifest['version']
+                    )
+                else:
+                    result = (
+                        True if destination.exists()
+                        else merger.replace_file(
+                            str(destination), content, manifest['version']
+                        )
+                    )
             else:
                 result = merger.update_file(str(destination), content, info.get('sections', []), manifest['version'])
             if not result:
