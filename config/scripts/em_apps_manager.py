@@ -299,7 +299,7 @@ def reconcile(manifest, repair=False):
             settings = {'boot': app.get('boot', 'auto'),
                         'watchdog': app.get('watchdog', True),
                         'auto_update': app.get('auto_update', False)}
-.
+
             if 'ingress_panel' in app:
                 if not isinstance(app['ingress_panel'], bool):
                     raise ValueError(
