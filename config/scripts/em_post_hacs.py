@@ -44,6 +44,7 @@ def main():
             return
         if current.get('status') not in ('pending', 'running'):
             return
+            update_mode = current.get('kind') == 'update'
         if not SCRIPT.is_file():
             write_status('failed', 'Missing /config/scripts/configure_em_integrations.py')
             return
@@ -74,6 +75,17 @@ def main():
                                   text=True, timeout=180)
             print(proc.stdout, flush=True)
             if proc.returncode == 0:
+                if update_mode:
+                    write_status(
+                        'complete',
+                        'Post-update integration reconciliation complete'
+                    )
+                    print(
+                        '[EM Post-HACS] Post-update checks completed successfully',
+                        flush=True
+                    )
+                    return
+
                 if not INITIALISE_SCRIPT.is_file():
                     write_status(
                         'failed',
