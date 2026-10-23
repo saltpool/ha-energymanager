@@ -1501,13 +1501,10 @@ try:
                     + integration_script
                 )
 
-            print("Reconciling MQTT and Node-RED Companion...")
-            subprocess.run(
-                [sys.executable, '-u', integration_script],
-                check=True
+            print(
+                "MQTT and Node-RED Companion reconciliation "
+                "scheduled after OS reboot"
             )
-
-            print("✅ Required Home Assistant integrations reconciled")
         except Exception as e:
             print(f"❌ Dependency reconciliation failed: {e}")
             update_dashboard_status(
@@ -1517,6 +1514,8 @@ try:
             success = False
 
     if success:
+        reboot_token = prepare_post_update_reboot()
+        
         update_checker.set_current_version(manifest['version'])
         with open('/config/.energy_manager/installed_branch.txt', 'w', encoding='utf-8') as f:
             f.write(update_checker.branch + '\n')
@@ -1525,6 +1524,13 @@ try:
         
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
             f.write(f"success:{manifest['version']}")
+
+        print(
+            "Energy Manager update complete. "
+            "A full Home Assistant OS reboot is mandatory.",
+            flush=True
+        )
+        reboot_home_assistant_os(reboot_token)
         sys.exit(0)
     else:
         print("❌ Update failed")
