@@ -312,7 +312,7 @@ input_select.electricity_provider,LocalVolts
 input_select.em_ev_battery_measurement,kWh
 input_select.em_ev_mode,solar_only
 input_select.em_ev_site_phases,1
-input_select.em_update_branch,main
+input_select.em_update_branch,development
 input_select.energy_profile_slot,Profile 1
 input_select.flow_power_price_signal_charge_limit,Very Low
 input_select.flow_power_price_signal_ev_limit_block,Low
