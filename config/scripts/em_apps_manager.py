@@ -299,6 +299,17 @@ def reconcile(manifest, repair=False):
             settings = {'boot': app.get('boot', 'auto'),
                         'watchdog': app.get('watchdog', True),
                         'auto_update': app.get('auto_update', False)}
+.
+            if 'ingress_panel' in app:
+                if not isinstance(app['ingress_panel'], bool):
+                    raise ValueError(
+                        f'{slug}: ingress_panel must be true or false'
+                    )
+                if app['ingress_panel'] and not current.get('ingress'):
+                    raise ValueError(
+                        f'{slug}: cannot enable sidebar for an App without ingress'
+                    )
+                settings['ingress_panel'] = app['ingress_panel']
 
             changed_settings = {key: value for key, value in settings.items()
                                 if current.get(key) != value}
