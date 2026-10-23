@@ -287,6 +287,49 @@ def _merge_flows(old_content, new_content):
                      and n.get('id') in subflows]
     ids = {n.get('id') for n in retained}
     retained.extend(n for n in incoming if n.get('id') not in ids)
+
+    # Include global configuration nodes referenced by Energy Manager.
+    # These include the HA server, entity configs and device configs.
+    global_configs = {
+        node['id']: node
+        for node in new
+        if isinstance(node, dict)
+        and node.get('id')
+        and not node.get('z')
+        and node.get('type') != 'tab'
+    }
+
+    def referenced_ids(value):
+        if isinstance(value, str):
+            if value in global_configs:
+                yield value
+        elif isinstance(value, dict):
+            for child in value.values():
+                yield from referenced_ids(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from referenced_ids(child)
+
+    required = set()
+    pending = list(incoming)
+
+    while pending:
+        node = pending.pop()
+        for ref in referenced_ids(node):
+            if ref not in required:
+                required.add(ref)
+                pending.append(global_configs[ref])
+
+    existing_ids = {node.get('id') for node in retained}
+    added_configs = 0
+
+    for ref in sorted(required):
+        if ref not in existing_ids:
+            retained.append(global_configs[ref])
+            existing_ids.add(ref)
+            added_configs += 1
+
+    log(f'Added {added_configs} missing Node-RED configuration nodes')
     log(f'Flow merge: replaced {len(old_tabs)} EM tabs with {len(new_tabs)} EM tabs')
     return json.dumps(retained, separators=(',', ':'))
 
