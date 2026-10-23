@@ -232,7 +232,7 @@ def _ensure_modbus_secrets():
     path = ROOT / 'secrets.yaml'
     existing = path.read_text(encoding='utf-8') if path.exists() else ''
     values = (
-        ('modbus_host_ip', '"REPLACE_WITH_INVERTER_IP"  # Set during inverter onboarding; no default'),
+        ('modbus_host_ip', '"REPLACE_WITH_INVERTER_IP"  # Set to your inverter IP, no default, remove quotes'),
         ('modbus_port', '502  # Default Modbus port'),
         ('modbus_slave', '1  # Default Modbus slave address'),
     )
