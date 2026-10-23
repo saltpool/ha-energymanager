@@ -19,7 +19,7 @@ STATE = Path('/config/.energy_manager')
 STATUS = STATE / 'post-hacs-status.json'
 LOCK = STATE / 'post-hacs.lock'
 SCRIPT = Path('/config/scripts/configure_em_integrations.py')
-
+INITIALISE_SCRIPT = Path('/config/scripts/em_initialise_states.py')
 
 def write_status(status, detail=''):
     payload = {'status': status, 'detail': detail,
@@ -74,6 +74,32 @@ def main():
                                   text=True, timeout=180)
             print(proc.stdout, flush=True)
             if proc.returncode == 0:
+                if not INITIALISE_SCRIPT.is_file():
+                    write_status(
+                        'failed',
+                        'Missing /config/scripts/em_initialise_states.py'
+                    )
+                    return
+
+                print(
+                    '[EM Post-HACS] Applying initial Energy Manager helper states',
+                    flush=True
+                )
+                initialisation = subprocess.run(
+                    [sys.executable, '-u', str(INITIALISE_SCRIPT)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=300
+                )
+                print(initialisation.stdout, flush=True)
+                if initialisation.returncode != 0:
+                    write_status(
+                        'failed',
+                        'Initial helper configuration failed; see post-hacs.log'
+                    )
+                    return
+
                 write_status('complete', 'MQTT discovery OFF; Node-RED Companion configured')
                 print('[EM Post-HACS] Completed successfully', flush=True)
                 return
