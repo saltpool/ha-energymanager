@@ -32,7 +32,10 @@ sys.path.append('/config/scripts')
 
 from update_checker import EnergyManagerUpdateChecker, version_tuple
 from file_merger import EnergyManagerFileMerger
-from hacs_manager import sync_hacs_components_via_ssh
+from hacs_manager import (
+    sync_hacs_components_via_ssh,
+    require_component_backend,
+)
 
 def prepare_post_update_reboot():
     """Register post-reboot checks and arm the one-time update task."""
@@ -1331,6 +1334,10 @@ try:
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
             f.write("error:Failed to download manifest")
         sys.exit(1)
+
+    # HA 2026.10 and earlier: HACS.
+    # HA 2026.11 and later: Marketplace (implementation pending).
+    require_component_backend()
     
     if args.force_reinstall:
         print(f"Force reinstalling version {manifest['version']}...")
