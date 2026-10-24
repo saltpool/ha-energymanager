@@ -478,6 +478,11 @@ def core_request(method, endpoint, payload=None, timeout=45):
 
 
 def install_hacs():
+    sys.path.insert(0, str(SCRIPTS))
+    from hacs_manager import require_component_backend
+
+    require_component_backend()
+    
     destination = ROOT / 'custom_components' / 'hacs'
     manifest_file = destination / 'manifest.json'
     if manifest_file.is_file():
@@ -533,6 +538,11 @@ def install_hacs():
 
 
 def finalise():
+    sys.path.insert(0, str(SCRIPTS))
+    from hacs_manager import require_component_backend
+
+    require_component_backend()
+    
     if not (ROOT / 'configuration.yaml').is_file():
         raise RuntimeError('Home Assistant configuration missing; run --step deploy first')
     if not (Path('/addon_configs/a0d7b954_nodered') / 'flows.json').is_file():
