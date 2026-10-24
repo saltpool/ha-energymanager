@@ -315,7 +315,7 @@ def reconcile(manifest, repair=False):
                         'sidebar visibility skipped',
                         flush=True
                     )
-               else:
+                else:
                     settings['ingress_panel'] = app['ingress_panel']
 
             changed_settings = {key: value for key, value in settings.items()
