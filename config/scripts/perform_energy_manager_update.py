@@ -1423,7 +1423,7 @@ def cleanup_obsolete_em_sections(file_merger, version):
             + r'_START v[\w.]+ ===\r?\n'
             + r'(?P<body>.*?)'
             + r'^# === ENERGY_MANAGER_'
-           + section
+            + section
             + r'_END ===[ \t]*(?:\r?\n)?'
         )
 
