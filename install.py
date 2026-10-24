@@ -206,18 +206,6 @@ def _install_base_yaml(name, downloaded):
                                'no Energy Manager markers; refusing to overwrite: '
                                + ', '.join(unexpected[:5]))
         result = downloaded
-    elif name == 'automations.yaml':
-        # HA's default empty list is often [] or an empty file.
-        active = [line.strip() for line in original.splitlines()
-                  if line.strip() and not line.lstrip().startswith('#')]
-        if active and active != ['[]']:
-            # Existing user automations should not be silently discarded.
-            if not all(line.startswith('- ') or line.startswith(' ') for line in
-                       original.splitlines() if line.strip() and not line.lstrip().startswith('#')):
-                raise RuntimeError('Existing automations.yaml cannot be safely merged on first install')
-            result = downloaded.rstrip() + '\n\n' + original.strip() + '\n'
-        else:
-            result = downloaded
     else:
         raise ValueError(name)
     if original == result:
@@ -400,7 +388,7 @@ def deploy():
     if errors:
         raise RuntimeError('Manifest deployment incomplete: ' + '; '.join(errors))
 
-    for base_name in ('configuration.yaml', 'automations.yaml'):
+    for base_name in ('configuration.yaml',):
         if base_name not in downloads:
             raise RuntimeError(f'Manifest missing required {base_name}')
         _install_base_yaml(base_name, downloads[base_name])
