@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Perform Energy Manager Update v1.3.0 - Github branch updater
+Perform Energy Manager Update v2.0.0 - Github branch updater
 """
 import sys
 import os
@@ -1296,6 +1296,58 @@ def update_lovelace_resources(manifest):
         print(f"❌ Error updating Lovelace resources via SSH: {e}")
         return False
 
+def cleanup_obsolete_em_sections(file_merger, version):
+    """Remove only known, unchanged, obsolete EM configuration sections."""
+    import re
+    from pathlib import Path
+
+    obsolete = {
+        'SHELL_COMMANDS',
+        'SENSORS',
+        'UPDATE_INPUTS',
+    }
+    path = Path('/config/configuration.yaml')
+    if not path.is_file():
+        return
+
+    original = path.read_text(encoding='utf-8')
+   updated = original
+
+    for section in obsolete:
+        pattern = (
+            r'(?m)^# === ENERGY_MANAGER_'
+            + section
+            + r'_START v[\w.]+ ===\r?\n'
+            + r'(?P<body>.*?)'
+            + r'^# === ENERGY_MANAGER_'
+           + section
+            + r'_END ===[ \t]*(?:\r?\n)?'
+        )
+
+        def remove_if_obsolete(match):
+            body = match.group('body').strip()
+            if body == '# (moved)':
+                print(f'Removing obsolete EM section: {section}')
+                return ''
+            print(f'Preserving modified EM section: {section}')
+            return match.group(0)
+
+        updated = re.sub(
+            pattern, remove_if_obsolete, updated,
+            flags=re.MULTILINE | re.DOTALL
+        )
+
+    if updated != original:
+        file_merger.create_backup(str(path), version)
+        temporary = path.with_name(path.name + '.em-cleanup')
+        try:
+            temporary.write_text(updated, encoding='utf-8')
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+        print('Obsolete Energy Manager configuration sections cleaned')
+
+
 try:
     cleanup_old_backups()
     
@@ -1393,6 +1445,7 @@ try:
             "Required files or Supervisor App reconciliation failed"
         )
 
+    cleanup_obsolete_em_sections(file_merger, manifest['version'])
    
     print("Processing special file operations...")
     update_dashboard_status("Processing special file operations...", "info")
