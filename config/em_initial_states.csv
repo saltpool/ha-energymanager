@@ -166,7 +166,7 @@ input_number.battery_evening_prep,100
 input_number.battery_morning_limit,20
 input_number.battery_morning_prep,40
 input_number.battery_reserve_export_cutoff,5
-input_number.battery_use_cost,0.1
+input_number.battery_use_cost,10
 input_number.billing_day,1
 input_number.curtail_cents,0
 input_number.electricity_closing_export_price,0
@@ -210,11 +210,11 @@ input_number.globird_super_max_export_kw_percentage,0
 input_number.globird_super_sell,0
 input_number.goodwe_schedule_4slot,1
 input_number.goodwe_schedule_8slot,1
-input_number.grid_buy_price_day,0
+input_number.grid_buy_price_day,10
 input_number.grid_buy_price_day_spike_prep,40
 input_number.grid_buy_price_night_spike_prep,15
 input_number.grid_sell_price_day,200
-input_number.grid_sell_price_night,1
+input_number.grid_sell_price_night,100
 input_number.high_sell_battery_reserve,50
 input_number.high_sell_price,50
 input_number.inverter_charge_discharge_power,10000
