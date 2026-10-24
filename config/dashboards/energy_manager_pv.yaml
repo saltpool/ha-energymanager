@@ -203,13 +203,13 @@ views:
                   - entity: input_select.inverter_brand
                     state_not: ["goodwe", "goodwe_et", "goodwe_int", "fronius"]
                 row:
-                  entity: sensor.battery_hours_remaining
+                  entity: sensor.battery_runtime
                   card_mod:
                     style:
                       hui-generic-entity-row:
                         $: |
                           :host {
-                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set state = states('sensor.battery_runtime') or '' %}
                             {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
                             {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
                             --runtime-color:
@@ -258,7 +258,7 @@ views:
                       hui-generic-entity-row:
                         $: |
                           :host {
-                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set state = states('sensor.battery_runtime') or '' %}
                             {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
                             {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
                             --completion-color:
@@ -309,7 +309,7 @@ views:
                       hui-generic-entity-row:
                         $: |
                           :host {
-                            {% set state = states('sensor.battery_hours_remaining') or '' %}
+                            {% set state = states('sensor.battery_runtime') or '' %}
                             {% set charging = states('sensor.inverter_battery_charging_power') | float(0) %}
                             {% set discharging = states('sensor.inverter_battery_discharging_power') | float(0) %}
                             --completion-color:
