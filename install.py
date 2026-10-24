@@ -493,8 +493,7 @@ def install_hacs():
     if destination.exists():
         raise RuntimeError('HACS destination exists but is incomplete; refusing to overwrite it')
 
-    #url = 'https://github.com/hacs/integration/releases/latest/download/hacs.zip'
-    url = 'https://github.com/hacs/integration/releases/download/2.0.4/hacs.zip'
+    url = 'https://github.com/hacs/integration/releases/latest/download/hacs.zip'
     log('Downloading official HACS release')
     request = urllib.request.Request(url, headers={'User-Agent': 'EnergyManagerBootstrap/1.0'})
     with urllib.request.urlopen(request, timeout=120) as response:
