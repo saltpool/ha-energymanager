@@ -28,8 +28,6 @@ SCRIPTS = ROOT / 'scripts'
 REQUIRED = (
     'update_checker.py',
     'file_merger.py',
-    'em_config_migration.py',
-    'em_config_adoption.py',
     'hacs_manager.py',
     'em_apps_manager.py',
     'em_post_hacs.py',
