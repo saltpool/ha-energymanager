@@ -1296,6 +1296,109 @@ def update_lovelace_resources(manifest):
         print(f"❌ Error updating Lovelace resources via SSH: {e}")
         return False
 
+def cleanup_legacy_placeholder_files(file_merger, version):
+    import re
+    import os
+    from pathlib import Path
+
+    expected = {
+        'automations.yaml': (
+            'AUTOMATIONS',
+            '''- id: em_placeholder_do_not_remove
+  alias: "EM Placeholder (safe)"
+  description: "Keeps YAML list shape when there are no other automations."
+  initial_state: false
+  trigger:
+    - platform: homeassistant
+      event: start
+  condition: []
+  action: []
+  mode: single'''
+        ),
+        'scripts.yaml': (
+            'SCRIPTS',
+            '''# Moved to packages (integrations/em_scripts.yaml)
+
+em_placeholder_do_not_remove:
+  alias: "EM Placeholder (safe)"
+  sequence: []
+  mode: single'''
+        ),
+        'group.yaml': (
+            'GROUPS',
+            '''# Moved to packages (integrations/em_groups.yaml)
+
+em_placeholder_do_not_remove:
+  name: "EM Placeholder (safe)"
+  entities: []          # empty group; harmless and valid
+  icon: mdi:dots-horizontal'''
+        ),
+        'template.yaml': (
+            'TEMPLATES',
+            '''# Moved to packages (integrations/em_templates.yaml)
+
+- sensor:'''
+        ),
+    }
+
+    for filename, (section, expected_body) in expected.items():
+        path = Path('/config') / filename
+        if not path.is_file():
+            continue
+
+        original = path.read_text(encoding='utf-8')
+
+        pattern = re.compile(
+            r'^# === ENERGY_MANAGER_' + section +
+            r'_START v[\w.]+ ===\r?\n'
+            r'(?P<body>.*?)'
+            r'^# === ENERGY_MANAGER_' + section +
+            r'_END ===[ \t]*(?:\r?\n)?',
+            re.MULTILINE | re.DOTALL
+        )
+
+        match = pattern.search(original)
+        if not match:
+            continue
+
+        if match.group('body').strip() != expected_body.strip():
+            print(f'Preserving modified {filename} EM section')
+            continue
+
+        replacement = '- sensor:\n' if filename == 'template.yaml' else ''
+
+        updated = (
+            original[:match.start()]
+            + replacement
+            + original[match.end():]
+        )
+
+        if updated == original:
+            continue
+
+        if filename == 'automations.yaml' and not any(
+            line.strip() and not line.lstrip().startswith('#')
+            for line in updated.splitlines()
+        ):
+            updated = '[]\n'
+
+        if filename in ('scripts.yaml', 'group.yaml') and not any(
+            line.strip() and not line.lstrip().startswith('#')
+            for line in updated.splitlines()
+        ):
+            updated = '{}\n'
+
+        file_merger.create_backup(str(path), version)
+
+        temporary = path.with_name(path.name + '.em-cleanup')
+        try:
+            temporary.write_text(updated, encoding='utf-8')
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+        print(f'Removed legacy EM placeholder from {filename}')
+
 def cleanup_obsolete_em_sections(file_merger, version):
     """Remove only known, unchanged, obsolete EM configuration sections."""
     import re
@@ -1446,6 +1549,7 @@ try:
         )
 
     cleanup_obsolete_em_sections(file_merger, manifest['version'])
+    cleanup_legacy_placeholder_files(file_merger, manifest['version'])
    
     print("Processing special file operations...")
     update_dashboard_status("Processing special file operations...", "info")
