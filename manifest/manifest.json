@@ -144,41 +144,29 @@
       "new_in_version": "1.3.0"
     },
     "automations.yaml": {
-      "action": "merge",
-      "sections": [
-        "AUTOMATIONS"
-      ],
+      "action": "create",
       "backup_current": true,
-      "description": "Clear EM-Managed automations, keep user automations",
+      "description": "Home Assistant UI-managed automations; never overwrite existing file",
       "new_in_version": "1.3.0"
-    },
+     },
     "scripts.yaml": {
-      "action": "merge",
-      "sections": [
-        "SCRIPTS"
-      ],
+      "action": "create",
       "backup_current": true,
-      "description": "Clear EM-Managed scripts, keep user scripts",
+      "description": "Home Assistant UI-managed scripts; never overwrite existing file",
       "new_in_version": "1.3.0"
-    },
+     },
     "group.yaml": {
-      "action": "merge",
-      "sections": [
-        "GROUPS"
-      ],
+      "action": "create",
       "backup_current": true,
-      "description": "Clear EM-Managed groups, keep user groups",
+      "description": "User groups; preserve existing file",
       "new_in_version": "1.3.0"
-    },
-    "template.yaml": {
-      "action": "merge",
-      "sections": [
-        "TEMPLATES"
-      ],
-      "backup_current": true,
-      "description": "Clear EM-Managed templates, keep user templates",
-      "new_in_version": "1.3.0"
-    },
+     },
+     "template.yaml": {
+       "action": "create",
+       "backup_current": true,
+       "description": "User templates and Additional PV Power sensor; preserve existing file",
+       "new_in_version": "1.3.0"
+     },
     "dashboards/energy_manager_costs.yaml": {
       "action": "replace",
       "description": "Costs dashboard",
