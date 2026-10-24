@@ -1,13 +1,7 @@
-# === ENERGY_MANAGER_TEMPLATES_START v1.3.0 ===
-# Moved to packages (integrations/em_templates.yaml)
+# User templates
+# Energy Manager templates are managed in integrations/em_templates.yaml
 
 - sensor:
-
-# === ENERGY_MANAGER_TEMPLATES_END ===
-
-# User customisations below this line are preserved during updates
-# Add your personal templates here
-
     - name: "Additional PV Power"
       unique_id: em_additional_pv_power_total
       unit_of_measurement: W
