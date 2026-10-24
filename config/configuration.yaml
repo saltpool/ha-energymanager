@@ -26,5 +26,26 @@ logger:
     py.warnings: error
 # === ENERGY_MANAGER_CORE_END ===
 
-# User customisations below this line are preserved during updates
-# Add your personal Home Assistant configuration here
+# ============================================================
+# USER CONFIGURATION
+# ============================================================
+#
+# Energy Manager manages the CORE section above.
+# Do not modify settings inside the managed section, as
+# they may be replaced during Energy Manager updates.
+#
+# For your own sensors, templates, groups, automations and
+# other supported configuration, create a separate YAML
+# package in /config/integrations/ with a user_ prefix.
+#
+# Example:
+#   /config/integrations/user_custom.yaml
+#
+# Energy Manager updates do not modify user_*.yaml files.
+#
+# Home Assistant automations and scripts created through
+# the UI remain in automations.yaml and scripts.yaml.
+#
+# Other top-level configuration can be added below.
+# Do not duplicate existing top-level YAML keys.
+# ============================================================
