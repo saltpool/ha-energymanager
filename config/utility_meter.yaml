@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_UTILITY_METERS_START v1.3.0 ===
+# === ENERGY_MANAGER_UTILITY_METERS_START v2.0.0 ===
 # Five minutes
 inverter_import_energy_5_minutes:
   unique_id: inverter_import_energy_5_minutes
@@ -195,3 +195,16 @@ yearly_exported_power:
   cycle: yearly
   name: "Yearly Exported Power"
 # === ENERGY_MANAGER_UTILITY_METERS_END ===
+
+# ============================================================
+# USER UTILITY METERS
+# ============================================================
+#
+# Add your own utility meters below this line.
+# Energy Manager updates only replace the tagged section above.
+#
+# Alternatively, utility meters can be defined in your own
+# Home Assistant package under /config/integrations/.
+#
+# Do not reuse an Energy Manager utility meter entity ID.
+# ============================================================
