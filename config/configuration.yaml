@@ -1,5 +1,5 @@
 # Energy Manager Configuration File
-# === ENERGY_MANAGER_CORE_START v1.3.0 ===
+# === ENERGY_MANAGER_CORE_START v2.0.0 ===
 default_config:
 
 frontend:
@@ -25,18 +25,6 @@ logger:
   logs:
     py.warnings: error
 # === ENERGY_MANAGER_CORE_END ===
-
-# === ENERGY_MANAGER_SHELL_COMMANDS_START v0.2.4 ===
-# (moved)
-# === ENERGY_MANAGER_SHELL_COMMANDS_END ===
-
-# === ENERGY_MANAGER_SENSORS_START v0.0.13 ===
-# (moved)
-# === ENERGY_MANAGER_SENSORS_END ===
-
-# === ENERGY_MANAGER_UPDATE_INPUTS_START v0.2.5 ===
-# (moved)
-# === ENERGY_MANAGER_UPDATE_INPUTS_END ===
 
 # User customisations below this line are preserved during updates
 # Add your personal Home Assistant configuration here
