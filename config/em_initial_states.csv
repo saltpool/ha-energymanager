@@ -334,8 +334,8 @@ input_text.ev_arbitration_reason,ev_inactive
 input_text.ev_reason_code,ev_disabled
 input_text.ev_reason_text,EV automation is disabled.
 input_text.inverter_ipv4_address,""
-input_text.localvolts_key,""
-input_text.localvolts_partner_id,""
+input_text.localvolts_key,
+input_text.localvolts_partner_id,
 input_text.nmi,""
 input_text.nodered_last_error,""
 input_text.other_tariff_plan_last_selected,AGL - Battery Rewards - QLD - Energex - 2026-07-01
