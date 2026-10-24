@@ -166,7 +166,6 @@ input_number.battery_evening_prep,100
 input_number.battery_morning_limit,20
 input_number.battery_morning_prep,40
 input_number.battery_reserve_export_cutoff,5
-input_number.battery_stacks,1
 input_number.battery_use_cost,0.1
 input_number.billing_day,1
 input_number.curtail_cents,0
@@ -231,8 +230,6 @@ input_number.inverter_max_discharge_limiter_percentage,100
 input_number.inverter_max_discharge_power,10000
 input_number.inverter_max_soc,100
 input_number.inverter_min_soc,10
-input_number.inverter_modbus_port,502
-input_number.inverter_modbus_slave,1
 input_number.inverter_pv_power_limit,19205
 input_number.inverter_reserved_soc_backup,0
 input_number.other_additional_tariff,0
