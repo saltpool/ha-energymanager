@@ -1414,7 +1414,7 @@ def cleanup_obsolete_em_sections(file_merger, version):
         return
 
     original = path.read_text(encoding='utf-8')
-   updated = original
+    updated = original
 
     for section in obsolete:
         pattern = (
