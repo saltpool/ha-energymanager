@@ -940,6 +940,7 @@ template:
             Battery Runtime
           {% endif %}
         unique_id: battery_hours_remaining
+        default_entity_id: sensor.battery_hours_remaining
         state: >
           {% set calc = states('sensor.battery_calculation_engine') %}
           {% set hours = state_attr('sensor.battery_calculation_engine', 'hours_total') | float(0) %}
@@ -985,6 +986,7 @@ template:
             Battery State
           {% endif %}
         unique_id: battery_completion_time
+        default_entity_id: sensor.battery_completion_time
         icon: mdi:clock-outline
         state: >
           {% set calc = states('sensor.battery_calculation_engine') %}
