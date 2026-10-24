@@ -145,7 +145,7 @@ mqtt:
 
     - name: "Inverter Battery SOH"
       unique_id: "inverter_battery_soh_mqtt"
-      default_entity_id: sensor.inverter_attery_soh
+      default_entity_id: sensor.inverter_battery_soh
       state_topic: "homeassistant/sensor/inverter/battery_soh/state"
       unit_of_measurement: "%"
       state_class: measurement
