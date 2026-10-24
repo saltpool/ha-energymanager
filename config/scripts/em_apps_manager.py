@@ -308,7 +308,7 @@ def reconcile(manifest, repair=False):
                 if not current.get('ingress'):
                     if app['ingress_panel']:
                         raise ValueError(
-                           f'{slug}: cannot enable sidebar for an App without ingress'
+                            f'{slug}: cannot enable sidebar for an App without ingress'
                         )
                     print(
                         f'[EM Apps] {slug}: ingress not supported; '
