@@ -141,6 +141,12 @@
       "backup_current": true,
       "new_in_version": "1.3.0"
     },
+    "modbus/modbus.yaml": {
+      "action": "create",
+      "description": "Default modbus, to be replaced if not Sungrow",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
     "modbus/modbus_2.yaml": {
       "action": "replace",
       "description": "Template modbus file",
