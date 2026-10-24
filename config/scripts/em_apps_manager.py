@@ -305,18 +305,18 @@ def reconcile(manifest, repair=False):
                     raise ValueError(
                         f'{slug}: ingress_panel must be true or false'
                     )
-                if not current.get('ingress'):
-                    if app['ingress_panel']:
-                        raise ValueError(
-                            f'{slug}: cannot enable sidebar for an App without ingress'
-                        )
+                if current.get('ingress'):
+                    settings['ingress_panel'] = app['ingress_panel']
+                elif app['ingress_panel']:
+                    raise ValueError(
+                        f'{slug}: cannot enable sidebar for an App without ingress'
+                    )
+                else:
                     print(
                         f'[EM Apps] {slug}: ingress not supported; '
                         'sidebar visibility skipped',
                         flush=True
                     )
-                else:
-                    settings['ingress_panel'] = app['ingress_panel']
 
             changed_settings = {key: value for key, value in settings.items()
                                 if current.get(key) != value}
