@@ -23,6 +23,30 @@ SCRIPTS = Path('/config/scripts')
 def log(message):
     print(f'[EM HACS] {message}', flush=True)
 
+def refresh_hacs_manager(repository, branch):
+    """Refresh the HACS manager before importing its functions."""
+    source = (
+        f'https://raw.githubusercontent.com/{repository}/{branch}'
+        '/config/scripts/hacs_manager.py'
+    )
+    destination = SCRIPTS / 'hacs_manager.py'
+
+    log('Downloading current HACS manager')
+    with urllib.request.urlopen(source, timeout=60) as response:
+        content = response.read()
+
+    # Refuse to install invalid Python.
+    compile(content, str(destination), 'exec')
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + '.download')
+    try:
+        temporary.write_bytes(content)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+    log('HACS manager refreshed successfully')
 
 # Verify the actual integration directories, not only HACS metadata.
 # These paths are defined by the upstream integration repositories.
@@ -127,12 +151,7 @@ def register_post_reboot():
     log('Post-reboot log: /config/.energy_manager/post-hacs.log')
 
 
-def main():
-    sys.path.insert(0, str(SCRIPTS))
-    from hacs_manager import require_component_backend
-
-    require_component_backend()
-    
+def main(): 
     parser = argparse.ArgumentParser(description='Install Energy Manager HACS components after GitHub authorisation')
     parser.add_argument('--repository', default=REPOSITORY)
     parser.add_argument('--branch', default=BRANCH)
@@ -144,13 +163,21 @@ def main():
         raise RuntimeError('Invalid GitHub branch')
     if not (os.environ.get('SUPERVISOR_TOKEN')):
         raise RuntimeError('Run this from Advanced SSH & Web Terminal with Supervisor access')
-    if not Path('/config/custom_components/hacs/manifest.json').is_file():
-        raise RuntimeError('HACS files are missing. Run install.py --step install-hacs first.')
-    if not (SCRIPTS / 'hacs_manager.py').is_file():
-        raise RuntimeError('Energy Manager HACS manager is missing. Run install.py --step prepare first.')
+
+    refresh_hacs_manager(args.repository, args.branch)
 
     sys.path.insert(0, str(SCRIPTS))
-    from hacs_manager import HAWebSocket, sync_hacs_components, validate_components
+    from hacs_manager import (
+        require_component_backend,
+        HAWebSocket,
+        sync_hacs_components,
+        validate_components,
+    )
+
+    require_component_backend()
+    
+    if not Path('/config/custom_components/hacs/manifest.json').is_file():
+        raise RuntimeError('HACS files are missing. Run install.py --step install-hacs first.')
 
     url = f'https://raw.githubusercontent.com/{args.repository}/{args.branch}/manifest/manifest.json'
     log(f'Reading manifest: {args.repository} ({args.branch})')
