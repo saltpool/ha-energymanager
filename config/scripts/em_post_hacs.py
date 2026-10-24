@@ -44,7 +44,7 @@ def main():
             return
         if current.get('status') not in ('pending', 'running'):
             return
-            update_mode = current.get('kind') == 'update'
+        update_mode = current.get('kind') == 'update'
         if not SCRIPT.is_file():
             write_status('failed', 'Missing /config/scripts/configure_em_integrations.py')
             return
