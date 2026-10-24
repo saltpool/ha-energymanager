@@ -12,6 +12,52 @@ import subprocess
 import shlex
 from pathlib import Path
 
+def component_backend():
+    import urllib.request
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError('Supervisor token unavailable')
+
+    request = urllib.request.Request(
+        'http://supervisor/core/info',
+        headers={'Authorization': 'Bearer ' + token}
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.load(response)
+
+    version = str(payload.get('data', {}).get('version', ''))
+    match = re.match(r'^(\d{4})\.(\d+)(?:\.|$)', version)
+
+    if not match:
+        raise RuntimeError(
+            f'Cannot determine Home Assistant Core version: {version!r}'
+        )
+
+    backend = (
+        'marketplace'
+        if (int(match.group(1)), int(match.group(2))) >= (2026, 11)
+        else 'hacs'
+    )
+    print(f'[EM Components] HA Core {version}: {backend}')
+    return backend
+
+
+def require_component_backend():
+    backend = component_backend()
+
+    if backend == 'marketplace':
+        raise NotImplementedError(
+            'Home Assistant Marketplace component deployment is '
+            'reserved for Energy Manager v2.0.0. '
+            'The Marketplace installer has not yet been implemented. '
+            'No HACS fallback will be attempted.'
+        )
+
+    return backend
 
 def remove_local_hacs_component(relative_path):
     if not isinstance(relative_path, str):
