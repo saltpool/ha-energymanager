@@ -128,6 +128,11 @@ def register_post_reboot():
 
 
 def main():
+    sys.path.insert(0, str(SCRIPTS))
+    from hacs_manager import require_component_backend
+
+    require_component_backend()
+    
     parser = argparse.ArgumentParser(description='Install Energy Manager HACS components after GitHub authorisation')
     parser.add_argument('--repository', default=REPOSITORY)
     parser.add_argument('--branch', default=BRANCH)
