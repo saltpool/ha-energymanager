@@ -89,13 +89,27 @@ Compatibility depends on your specific inverter model, battery configuration and
 
 Energy Manager uses [Home Assistant](https://www.home-assistant.io/) to connect with and control supported energy equipment in your home.
 
-A pre-configured Home Assistant installation provides the monitoring dashboards, integrations and device controls required to operate Energy Manager.
+Energy Manager uses a dedicated, pre-configured Home Assistant OS installation to provide its monitoring dashboards, equipment connections and controls.
 
 Energy Manager combines information from your equipment, electricity pricing and energy forecasts to develop an optimised energy plan. Your local Home Assistant system then carries out the applicable control instructions.
 
-**No additional proprietary hardware is required.**
+**No additional proprietary hardware is required.** Energy Manager does, however, require a clean, dedicated Home Assistant OS installation. Adding to an existing Home Assistant installation as a normal integration is not supported.
 
-Energy Manager requires a clean, dedicated Home Assistant OS installation. It is not designed to be installed as an integration into an existing Home Assistant system.
+### 🚀 Easier Setup with Energy Manager 2.0
+
+Version 2.0 introduces a more streamlined installation and maintenance experience. Instead of manually assembling and maintaining the various Home Assistant components that Energy Manager relies on, much of the setup is now handled for you.
+
+- **Pre-configured starting point** — Energy Manager v2.0.0 introduces a new automated installation process, replacing the previous requirement to restore a pre-configured Home Assistant backup. Simply start with a clean Home Assistant OS installation and follow the installation instructions on the Energy Manager website. The installer handles the deployment and configuration of the required Energy Manager components, significantly reducing manual setup.
+- **Automatic component setup** — The Energy Manager installer provisions the required Apps (formerly add-ons), supporting integrations, dashboards and configuration files, reducing the number of manual installation steps.
+- **Guided final configuration** — Some one-time actions, such as GitHub authorisation for HACS where required, still need to be completed by you. You will also connect your supported equipment, select your electricity provider details, configure BOM and Solcast details, and set your preferences.
+- **Simpler ongoing updates** — Energy Manager's built-in update tools can check for new versions and update the managed installation, including its supporting components.
+- **Repair and reinstall options** — A force-reinstall option helps restore managed Energy Manager components when an installation needs repair, without requiring you to rebuild everything manually.
+
+Existing Energy Manager users can follow the official upgrade instructions for v2.0.0. Back up your system before upgrading.
+
+**The goal is to let you spend less time maintaining Home Assistant and more time using Energy Manager.**
+
+For current installation and upgrade instructions, visit **[EnergyManager.com.au](https://energymanager.com.au/)**.
 
 ---
 
