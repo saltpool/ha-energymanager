@@ -38,14 +38,29 @@ def main():
     if args.force_reinstall:
         invocation += ' --force-reinstall'
 
-    # nohup, redirected standard streams and background execution let the SSH
-    # call return before the update finishes or restarts Home Assistant OS.
+    # Run through the SSH App login shell to obtain its Supervisor token.
+    # Execute as root so the updater can manage /config, /share and Apps.
+    # Keep the detached process alive after the SSH connection closes.
     log = '/config/.energy_manager/update-run.log'
-    remote = (
-        f'if test -f {shlex.quote(updater)}; then '
-        f'nohup {invocation} > {shlex.quote(log)} 2>&1 < /dev/null & '
-        'echo EM_UPDATE_LAUNCHED; else echo MISSING_UPDATER >&2; exit 1; fi'
+
+    privileged_command = (
+        f'nohup {invocation} > {shlex.quote(log)} '
+        '2>&1 < /dev/null &'
     )
+
+    remote_script = (
+        'set -e; '
+        'TOKEN="${SUPERVISOR_TOKEN:-${HASSIO_TOKEN:-}}"; '
+        'test -n "$TOKEN" || { echo MISSING_SUPERVISOR_TOKEN >&2; exit 1; }; '
+        f'test -f {shlex.quote(updater)} || '
+        '{ echo MISSING_UPDATER >&2; exit 1; }; '
+        'sudo -n env SUPERVISOR_TOKEN="$TOKEN" '
+        f'bash -c {shlex.quote(privileged_command)}; '
+        f'sudo -n test -f {shlex.quote(log)} || '
+        '{ echo UPDATE_LOG_NOT_CREATED >&2; exit 1; }; '
+        'echo EM_UPDATE_LAUNCHED'  
+    )
+    remote = 'bash -lc ' + shlex.quote(remote_script)
     command = [
         'ssh', '-n', '-i', str(KEY),
         '-o', 'BatchMode=yes',
