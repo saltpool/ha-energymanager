@@ -478,12 +478,108 @@
     "new_in_version": "1.3.0"
   },
 "apps": [
-  {"slug":"a0d7b954_ssh", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":false, "options":{"zsh":true,"share_sessions":false,"packages":[],"init_commands":[]}},
-  {"slug":"a0d7b954_vscode", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":true, "options":{"packages":[],"init_commands":[]}},
-  {"slug":"core_mosquitto", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":false, "options":{"log_dest":[],"log_type":[],"require_certificate":false, "certfile":"fullchain.pem","keyfile":"privkey.pem", "customize":{"active":false,"folder":"mosquitto"}}},
-  {"slug":"a0d7b954_nodered", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":false, "options":{"theme":"default","ssl":false,"certfile":"","keyfile":"", "system_packages":[],"npm_packages":[],"init_commands":[]}},
-  {"slug":"1bd4a9fb_victoria_metrics", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":false, "options":{"retention":"60d","additionalArguments":"","enableHTTPAuth":false, "enablePrometheusScrape":true,"prometheusScrapeHTTPS":false, "prometheusScrapeInterval":"15s","prometheusScrapeTimeout":"10s", "homeassistantUrl":"homeassistant:8123"}},
-  {"slug":"a0d7b954_grafana", "version":"latest", "boot":"auto", "watchdog":true, "auto_update":false, "ingress_panel":false, "options":{"plugins":["victoriametrics-metrics-datasource"],"custom_plugins":[], "env_vars":[{"name":"GF_SECURITY_ALLOW_EMBEDDING","value":"true"}, {"name":"GF_PATHS_PROVISIONING","value":"/share/grafana/provisioning"}], "ssl":true,"certfile":"fullchain.pem","keyfile":"privkey.pem"}}
+   {
+    "slug":"a0d7b954_ssh", 
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false,
+    "ingress_panel":false, 
+    "options": {
+      "zsh":true,
+      "share_sessions":false,
+      "packages":[],
+      "init_commands":[]
+    }
+  },
+  {
+    "slug":"a0d7b954_vscode", 
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false, 
+    "ingress_panel":true, 
+    "options": {
+    "packages":[],
+    "init_commands":[]
+    }
+  },
+  {
+    "slug":"core_mosquitto", 
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false, 
+    "ingress_panel":false, 
+    "options": {
+      "log_dest":[],
+      "log_type":[],
+      "require_certificate":false, 
+      "certfile":"fullchain.pem",
+      "keyfile":"privkey.pem",
+      "customize": {
+        "active":false,
+        "folder":"mosquitto"
+      }
+    }
+  },
+  {
+    "slug":"a0d7b954_nodered", 
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false, 
+    "ingress_panel":false, 
+    "options": {
+      "theme":"default",
+      "ssl":false,
+      "certfile":"",
+      "keyfile":"", 
+      "system_packages":[],
+      "npm_packages":[],
+      "init_commands":[]
+    }
+  },
+  {
+    "slug":"1bd4a9fb_victoria_metrics",
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false, 
+    "ingress_panel":false, 
+    "options":{
+      "retention":"60d",
+      "additionalArguments":"",
+      "enableHTTPAuth":false, 
+      "enablePrometheusScrape":true,
+      "prometheusScrapeHTTPS":false, 
+      "prometheusScrapeInterval":"15s",
+      "prometheusScrapeTimeout":"10s", 
+      "homeassistantUrl":"homeassistant:8123"
+    }
+  },
+  {
+    "slug":"a0d7b954_grafana", 
+    "version":"latest", 
+    "boot":"auto", 
+    "watchdog":true, 
+    "auto_update":false, 
+    "ingress_panel":false, 
+    "options":{
+      "plugins":["victoriametrics-metrics-datasource"],
+      "custom_plugins":[], 
+      "env_vars":[{
+        "name":"GF_SECURITY_ALLOW_EMBEDDING","value":"true"}, 
+        {
+          "name":"GF_PATHS_PROVISIONING",
+          "value":"/share/grafana/provisioning"
+        }
+      ], 
+      "ssl":true,
+      "certfile":"fullchain.pem",
+      "keyfile":"privkey.pem"
+    }
+  }
 ],
   "nodered_dependencies": {
     "node-red-contrib-sun-position": "3.0.0-alpha2",
