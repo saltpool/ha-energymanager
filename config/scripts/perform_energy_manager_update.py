@@ -1462,7 +1462,7 @@ try:
     installed_version = version_tuple(result['current_version'])
 
     if not should_update:
-        print("No new Energy Manager version; no changes made")
+        print("Your Energy Manager is currently up to date; no changes made")
         update_dashboard_status(
             "No updates available. System is up to date.",
             "success"
