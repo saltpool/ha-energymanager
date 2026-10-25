@@ -3362,50 +3362,65 @@ script:
       - action: persistent_notification.create
         data:
           title: "🔄 Energy Manager Update Starting"
-          message: "Starting Energy Manager update process. Do not restart Home Assistant during this process."
+          message: "Checking for and installing Energy Manager updates..."
           notification_id: "em_updating"
       - action: shell_command.perform_energy_manager_update
         response_variable: update_result
-      - delay:
-          seconds: 10
+        continue_on_error: true
       - action: persistent_notification.dismiss
         data:
           notification_id: "em_updating"
+      - action: shell_command.em_read_update_result
+        response_variable: result_file
+        continue_on_error: true
+      - variables:
+          em_result: "{{ result_file.stdout | default('unknown') | trim }}"
       - choose:
           - conditions:
               - condition: template
-                value_template: >
-                  {{ update_result.returncode == 0
-                     and states('sensor.energy_manager_current_version') not in
-                     ['unknown', 'unavailable'] }}
+                value_template: "{{ em_result == 'no_updates' }}"
             sequence:
               - action: input_boolean.turn_off
                 target:
                   entity_id: input_boolean.energy_manager_update_available
-              - action: homeassistant.update_entity
+              - action: persistent_notification.create
+                data:
+                  title: "ℹ️ Energy Manager Up to Date"
+                  message: "Your Energy Manager is currently up to date."
+                  notification_id: "em_update_result"
+          - conditions:
+              - condition: template
+                value_template: "{{ em_result.startswith('success:') }}"
+            sequence:
+              - action: input_boolean.turn_off
                 target:
-                  entity_id: sensor.energy_manager_current_version
+                  entity_id: input_boolean.energy_manager_update_available
               - action: persistent_notification.create
                 data:
                   title: "✅ Energy Manager Update Complete"
                   message: >
-                    Energy Manager is running version
-                    {{ states('sensor.energy_manager_current_version') }}.
-                  notification_id: "em_update_complete"
+                    Successfully updated to Energy Manager
+                    {{ em_result.split(':', 1)[1] }}.
+                  notification_id: "em_update_result"
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ em_result == 'failed'
+                     or em_result.startswith('error:') }}
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "❌ Energy Manager Update Failed"
+                  message: "The update failed. Check the Energy Manager update logs."
+                  notification_id: "em_update_result"
         default:
           - action: persistent_notification.create
             data:
               title: "ℹ️ Energy Manager Update Status"
               message: >
-                The update command has completed.
-                Check the update status for details.
-              notification_id: "em_update_complete"
-        else:
-          - action: persistent_notification.create
-            data:
-              title: "❌ Energy Manager Update Failed"
-              message: "Update failed. Check the logs for details."
-              notification_id: "em_update_failed"
+                The update has not reported a final result.
+                Check the Energy Manager update status.
+              notification_id: "em_update_result"
   update_energy_manager_force:
     alias: "Update Energy Manager Reinstall"
     icon: mdi:download
@@ -3413,29 +3428,50 @@ script:
       - action: persistent_notification.create
         data:
           title: "🔄 Energy Manager Reinstall Starting"
-          message: "Starting Energy Manager reinstall process. Do not restart Home Assistant during this process."
+          message: "Reinstalling Energy Manager managed files..."
           notification_id: "em_updating"
       - action: shell_command.perform_energy_manager_update_force
         response_variable: update_result
-      - delay:
-          seconds: 10
+        continue_on_error: true
       - action: persistent_notification.dismiss
         data:
           notification_id: "em_updating"
-      - if:
-          - condition: template
-            value_template: "{{ update_result.returncode == 0 }}"
-        then:
+      - action: shell_command.em_read_update_result
+        response_variable: result_file
+        continue_on_error: true
+      - variables:
+          em_result: "{{ result_file.stdout | default('unknown') | trim }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ em_result.startswith('success:') }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "✅ Energy Manager Reinstall Complete"
+                  message: >
+                    Energy Manager
+                    {{ em_result.split(':', 1)[1] }}
+                    was successfully reinstalled.
+                  notification_id: "em_update_result"
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ em_result == 'failed'
+                     or em_result.startswith('error:') }}
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "❌ Energy Manager Reinstall Failed"
+                  message: "The reinstall failed. Check the Energy Manager update logs."
+                  notification_id: "em_update_result"
+        default:
           - action: persistent_notification.create
             data:
-              title: "✅ Energy Manager Reinstall Complete"
-              message: "Successfully reinstalled update. Ensure you reboot Home Assistant."
-              notification_id: "em_update_complete"
-        else:
-          - action: persistent_notification.create
-            data:
-              title: "❌ Energy Manager Reinstall Failed"
-              message: "Reinstall failed. Check the logs for details."
-              notification_id: "em_update_failed"
+              title: "ℹ️ Energy Manager Reinstall Status"
+              message: >
+                The reinstall has not reported a final result.
+                Check the Energy Manager update status.
+              notification_id: "em_update_result"
 
-  # === ENERGY_MANAGER_SCRIPTS_END ===
+  # === ENERGY_MANAGER_SCRIPTS_END === 
