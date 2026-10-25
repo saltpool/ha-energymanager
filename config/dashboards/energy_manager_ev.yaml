@@ -75,7 +75,7 @@ views:
                 Note that the OCPP charger must support a user-configurable OCPP endpoint AND control through the Energy Manager configured method. Not all "OCPP compliant" fast chargers allow the owner to control via OCPP. Some also require cloud connectivity. It is very important to do your own research as to whether your charger (or one you are going to purchase) will work.
 
 
-                The recommended charger for Energy Manager is the **Ocular IQ Home Solar** which is Australian made and works well with customisable OCPP. There have been reports of the **SigenStore EV Charger module** (both AC and DC) working with Energy Manager. 
+                The recommended charger for Energy Manager is the **Ocular IQ Home Solar** which is Australian made and works well with customisable OCPP. There have been reports of the **SigenStore EV Charger module** (both AC and DC) working with Energy Manager, along with the **EV Switch** charger also working.
 
 
                 The **myenergi Zappi** is known to require cloud connectivity and may or may not work. The **Sungrow iHomeManager** and **Tesla Wall Connector** _WILL NOT WORK_ as they either do not support OCPP or do not allow owner configuration.
@@ -84,15 +84,7 @@ views:
                 Please follow the following procedure to enable:
                   
 
-                1 - Download and install the HACS OCPP package/integration.
-
-                - Click on the HACS menu item on the left.
-                
-                - Enter "OCPP" in the search bar in HACS.
-                
-                - **Download** the component **Open Charge Point Protocol (OCPP)**
-
-                - **Restart** Home Assistant
+                1 - Install the HACS OCPP package/integration.
 
                 - Go to [Settings → Devices & services → Integrations](/config/integrations).
 
