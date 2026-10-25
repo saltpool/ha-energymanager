@@ -162,7 +162,7 @@ def reboot_home_assistant_os(token):
     print('Home Assistant OS reboot requested successfully', flush=True)
 
 
-def :
+def cleanup_old_backups():
     try:
         backup_dir = '/config/.energy_manager/backups'
         if not os.path.exists(backup_dir):
