@@ -14,14 +14,14 @@ from update_checker import EnergyManagerUpdateChecker
 EM_DIR = '/config/.energy_manager'
 
 
-def write_outputs(status, version, changelog='', branch='main', error=''):
+def write_outputs(status, version, changelog='', branch='main', error='', restart_required=False):
     os.makedirs(EM_DIR, exist_ok=True)
     with open(os.path.join(EM_DIR, 'update_status.txt'), 'w', encoding='utf-8') as file:
         file.write(status)
     with open(os.path.join(EM_DIR, 'update_details.json'), 'w', encoding='utf-8') as file:
         json.dump({'status': status, 'version': version, 'branch': branch,
                    'checked_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                   'changelog': changelog, 'restart_required': False, 'error': error}, file, indent=2)
+                   'changelog': changelog, 'restart_required': restart_required, 'error': error}, file, indent=2)
     with open(os.path.join(EM_DIR, 'current_version.txt'), 'w', encoding='utf-8') as file:
         file.write(version or '')
     with open(os.path.join(EM_DIR, 'changelog.md'), 'w', encoding='utf-8') as file:
@@ -44,7 +44,13 @@ def main():
             manifest = result['manifest']
             notes = next((manifest[key] for key in ('changelog', 'release_notes', 'notes', 'description')
         if isinstance(manifest.get(key), str)), '')
-            write_outputs('update_available', result['remote_version'], notes, checker.branch)
+            write_outputs(
+                'update_available',
+                result['remote_version'],
+                notes,
+                checker.branch,
+                restart_required=bool(manifest.get('restart_required', True))
+            )
             print(f"Update available on {checker.branch}: {result['current_version']} -> {result['remote_version']}")
             return 1
         else:       
