@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_AUTOMATIONS_START v1.3.0 ===
+# === ENERGY_MANAGER_AUTOMATIONS_START v2.0.0 ===
 automation:
   - id: "solcast_update"
     alias: Solcast update
@@ -1614,18 +1614,42 @@ automation:
           service: trigger
           service_data:
             entity_id: automation.energy_manager_perform_update
-    condition:
-      - condition: state
-        entity_id: input_boolean.energy_manager_update_available
-        state: "on"
-    action:
-      - service: persistent_notification.create
-        data:
-          title: "Update Starting"
-          message: "Energy Manager update is starting. Please do not restart Home Assistant during this process."
-          notification_id: "em_update_starting"
-      - service: shell_command.perform_energy_manager_update
-    mode: single
+      action:
+      - service: shell_command.check_energy_manager_updates
+        response_variable: update_check_result
+        - service: shell_command.em_read_update_status
+        response_variable: status_result
+        - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ status_result.stdout | trim == 'update_available' }}"
+            sequence:
+              - service: persistent_notification.create
+                data:
+                  title: "Update Starting"
+                  message: "Energy Manager update is starting. Please do not restart Home Assistant during this process."
+                  notification_id: "em_update_starting"
+                - service: shell_command.perform_energy_manager_update
+            - conditions:
+              - condition: template
+                value_template: "{{ status_result.stdout | trim == 'no_updates' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.energy_manager_update_available
+  
+              - service: persistent_notification.create
+                data:
+                  title: "✅ Energy Manager Up to Date"
+                  message: "Your Energy Manager is currently up to date."
+                  notification_id: "em_update_result"
+          default:
+          - service: persistent_notification.create
+            data:
+              title: "❌ Energy Manager Update Check Failed"
+              message: "Unable to check the current version. Please check the logs."
+              notification_id: "em_update_result"
+      mode: single
   - id: generate_ssh_key_shell
     alias: "Generate SSH Key (Shell)"
     trigger: []
