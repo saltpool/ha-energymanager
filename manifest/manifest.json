@@ -6,7 +6,8 @@
   "files": {
     "integrations/README.md": {
       "action": "create",
-      "description": "Guide to adding user-owned Home Assistant configuration"
+      "description": "Guide to adding user-owned Home Assistant configuration",
+      "new_in_version": "2.0.0"
     },
     "em_initial_states.csv": {
       "action": "create",
