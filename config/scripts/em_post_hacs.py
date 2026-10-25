@@ -78,7 +78,7 @@ def notify_update_complete(token):
         )
 
        'title': '✅ Energy Manager Update Complete',
-        'message': (
+       'message': (
             f'Energy Manager has successfully updated to version {version}. '
             'Home Assistant has restarted and the post-update '
            'integration checks have completed successfully.'
