@@ -204,10 +204,11 @@ def reconcile_nodered_dependencies(manifest):
     )
 
 
-def reconcile(manifest, repair=False):
+def reconcile(manifest, repair=False, protect_ssh_session=False):
     errors = []
     for app in manifest.get('apps', []):
         slug = app['slug']
+        protect_ssh = protect_ssh_session and slug == 'a0d7b954_ssh'
         try:
             target_version = str(app.get('version', 'latest')).strip()
             if not target_version:
@@ -254,7 +255,7 @@ def reconcile(manifest, repair=False):
                 )
             else:
                 latest_version = current.get('version_latest')
-                if latest_version and installed_version != latest_version:
+                if latest_version and installed_version != latest_version and not protect_ssh:
                     print(
                         f'[EM Apps] {slug}: updating '
                         f'{installed_version} -> {latest_version}',
@@ -281,7 +282,13 @@ def reconcile(manifest, repair=False):
                     print(
                         f'[EM Apps] {slug}: updated to {latest_version}',
                         flush=True
-                    )          
+                    )
+                elif latest_version and installed_version != latest_version and protect_ssh:
+                    print(
+                        '[EM Apps] SSH App update deferred to preserve '
+                        'the active updater session',
+                        flush=True
+                    )
 
             existing_options = dict(current.get('options') or {})
             desired = dict(app.get('options') or {})
@@ -366,7 +373,14 @@ def reconcile(manifest, repair=False):
             )
             
             if changed_options and current.get('state') == 'started':
-                request('POST', f'/addons/{slug}/restart', {}, timeout=15)
+                if protect_ssh:
+                    print(
+                        '[EM Apps] SSH App restart deferred until '
+                        'the final Home Assistant OS reboot',
+                        flush=True
+                    )
+                else:
+                    request('POST', f'/addons/{slug}/restart', {}, timeout=15)
             elif repair:
                 print(f'[EM Apps] {slug}: configured correctly', flush=True)
 
