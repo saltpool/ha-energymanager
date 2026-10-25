@@ -32,6 +32,61 @@ from hacs_manager import (
     require_component_backend,
 )
 
+def validate_home_assistant_config():
+    """Validate the deployed Home Assistant configuration without rebooting."""
+    import urllib.request
+    import urllib.error
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError(
+            'Cannot validate Home Assistant configuration: Supervisor token missing'
+        )
+
+    print('Validating Home Assistant configuration before reboot...', flush=True)
+
+    request = urllib.request.Request(
+        'http://supervisor/core/check',
+        data=b'{}',
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode('utf-8', errors='replace')
+        try:
+            payload = json.loads(detail)
+            detail = str(payload.get('message') or detail)
+        except ValueError:
+            pass
+        raise RuntimeError(
+            f'Home Assistant configuration validation failed '
+            f'(HTTP {exc.code}): {detail}'
+        ) from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise RuntimeError(
+            f'Unable to validate Home Assistant configuration: {exc}'
+        ) from exc
+
+    if result.get('result') != 'ok':
+        raise RuntimeError(
+            'Home Assistant configuration validation failed: '
+            + str(result.get('message', result))
+        )
+
+    print('✅ Home Assistant configuration is valid', flush=True)
+    return True
+
+
 def prepare_post_update_reboot():
     """Register post-reboot checks and arm the one-time update task."""
     from pathlib import Path
@@ -1687,6 +1742,11 @@ try:
             success = False
 
     if success:
+        update_dashboard_status(
+            "Validating Home Assistant configuration...", "info"
+        )
+
+        validate_home_assistant_config()
         reboot_token = prepare_post_update_reboot()
         
         update_checker.set_current_version(manifest['version'])
