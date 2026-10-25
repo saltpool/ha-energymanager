@@ -19,6 +19,11 @@
       "new_in_version": "1.3.0",
       "description": "One-time Home Assistant helper initialisation"
     },
+    "scripts/em_update_launcher.py": {
+      "action": "replace",
+      "description": "Launch Energy Manager updates inside Advanced SSH",
+      "new_in_version": "1.3.0"
+    },
     "configuration.yaml": {
       "action": "merge",
       "sections": [
