@@ -162,7 +162,7 @@ def reboot_home_assistant_os(token):
     print('Home Assistant OS reboot requested successfully', flush=True)
 
 
-def cleanup_old_backups():
+def :
     try:
         backup_dir = '/config/.energy_manager/backups'
         if not os.path.exists(backup_dir):
@@ -1442,6 +1442,9 @@ def cleanup_obsolete_em_sections(file_merger, version):
 
 
 try:
+    os.makedirs('/config/.energy_manager', exist_ok=True)
+    with open('/config/.energy_manager/update_result.txt', 'w') as f:
+        f.write('running')
     cleanup_old_backups()
     
     args = parse_arguments()
