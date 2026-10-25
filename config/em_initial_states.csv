@@ -318,7 +318,6 @@ input_select.inverter_brand,sungrow
 input_select.inverter_charge_discharge_mode,Stop
 input_select.inverter_ems_mode,Self-Consumption mode
 input_select.inverter_run_mode,Start
-input_select.other_tariff_plan,AGL - Battery Rewards - QLD - Energex - 2026-07-01
 input_select.scheduled_charge_signal,Extreme
 input_text.aemo_region,QLD1
 input_text.amber_api_key,""
