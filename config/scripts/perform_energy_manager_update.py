@@ -32,6 +32,149 @@ from hacs_manager import (
     require_component_backend,
 )
 
+def create_update_snapshot(manifest):
+    """Snapshot exactly the local files this update may modify."""
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    state = Path('/config/.energy_manager')
+    backup_root = state / 'backups'
+    backup_root.mkdir(parents=True, exist_ok=True)
+
+    paths = set()
+    for filepath in manifest['files']:
+        if filepath.startswith('/share/'):
+            paths.add(filepath)
+        else:
+            paths.add(str(Path('/config') / filepath))
+
+    # Files modified by legacy cleanup or update bookkeeping.
+    paths.update((
+        '/config/configuration.yaml',
+        '/config/automations.yaml',
+        '/config/scripts.yaml',
+        '/config/group.yaml',
+        '/config/template.yaml',
+        '/config/.energy_manager/managed-sections.json',
+        '/config/.energy_manager/version.txt',
+        '/config/.energy_manager/installed_branch.txt',
+        '/config/.energy_manager/post-hacs-status.json',
+    ))
+
+    snapshot_dir = Path(tempfile.mkdtemp(
+        prefix='update-rollback-',
+        dir=str(backup_root)
+    ))
+
+    records = []
+    try:
+        for index, filename in enumerate(sorted(paths)):
+            original = Path(filename)
+            if original.is_symlink():
+                raise RuntimeError(
+                    f'Refusing to snapshot symbolic link: {filename}'
+                )
+
+            existed = original.exists()
+            if existed and not original.is_file():
+                raise RuntimeError(
+                    f'Expected regular file: {filename}'
+                )
+
+            backup_name = str(index)
+            if existed:
+                shutil.copy2(original, snapshot_dir / backup_name)
+
+            records.append({
+                'path': filename,
+                'existed': existed,
+                'backup': backup_name if existed else None,
+            })
+
+        (snapshot_dir / 'snapshot.json').write_text(
+            json.dumps(records, indent=2) + '\n',
+            encoding='utf-8'
+        )
+
+        print(
+            f'Rollback snapshot created: {snapshot_dir}',
+            flush=True
+        )
+        return snapshot_dir
+
+    except Exception:
+        shutil.rmtree(snapshot_dir, ignore_errors=True)
+        raise
+
+
+def restore_update_snapshot(snapshot_dir):
+    """Restore only files recorded in the current attempt's snapshot."""
+    import filecmp
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    records = json.loads(
+        (snapshot_dir / 'snapshot.json').read_text(encoding='utf-8')
+    )
+
+    errors = []
+    restored = 0
+
+    for record in reversed(records):
+        path = Path(record['path'])
+        try:
+            if path.is_symlink():
+                raise RuntimeError('Destination became a symbolic link')
+
+            if record['existed']:
+                backup = snapshot_dir / record['backup']
+                if not backup.is_file():
+                    raise RuntimeError('Original snapshot file missing')
+
+                if path.is_file() and filecmp.cmp(
+                    backup, path, shallow=False
+                ):
+                    continue
+
+                path.parent.mkdir(parents=True, exist_ok=True)
+                fd, temp_name = tempfile.mkstemp(
+                    prefix='.em-restore-',
+                    dir=str(path.parent)
+                )
+                os.close(fd)
+                try:
+                    shutil.copy2(backup, temp_name)
+                    os.replace(temp_name, path)
+                finally:
+                    if os.path.exists(temp_name):
+                        os.unlink(temp_name)
+            else:
+                if path.exists():
+                    if not path.is_file():
+                        raise RuntimeError(
+                            'New destination is not a regular file'
+                        )
+                    path.unlink()
+
+            restored += 1
+            print(f'[EM Rollback] Restored {path}', flush=True)
+
+        except Exception as exc:
+            errors.append(f'{path}: {exc}')
+            print(f'[EM Rollback] ERROR {path}: {exc}', flush=True)
+
+    if errors:
+        raise RuntimeError(
+            'Rollback incomplete: ' + '; '.join(errors)
+        )
+
+    print(
+        f'[EM Rollback] Completed; {restored} files restored or removed',
+        flush=True
+    )
+
 def validate_home_assistant_config():
     """Validate the deployed Home Assistant configuration without rebooting."""
     import urllib.request
@@ -1495,6 +1638,8 @@ def cleanup_obsolete_em_sections(file_merger, version):
             temporary.unlink(missing_ok=True)
         print('Obsolete Energy Manager configuration sections cleaned')
 
+rollback_snapshot = None
+update_committed = False
 
 try:
     os.makedirs('/config/.energy_manager', exist_ok=True)
@@ -1541,6 +1686,8 @@ try:
     # HA 2026.10 and earlier: HACS.
     # HA 2026.11 and later: Marketplace (implementation pending).
     require_component_backend()
+
+    rollback_snapshot = create_update_snapshot(manifest)
     
     if args.force_reinstall:
         print(f"Force reinstalling version {manifest['version']}...")
@@ -1758,6 +1905,8 @@ try:
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
             f.write(f"success:{manifest['version']}")
 
+        update_committed = True
+        
         print(
             "Energy Manager update complete. "
             "A full Home Assistant OS reboot is mandatory.",
@@ -1766,15 +1915,36 @@ try:
         reboot_home_assistant_os(reboot_token)
         sys.exit(0)
     else:
-        print("❌ Update failed")
-        update_status_failed("One or more update steps failed")
-        with open('/config/.energy_manager/update_result.txt', 'w') as f:
-            f.write("failed")
-        sys.exit(1)
+        raise RuntimeError("One or more update steps failed")
 
 except Exception as e:
     print(f"Update process failed: {e}")
-    update_status_failed(str(e))
+
+    error_message = str(e)
+
+    if rollback_snapshot is not None and not update_committed:
+        print(
+            '[EM Rollback] Update failed; restoring previous managed files...',
+            flush=True
+        )
+        try:
+            restore_update_snapshot(rollback_snapshot)
+            print(
+                '[EM Rollback] Checking restored Home Assistant configuration...',
+                flush=True
+            )
+            validate_home_assistant_config()
+            error_message += (
+                ' | Previous managed files restored and configuration validated'
+            )
+        except Exception as rollback_error:
+            print(
+                f'[EM Rollback] ERROR: {rollback_error}',
+                flush=True
+            )
+            error_message += f' | Rollback verification failed: {rollback_error}'
+
+    update_status_failed(error_message)
     with open('/config/.energy_manager/update_result.txt', 'w') as f:
-        f.write(f"error:{str(e)}")
+        f.write(f"error:{error_message}")
     sys.exit(1)
