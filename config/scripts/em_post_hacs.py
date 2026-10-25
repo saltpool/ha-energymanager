@@ -56,7 +56,27 @@ def notify_update_complete(token):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise RuntimeError('Invalid completed update version: ' + repr(version))
 
-    payload = {
+    dismiss_request = urllib.request.Request(
+        'http://supervisor/core/api/services/persistent_notification/dismiss',
+        data=json.dumps({
+            'notification_id': 'em_updating'
+        }).encode('utf-8'),
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(dismiss_request, timeout=20):
+            pass
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        print(
+            f'[EM Post-HACS] Could not dismiss progress notification: {exc}',
+            flush=True
+        )
+
        'title': '✅ Energy Manager Update Complete',
         'message': (
             f'Energy Manager has successfully updated to version {version}. '
