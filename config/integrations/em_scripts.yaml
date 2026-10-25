@@ -1,5 +1,5 @@
 # em_scripts.yaml 
-# === ENERGY_MANAGER_SCRIPTS_START v1.3.0 ===
+# === ENERGY_MANAGER_SCRIPTS_START v2.0.0 ===
 script:
   switch_inverter_brand:
     alias: "Switch Inverter Brand"
@@ -3371,22 +3371,34 @@ script:
       - action: persistent_notification.dismiss
         data:
           notification_id: "em_updating"
-      - if:
-          - condition: template
-            value_template: "{{ update_result.returncode == 0 }}"
-        then:
-          - action: input_boolean.turn_off
-            target:
-              entity_id: input_boolean.energy_manager_update_available
-          - action: homeassistant.update_entity
-            target:
-              entity_id: sensor.energy_manager_current_version
-          - delay:
-              seconds: 2
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ update_result.returncode == 0
+                     and states('sensor.energy_manager_current_version') not in
+                     ['unknown', 'unavailable'] }}
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.energy_manager_update_available
+              - action: homeassistant.update_entity
+                target:
+                  entity_id: sensor.energy_manager_current_version
+              - action: persistent_notification.create
+                data:
+                  title: "✅ Energy Manager Update Complete"
+                  message: >
+                    Energy Manager is running version
+                    {{ states('sensor.energy_manager_current_version') }}.
+                  notification_id: "em_update_complete"
+        default:
           - action: persistent_notification.create
             data:
-              title: "✅ Energy Manager Update Complete"
-              message: "Successfully updated to version {{ states('input_text.energy_manager_available_version') }}. Please reboot Home Assistant."
+              title: "ℹ️ Energy Manager Update Status"
+              message: >
+                The update command has completed.
+                Check the update status for details.
               notification_id: "em_update_complete"
         else:
           - action: persistent_notification.create
