@@ -13,6 +13,8 @@ import uuid
 import glob
 from datetime import datetime, timedelta
 import argparse
+import urllib.request
+import urllib.error
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Energy Manager Update Script')
@@ -20,13 +22,6 @@ def parse_arguments():
     parser.add_argument('--branch', choices=('main', 'early', 'test', 'development'), help='Override HA branch selector')
     parser.add_argument('--key', default='', help=argparse.SUPPRESS)
     return parser.parse_args()
-
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
-    print("⚠ requests module not available - some features may not work")
 
 sys.path.append('/config/scripts')
 
@@ -199,32 +194,37 @@ def cleanup_old_backups():
         print(f"⚠ Backup cleanup error: {e}")
 
 def supervisor_api_call(endpoint, method='GET', data=None):
-    if not REQUESTS_AVAILABLE:
-        print("❌ Cannot make API calls - requests module not available")
-        return False, {}
-
-    token = os.environ.get('SUPERVISOR_TOKEN', '')
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
     if not token:
+        print("Supervisor API unavailable: missing token")
         return False, {}
 
     url = f"http://supervisor/core/api/{endpoint}"
-    headers = {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-    }
-    
+    payload = (
+        json.dumps(data).encode('utf-8')
+        if data is not None else None
+    )
+
+    request = urllib.request.Request(
+        url,
+        data=payload,
+        method=method,
+        headers={
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+    )
+
     try:
-        if method == 'POST':
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-        else:
-            response = requests.get(url, headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            return True, response.json() if response.text else {}
-        else:
-            return False, {}
-            
-    except Exception as e:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            content = response.read()
+            return True, json.loads(content) if content else {}
+    except (urllib.error.HTTPError, urllib.error.URLError,
+            TimeoutError, OSError, ValueError) as exc:
+        print(f"Supervisor API request failed ({endpoint}): {exc}")
         return False, {}
 
 def get_entity_state(entity_id):
@@ -307,19 +307,6 @@ def get_entity_state(entity_id):
     except Exception as e:
         pass
     
-    try:
-        url = f"http://127.0.0.1:8123/api/states/{entity_id}"
-        headers = {'Content-Type': 'application/json'}
-
-        response = requests.get(url, headers=headers, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-            return data
-
-    except Exception as e:
-        pass
-
     try:
         config_file = '/config/configuration.yaml'
         if os.path.exists(config_file):
@@ -937,7 +924,7 @@ def create_or_update_entity(entity_id, entity_config):
         
         success = False
         
-        if not success and REQUESTS_AVAILABLE:
+        if not success:
             try:
                 service_name = f"{entity_type}_set_value" if preserve_current and current_value else f"{entity_type}_create"
                 
@@ -1137,15 +1124,18 @@ def handle_entities_update(manifest):
 
 def reload_home_assistant_config():
     try:
-        if REQUESTS_AVAILABLE:
-            success, response = supervisor_api_call('services/homeassistant/reload_config_entry', 'POST', {})
-            if success:
-                return True
-            
-            success, response = supervisor_api_call('services/homeassistant/restart', 'POST', {})
-            if success:
-                print("⚠ Full restart initiated instead of config reload")
-                return True
+        success, response = supervisor_api_call(
+            'services/homeassistant/reload_config_entry', 'POST', {}
+        )
+        if success:
+            return True
+
+        success, response = supervisor_api_call(
+            'services/homeassistant/restart', 'POST', {}
+        )
+        if success:
+            print("⚠ Full restart initiated instead of config reload")
+            return True
         
         return False
         
@@ -1589,8 +1579,6 @@ try:
                     
                     if ssh_result:
                         print("✓ Node-RED flows updated via SSH")
-                        if not REQUESTS_AVAILABLE:
-                            _restart_nodered_via_ssh()
                     else:
                         print("✗ SSH flows update failed")
                         success = False
@@ -1614,30 +1602,44 @@ try:
     if success and update_flows:
         print("Restarting Node-RED to pick up changes...")
         update_dashboard_status("Restarting Node-RED...", "info")
-        
+
+        token = (
+            os.environ.get('SUPERVISOR_TOKEN')
+            or os.environ.get('HASSIO_TOKEN')
+        )
+
         try:
-            if REQUESTS_AVAILABLE:
-                url = "http://supervisor/addons/a0d7b954_nodered/restart"
-                headers = {
-                    'Authorization': 'Bearer ' + os.environ.get('SUPERVISOR_TOKEN', ''),
+            if not token:
+                raise RuntimeError('Supervisor token unavailable')
+
+            request = urllib.request.Request(
+                'http://supervisor/addons/a0d7b954_nodered/restart',
+                data=b'{}',
+                method='POST',
+                headers={
+                    'Authorization': f'Bearer {token}',
                     'Content-Type': 'application/json'
                 }
-                
-                response = requests.post(url, headers=headers, timeout=30)
-                
-                if response.status_code == 200:
-                    print("✅ Node-RED restart initiated")
-                else:
-                    print(f"❌ Node-RED restart failed: {response.status_code}")
-                    print("Please restart Node-RED manually")
-                    
-            else:
-                print("⚠ Please restart Node-RED manually - requests not available")
-                
-        except Exception as e:
-            print(f"❌ Node-RED restart error: {e}")
-            print("Please restart Node-RED manually")
-  
+            )
+
+            with urllib.request.urlopen(request, timeout=30) as response:
+                result = json.load(response)
+
+            if result.get('result') == 'error':
+                raise RuntimeError(
+                    result.get('message', 'Supervisor rejected restart')
+                )
+
+            print("✅ Node-RED restart initiated")
+
+        except (urllib.error.URLError, TimeoutError,
+                OSError, ValueError, RuntimeError) as exc:
+            print(f"⚠ Supervisor Node-RED restart failed: {exc}")
+            print("Attempting Node-RED restart via SSH...")
+            if not _restart_nodered_via_ssh():
+                print("❌ Node-RED restart failed")
+                success = False
+    
     if success:
         print("Processing HACS dependencies...")
         update_dashboard_status(
