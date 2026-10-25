@@ -22,11 +22,78 @@ SCRIPT = Path('/config/scripts/configure_em_integrations.py')
 INITIALISE_SCRIPT = Path('/config/scripts/em_initialise_states.py')
 
 def write_status(status, detail=''):
+    previous = {}
+    if STATUS.is_file():
+        try:
+            previous = json.loads(STATUS.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            pass
     payload = {'status': status, 'detail': detail,
                'updated_at': datetime.now(timezone.utc).isoformat()}
+    if previous.get('kind'):
+        payload['kind'] = previous['kind']
+
     tmp = STATUS.with_suffix('.tmp')
     tmp.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     os.replace(tmp, STATUS)
+
+
+def notify_update_complete(token):
+    """Notify Home Assistant after successful post-update checks."""
+    import re
+
+    result_file = STATE / 'update_result.txt'
+    if not result_file.is_file():
+        raise RuntimeError('Missing update result; cannot confirm completed version')
+
+    result = result_file.read_text(encoding='utf-8').strip()
+    if not result.startswith('success:'):
+        raise RuntimeError(
+            'Update result does not indicate success: ' + result
+        )
+
+    version = result.split(':', 1)[1]
+    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+        raise RuntimeError('Invalid completed update version: ' + repr(version))
+
+    payload = {
+       'title': '✅ Energy Manager Update Complete',
+        'message': (
+            f'Energy Manager has successfully updated to version {version}. '
+            'Home Assistant has restarted and the post-update '
+           'integration checks have completed successfully.'
+        ),
+       'notification_id': 'em_update_complete'
+    }
+
+    request = urllib.request.Request(
+        'http://supervisor/core/api/services/persistent_notification/create',
+        data=json.dumps(payload).encode('utf-8'),
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    for attempt in range(1, 7):
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                if response.status not in (200, 201):
+                    raise RuntimeError(
+                        f'Notification service returned HTTP {response.status}'
+                    )
+            print(
+                f'[EM Post-HACS] Update completion notification sent: {version}',
+                flush=True
+            )
+            return
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == 6:
+                raise RuntimeError(
+                    f'Unable to send completion notification: {exc}'
+                ) from exc
+            time.sleep(10)
 
 
 def main():
@@ -76,9 +143,16 @@ def main():
             print(proc.stdout, flush=True)
             if proc.returncode == 0:
                 if update_mode:
+                    print(
+                        '[EM Post-HACS] Post-update checks passed; '
+                        'sending completion notification',
+                        flush=True
+                    )
+                    notify_update_complete(token)
                     write_status(
                         'complete',
-                        'Post-update integration reconciliation complete'
+                        'Post-update integration reconciliation complete; '
+                        'completion notification sent'
                     )
                     print(
                         '[EM Post-HACS] Post-update checks completed successfully',
