@@ -77,13 +77,13 @@ def notify_update_complete(token):
             flush=True
         )
 
-       'title': '✅ Energy Manager Update Complete',
-       'message': (
+        'title': '✅ Energy Manager Update Complete',
+        'message': (
             f'Energy Manager has successfully updated to version {version}. '
             'Home Assistant has restarted and the post-update '
            'integration checks have completed successfully.'
         ),
-       'notification_id': 'em_update_complete'
+        'notification_id': 'em_update_complete'
     }
 
     request = urllib.request.Request(
