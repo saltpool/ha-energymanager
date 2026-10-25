@@ -3298,6 +3298,9 @@ views:
               service: script.turn_on
               service_data:
                 entity_id: script.update_energy_manager_force
+          - type: markdown
+            content: >-
+              **Important:** All Energy Manager updates will involve a forced reboot of Home Assistant without prompt. Ensure you are ok with a forced reboot before clicking on **Install Update** or **Force Reinstall**.
           - type: conditional
             conditions:
               - entity: input_boolean.energy_manager_update_available
