@@ -1528,7 +1528,11 @@ try:
         update_dashboard_status("Reconciling Supervisor Apps...", "info")
         try:
             from em_apps_manager import reconcile
-            reconcile(manifest, repair=True)
+            reconcile(
+                manifest,
+                repair=True,
+                protect_ssh_session=True
+            )
         except Exception as e:
             print(f"❌ App reconciliation failed: {e}")
             success = False
