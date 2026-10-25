@@ -1,5 +1,5 @@
 # Energy Manager Helper File
-# === ENERGY_MANAGER_SHELL_COMMANDS_START v1.3.0 ===
+# === ENERGY_MANAGER_SHELL_COMMANDS_START v2.0.0 ===
 shell_command:
   electricity_load: "python3 /config/scripts/electricity_dashboard.py load"
   electricity_update: "python3 /config/scripts/electricity_dashboard.py update '{{ data }}'"
@@ -21,6 +21,7 @@ shell_command:
   check_energy_manager_updates: "python3 /config/scripts/check_energy_manager_updates.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
   perform_energy_manager_update: "python3 /config/scripts/perform_energy_manager_update.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
   perform_energy_manager_update_force: "python3 /config/scripts/perform_energy_manager_update.py --force-reinstall --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
+  em_read_update_result: "cat /config/.energy_manager/update_result.txt 2>/dev/null || echo unknown"
   generate_ssh_key: 'mkdir -p /config/.energy_manager && ssh-keygen -t ed25519 -f /config/.energy_manager/ssh_key -N "" -C "energy_manager_automation"'
   read_ssh_key: 'cat /config/.energy_manager/ssh_key.pub 2>/dev/null || echo "no_key"'
   em_victoriametrics_setup: "python3 /config/scripts/em_victoriametrics_setup.py"
