@@ -1,6 +1,5 @@
 # === ENERGY_MANAGER_AUTOMATIONS_START v2.0.0 ===
 automation:
-A LINE HERE TO BREAK UPDATES TO TEST VALIDATION. TEMPORARY.
   - id: "solcast_update"
     alias: Solcast update
     description: ""
