@@ -3416,10 +3416,11 @@ script:
         default:
           - action: persistent_notification.create
             data:
-              title: "ℹ️ Energy Manager Update Status"
+              title: "🔄 Energy Manager Update Running"
               message: >
-                The update has not reported a final result.
-                Check the Energy Manager update status.
+                Energy Manager is updating in the background.
+                Home Assistant will reboot automatically after
+                successful installation and configuration validation.
               notification_id: "em_update_result"
   update_energy_manager_force:
     alias: "Update Energy Manager Reinstall"
@@ -3468,10 +3469,11 @@ script:
         default:
           - action: persistent_notification.create
             data:
-              title: "ℹ️ Energy Manager Reinstall Status"
+              title: "🔄 Energy Manager Reinstall Running"
               message: >
-                The reinstall has not reported a final result.
-                Check the Energy Manager update status.
+                Energy Manager is reinstalling in the background.
+                Home Assistant will reboot automatically after
+                successful installation and configuration validation.
               notification_id: "em_update_result"
 
   # === ENERGY_MANAGER_SCRIPTS_END === 
