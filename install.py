@@ -695,6 +695,9 @@ def main():
 
     require_supported_home_assistant()
     
+    if args.step == 'all':
+        preflight_marketplace_consent()
+    
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
     if not BRANCH or '/' in BRANCH or '..' in BRANCH:
