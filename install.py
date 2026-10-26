@@ -4,6 +4,7 @@
 Run in Advanced SSH & Web Terminal on dedicated Home Assistant OS.
 """
 import argparse
+import getpass
 import uuid
 import shutil
 from datetime import datetime
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import urllib.request
 import time
+import stat
 
 REPO = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
 BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
@@ -680,6 +682,46 @@ def preflight_marketplace_consent():
 
     log('Marketplace ready and consent confirmed')
 
+def collect_onboarding_credentials():
+    """Collect credentials before changing a fresh HA installation.
+
+    Stored only until the first post-reboot setup succeeds; never log values.
+    """
+    log('Solcast credentials are required for this fresh installation.')
+    solcast_key = getpass.getpass('Solcast API key: ').strip()
+    if not solcast_key:
+        raise RuntimeError('Solcast API key is required')
+    resource_1 = input('Solcast resource ID 1 (required): ').strip()
+    if not resource_1:
+        raise RuntimeError('At least one Solcast resource ID is required')
+    resource_2 = input('Solcast resource ID 2 (optional, Enter to skip): ').strip()
+    if resource_2 and resource_2 == resource_1:
+        raise RuntimeError('Solcast resource IDs must be different')
+    print('Energy Manager key is strongly recommended. Without it, automated '
+          'energy optimisation will not operate.', flush=True)
+    em_key = getpass.getpass('Energy Manager key (Enter to skip): ').strip()
+    if not em_key:
+        log('WARNING: No Energy Manager key supplied; optimisation will not operate.')
+    secrets = {
+        'solcast_key': solcast_key,
+        'solcast_array_1': resource_1,
+        'solcast_array_2': resource_2,
+        'energymanager_key': em_key,
+    }
+    STATE.mkdir(parents=True, exist_ok=True)
+    path = STATE / 'onboarding-secrets.json'
+    if path.exists():
+        raise RuntimeError('Onboarding secrets already staged; resolve prior installation before retrying')
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            json.dump(secrets, handle)
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+    log('Onboarding credentials staged securely for post-reboot setup')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
     parser.add_argument('--step', choices=['all', 'prepare', 'install-apps', 'deploy', 'install-marketplace', 'finalise', 'configure-ssh', 'check-ssh'], default='all', help='Installation stage (default: all); specific stages for troubleshooting')
@@ -691,6 +733,7 @@ def main():
     
     if args.step == 'all':
         preflight_marketplace_consent()
+        collect_onboarding_credentials()
     
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
