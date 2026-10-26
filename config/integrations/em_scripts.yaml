@@ -1323,7 +1323,7 @@ script:
                     - "{{ (power_value + 32000) % 65536 }}"
           - conditions:
               - condition: template
-                value_template: "{{ states('input_select.inverter_brand').startswith('goodwe') }}"
+                value_template: "{{ states('input_select.inverter_brand') in ['goodwe', 'goodwe_et'] }}"
             sequence:
               - variables:
                   power_value: "{{ states('input_number.inverter_charge_discharge_power') | int }}"
@@ -1333,7 +1333,34 @@ script:
                 target:
                   entity_id: number.goodwe_eco_mode_power
                 data:
-                  value: "{{ power_percentage }}"
+                            value: "{{ power_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'goodwe_int') }}"
+            sequence:
+              - variables:
+                  requested_w: "{{ states('input_number.inverter_charge_discharge_power') | float(0) }}"
+                  mode: "{{ states('input_select.inverter_charge_discharge_mode') }}"
+                  hard_limit_w: >-
+                    {% if mode == 'Forced Charge' %}
+                      {{ states('input_number.battery_charge_power_hardlimit') | float(0) }}
+                    {% elif mode == 'Forced Discharge' %}
+                      {{ states('input_number.battery_discharge_power_hardlimit') | float(0) }}
+                    {% else %}
+                      0
+                    {% endif %}
+              - condition: template
+                value_template: >-
+                  {{ mode in ['Forced Charge', 'Forced Discharge']
+                     and hard_limit_w | float(0) > 0
+                     and has_value('number.goodwe_ems_power_limit') }}
+              - action: number.set_value
+                target:
+                  entity_id: number.goodwe_ems_power_limit
+                data:
+                  value: >-
+                    {{ [[requested_w | float(0), 0] | max,
+                        hard_limit_w | float(0)] | min | round(0) }}
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
