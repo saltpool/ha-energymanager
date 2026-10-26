@@ -348,16 +348,18 @@ def configure_bom():
 def configure_solcast():
     """Configure Solcast once on a vanilla instance; never enable its own scheduler."""
     domain = 'solcast_solar'
+    if not SECRETS_FILE.is_file():
+        log('No staged onboarding credentials; Solcast setup skipped')
+        return
+    credentials = json.loads(SECRETS_FILE.read_text(encoding='utf-8'))
+    api_key = credentials.get('solcast_key', '')
+    if not api_key:
+        log('Solcast onboarding skipped by installer; configure manually later')
+        return
     if entries(domain):
         raise RuntimeError('Solcast is already configured; fresh-install onboarding refuses to overwrite it')
     if not Path('/config/custom_components/solcast_solar/manifest.json').is_file():
         raise RuntimeError('Solcast files missing; Marketplace must install them before reboot')
-    if not SECRETS_FILE.is_file():
-        raise RuntimeError('Missing staged Solcast credentials from install.py')
-    credentials = json.loads(SECRETS_FILE.read_text(encoding='utf-8'))
-    api_key = credentials.get('solcast_key', '')
-    if not api_key:
-        raise RuntimeError('Solcast API key missing from staged installer credentials')
     # Solcast's current config flow requires api_key, api_limit and auto_update.
     # 0 = never update automatically. EM's existing automation owns daily refresh.
     flow = start_flow(domain)
