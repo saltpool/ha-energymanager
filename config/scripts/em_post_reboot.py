@@ -189,7 +189,7 @@ def main():
                     return
 
                 print(
-                    [EM Post-Reboot] Applying initial Energy Manager helper states',
+                    '[EM Post-Reboot] Applying initial Energy Manager helper states',
                     flush=True
                 )
                 initialisation = subprocess.run(
