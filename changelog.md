@@ -1,17 +1,18 @@
 # Changelog
 
 <details open>
-<summary><strong>1.3.0 - 2026-10-xx</strong></summary>
+<summary><strong>2.0.0 - 2026-11-xx</strong></summary>
 
 ### Added
-* New split news page. One column version specific, one for general information, and one for changelog
 * New update method 
   * Now via Github allowing community submissions
   * Integration, HACS and App installation control and configuration
+  * Version control on integrations, HACS and App components
   * Forced reboot after any update
   * Built in YAML syntax check
   * Bootstap deployment method - the ability to deploy EM to vanilla OS without requiring a restoration
   * Removal of backup restoration method for new deployments
+* New split news page. One column version specific, one for general information, and one for changelog
 * Safe-guard added for Flow Power users if EM tag detection file not present
 * All entities now YAML based (removal of UI entities via migration script)
 * Update script now manages HACS component addition/removal/forced version.
