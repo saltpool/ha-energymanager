@@ -7,6 +7,7 @@ BOM and Solcast deliberately remain manual onboarding steps.
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -14,6 +15,17 @@ from pathlib import Path
 API = 'http://supervisor/core/api/config/config_entries'
 TOKEN = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
 
+NODERED_ENTITY_IDS = {
+    'sensor.electricity_provider_buy_price': 'sensor.nodered_buyprice',
+    'sensor.electricity_provider_demand_interval': 'sensor.demand_interval',
+    'sensor.electricity_provider_em_last_updated': 'sensor.em_last_updated',
+    'sensor.electricity_provider_end_time': 'sensor.end_time',
+    'sensor.electricity_provider_forecast': 'sensor.nodered_forecast',
+    'sensor.electricity_provider_last_updated': 'sensor.nodered_energyproviderupdate',
+    'sensor.electricity_provider_sell_price': 'sensor.nodered_sellprice',
+    'sensor.electricity_provider_solcast_last_updated': 'sensor.solcast_last_updated',
+    'sensor.electricity_provider_start_time': 'sensor.start_time',
+}
 
 def log(message):
     print('[EM Integrations] ' + message, flush=True)
@@ -68,6 +80,81 @@ def configure_node_red():
         raise RuntimeError('Node-RED Companion configuration unsuccessful: ' + json.dumps(flow)[:900])
     log('Node-RED Companion configuration entry created')
 
+def correct_nodered_entity_ids():
+    """Assign Energy Manager entity IDs using Home Assistant's registry API."""
+    from hacs_manager import HAWebSocket
+
+    entry_ids = {
+        entry['entry_id']
+        for entry in entries('nodered')
+        if entry.get('entry_id')
+    }
+    if not entry_ids:
+        raise RuntimeError('Node-RED Companion has no configuration entry')
+
+    remaining = dict(NODERED_ENTITY_IDS)
+    renamed = 0
+
+    for attempt in range(12):
+        with HAWebSocket() as ws:
+            registry = ws.call('config/entity_registry/list')
+            by_id = {
+                entity['entity_id']: entity
+                for entity in registry
+            }
+
+            for old_id, new_id in list(remaining.items()):
+                old = by_id.get(old_id)
+                new = by_id.get(new_id)
+
+                if old is None:
+                    if new is not None:
+                        if new.get('config_entry_id') not in entry_ids:
+                            raise RuntimeError(
+                                f'Entity ID conflict: {new_id} belongs '
+                                'to another integration'
+                            )
+                        log(f'Entity already correct: {new_id}')
+                        del remaining[old_id]
+                    continue
+
+                if old.get('config_entry_id') not in entry_ids:
+                    raise RuntimeError(
+                        f'Refusing to rename non-Node-RED entity: {old_id}'
+                    )
+
+                if new is not None:
+                    raise RuntimeError(
+                        f'Cannot rename {old_id}: {new_id} already exists'
+                    )
+
+                ws.call(
+                    'config/entity_registry/update',
+                    entity_id=old_id,
+                    new_entity_id=new_id
+                )
+                log(f'Renamed entity: {old_id} -> {new_id}')
+                renamed += 1
+                del remaining[old_id]
+
+            if not remaining:
+                break
+
+        if attempt < 11:
+            time.sleep(10)
+
+    if remaining:
+        log(
+            'WARNING: Node-RED entities not yet registered: '
+            + ', '.join(remaining)
+        )
+
+    log(
+        f'Node-RED entity tidy-up complete: '
+        f'{renamed} renamed, '
+        f'{len(NODERED_ENTITY_IDS) - renamed - len(remaining)} already correct, '
+        f'{len(remaining)} not found'
+    )
 
 def configure_mqtt():
     configured = entries('mqtt')
@@ -171,6 +258,7 @@ def main():
     entry = configure_mqtt()
     ensure_mqtt_discovery_off(entry)
     dismiss_stale_mqtt_repair()
+    correct_nodered_entity_ids()
     log('MQTT and Node-RED Companion configured successfully')
     log('Bureau of Meteorology and Solcast PV Forecast require manual onboarding')
 
