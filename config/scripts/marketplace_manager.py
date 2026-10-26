@@ -2,7 +2,7 @@
 """Energy Manager Marketplace component management for HA Core 2026.11+.
 
 Runs from the Advanced SSH & Web Terminal App, with SUPERVISOR_TOKEN.
-Never accepts the Marketplace security warning on a user's behalf.
+Accepts the Marketplace warning only after explicit terminal consent.
 """
 import argparse
 import base64
@@ -191,12 +191,39 @@ def _remove_legacy_directory(relative_path):
         print('[EM Marketplace] Removed legacy resource directory: ' + relative_path, flush=True)
 
 
-def check_marketplace(ws):
+def check_marketplace(ws, ask_consent=False):
+    """Only acknowledge the warning after explicit approval on this session."""
     info = ws.call('marketplace/info')
     if info.get('stage') != 'running':
         raise RuntimeError('Marketplace is not ready (stage: %s)' % info.get('stage'))
+    if info.get('warning_accepted'):
+        return info
+
+    if not ask_consent:
+        raise RuntimeError(
+            'Marketplace warning has not been acknowledged for this connection. '
+            'Run the interactive installer or marketplace_manager.py --preflight --consent. '
+            'Review the actual Marketplace warning at Settings > Marketplace first.'
+        )
+
+    print('\n[EM Marketplace] CONSENT REQUIRED', flush=True)
+    print('Marketplace installs third-party community software, which is not reviewed or'
+          ' supported by Home Assistant. Review the full warning in'
+          ' Home Assistant > Settings > Marketplace before continuing.', flush=True)
+    print('Your confirmation below will acknowledge the Marketplace warning for the'
+          ' identity used by the Energy Manager installer.', flush=True)
+    try:
+        answer = input('After reviewing the warning, type YES to accept and continue: ')
+    except (EOFError, KeyboardInterrupt) as exc:
+        raise RuntimeError('Marketplace warning not accepted; installation cancelled') from exc
+    if answer != 'YES':
+        raise RuntimeError('Marketplace warning not accepted; installation cancelled')
+
+    ws.call('marketplace/warning/accept')
+    info = ws.call('marketplace/info')
     if not info.get('warning_accepted'):
-        raise RuntimeError('Open Settings > Marketplace and accept its community-content warning as an administrator, then rerun Energy Manager. No warning will be accepted automatically.')
+        raise RuntimeError('Marketplace did not confirm the acknowledgement; installation stopped')
+    print('[EM Marketplace] Warning acknowledgement verified', flush=True)
     return info
 
 
@@ -267,12 +294,14 @@ def sync_marketplace_components(entries, dry_run=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--preflight', action='store_true')
+    parser.add_argument('--consent', action='store_true',
+                        help='Interactively request consent if Marketplace needs acknowledgement')
     parser.add_argument('--manifest')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     require_marketplace()
     with HAWebSocket() as ws:
-        info = check_marketplace(ws)
+        info = check_marketplace(ws, ask_consent=args.consent)
         print('[EM Marketplace] Ready; GitHub connected: %s' % info.get('github_connected'), flush=True)
     if args.manifest and not args.preflight:
         with open(args.manifest, encoding='utf-8') as handle:
