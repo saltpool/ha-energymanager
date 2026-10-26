@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Set up MQTT and Node-RED Companion following the Marketplace component reboot.
+"""Set up MQTT, Node-RED Companion and BOM following the Marketplace reboot.
 
 Uses Home Assistant's HTTP config flows. Never edits .storage directly.
-BOM and Solcast deliberately remain manual onboarding steps.
+Solcast deliberately remains a manual onboarding step.
 """
 import json
 import os
@@ -251,16 +251,109 @@ def dismiss_stale_mqtt_repair():
         )
         log('Stale MQTT setup repair dismissed')
 
+def _home_coordinates():
+    """Use the location configured during Home Assistant onboarding."""
+    if not TOKEN:
+        raise RuntimeError('Supervisor token missing')
+    req = urllib.request.Request(
+        'http://supervisor/core/api/config',
+        headers={'Authorization': 'Bearer ' + TOKEN},
+    )
+    with urllib.request.urlopen(req, timeout=30) as response:
+        config = json.load(response)
+    latitude = config.get('latitude')
+    longitude = config.get('longitude')
+    if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+        raise RuntimeError('Home Assistant latitude/longitude not configured')
+    return float(latitude), float(longitude)
+
+
+def _all_form_choices(flow, field_name):
+    """Select every choice actually offered by the integration's form."""
+   field = _option_fields(flow).get(field_name)
+    if not field:
+        raise RuntimeError(f'BOM form has no {field_name}: {json.dumps(flow)[:900]}')
+    options = field.get('options')
+    if isinstance(options, dict):
+        choices = list(options)
+    elif isinstance(options, list):
+        choices = [
+            option['value'] if isinstance(option, dict) else option
+            for option in options
+        ]
+    else:
+        raise RuntimeError(f'BOM form has no selectable options for {field_name}')
+    if not choices or not all(isinstance(choice, str) for choice in choices):
+        raise RuntimeError(f'Invalid or empty BOM options for {field_name}')
+    return choices
+
+
+def _bom_step(flow, expected_step, values):
+    if flow.get('type') != 'form' or flow.get('step_id') != expected_step:
+        raise RuntimeError(
+            f'Unexpected BOM step (expected {expected_step}): '
+            + json.dumps(flow)[:900]
+        )
+    result = submit_flow(flow, values)
+    if result.get('type') == 'form' and result.get('errors'):
+        raise RuntimeError('BOM rejected setup values: ' + json.dumps(result)[:900])
+    return result
+
+
+def configure_bom():
+    """Configure new BOM integration using HA location and fixed 'home' names."""
+    domain = 'bureau_of_meteorology'
+    if entries(domain):
+        log('BOM already configured; existing entry preserved')
+        return
+    if not Path(f'/config/custom_components/{domain}/manifest.json').is_file():
+        raise RuntimeError('BOM integration files missing; Marketplace install must run first')
+
+    latitude, longitude = _home_coordinates()
+    log(f'Configuring BOM with Home Assistant coordinates: {latitude}, {longitude}')
+    flow = start_flow(domain)
+    flow = _bom_step(flow, 'user', {
+        'latitude': latitude,
+        'longitude': longitude,
+    })
+    flow = _bom_step(flow, 'weather_name', {'weather_name': 'home'})
+    flow = _bom_step(flow, 'sensors_create', {
+        'observations_create': True,
+        'forecasts_create': True,
+        'warnings_create': True,
+    })
+    observations = _all_form_choices(flow, 'observations_monitored')
+    flow = _bom_step(flow, 'observations_monitored', {
+        'observations_basename': 'home',
+        'observations_monitored': observations,
+    })
+    forecasts = _all_form_choices(flow, 'forecasts_monitored')
+    flow = _bom_step(flow, 'forecasts_monitored', {
+        'forecasts_basename': 'home',
+        'forecasts_monitored': forecasts,
+        'forecasts_days': 7,
+    })
+    flow = _bom_step(flow, 'warnings_basename', {'warnings_basename': 'home'})
+    if flow.get('type') != 'create_entry':
+        raise RuntimeError('BOM configuration did not complete: ' + json.dumps(flow)[:900])
+    if not entries(domain):
+        raise RuntimeError('BOM config flow completed but no configuration entry exists')
+    log(
+        f'BOM configured: all {len(observations)} observations, '
+        f'all {len(forecasts)} forecast sensor types, warnings, '
+        '7 forecast days; all basenames home'
+    )
+
 
 def main():
-    log('Configuring Node-RED Companion and MQTT')
+    log('Configuring Node-RED Companion, MQTT and Bureau of Meteorology'
     configure_node_red()
     entry = configure_mqtt()
     ensure_mqtt_discovery_off(entry)
     dismiss_stale_mqtt_repair()
     correct_nodered_entity_ids()
-    log('MQTT and Node-RED Companion configured successfully')
-    log('Bureau of Meteorology and Solcast PV Forecast require manual onboarding')
+    log('MQTT, Node-RED Companion and BOM configured successfully')
+    log('Solcast PV Forecast requires manual onboarding')
 
 
 if __name__ == '__main__':
