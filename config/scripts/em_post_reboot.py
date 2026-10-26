@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """One-shot post-reboot Energy Manager integration configuration.
 
-Started by Advanced SSH & Web Terminal init_commands after HACS reboot.
-Only runs when explicitly armed by install_hacs_components.py.
+Started by Advanced SSH & Web Terminal init_commands after Home Assistant OS reboot.
+Only runs when explicitly armed by install.py.
 """
 import fcntl
 import json
@@ -16,8 +16,8 @@ import urllib.request
 from datetime import datetime, timezone
 
 STATE = Path('/config/.energy_manager')
-STATUS = STATE / 'post-hacs-status.json'
-LOCK = STATE / 'post-hacs.lock'
+STATUS = STATE / 'post-reboot-status.json'
+LOCK = STATE / 'post-reboot.lock'
 SCRIPT = Path('/config/scripts/configure_em_integrations.py')
 INITIALISE_SCRIPT = Path('/config/scripts/em_initialise_states.py')
 
@@ -73,7 +73,7 @@ def notify_update_complete(token):
             pass
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         print(
-            f'[EM Post-HACS] Could not dismiss progress notification: {exc}',
+            f'[EM Post-Reboot] Could not dismiss progress notification: {exc}',
             flush=True
         )
 
@@ -105,7 +105,7 @@ def notify_update_complete(token):
                         f'Notification service returned HTTP {response.status}'
                     )
             print(
-                f'[EM Post-HACS] Update completion notification sent: {version}',
+                f'[EM Post-Reboot] Update completion notification sent: {version}',
                 flush=True
             )
             return
@@ -140,7 +140,7 @@ def main():
         if not token:
             write_status('failed', 'Supervisor token unavailable in SSH App startup')
             return
-        print('[EM Post-HACS] Waiting for Home Assistant Core to become available', flush=True)
+        print('[EM Post-Reboot] Waiting for Home Assistant Core to become available', flush=True)
         write_status('running', 'Waiting for Core')
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
@@ -156,7 +156,7 @@ def main():
         else:
             write_status('failed', 'Home Assistant Core did not become available within 10 minutes')
             return
-        print('[EM Post-HACS] Configuring MQTT and Node-RED Companion', flush=True)
+        print('[EM Post-Reboot] Configuring MQTT and Node-RED Companion', flush=True)
         for attempt in range(1, 4):
             proc = subprocess.run([sys.executable, '-u', str(SCRIPT)],
                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -165,7 +165,7 @@ def main():
             if proc.returncode == 0:
                 if update_mode:
                     print(
-                        '[EM Post-HACS] Post-update checks passed; '
+                        '[EM Post-Reboot] Post-update checks passed; '
                         'sending completion notification',
                         flush=True
                     )
@@ -176,7 +176,7 @@ def main():
                         'completion notification sent'
                     )
                     print(
-                        '[EM Post-HACS] Post-update checks completed successfully',
+                        '[EM Post-Reboot] Post-update checks completed successfully',
                         flush=True
                     )
                     return
@@ -189,7 +189,7 @@ def main():
                     return
 
                 print(
-                    '[EM Post-HACS] Applying initial Energy Manager helper states',
+                    [EM Post-Reboot] Applying initial Energy Manager helper states',
                     flush=True
                 )
                 initialisation = subprocess.run(
@@ -203,18 +203,18 @@ def main():
                 if initialisation.returncode != 0:
                     write_status(
                         'failed',
-                        'Initial helper configuration failed; see post-hacs.log'
+                        'Initial helper configuration failed; see post-reboot.log'
                     )
                     return
 
                 write_status('complete', 'MQTT discovery OFF; Node-RED Companion configured')
-                print('[EM Post-HACS] Completed successfully', flush=True)
+                print('[EM Post-Reboot] Completed successfully', flush=True)
                 return
             if attempt < 3:
-                print(f'[EM Post-HACS] Attempt {attempt} failed; retrying', flush=True)
+                print(f'[EM Post-Reboot] Attempt {attempt} failed; retrying', flush=True)
                 time.sleep(20)
-        write_status('failed', 'Integration configuration failed after 3 attempts; see post-hacs.log')
-        print('[EM Post-HACS] Failed; see /config/.energy_manager/post-hacs.log', flush=True)
+        write_status('failed', 'Integration configuration failed after 3 attempts; see post-reboot.log')
+        print('[EM Post-Reboot] Failed; see /config/.energy_manager/post-reboot.log', flush=True)
 
 
 if __name__ == '__main__':
@@ -222,5 +222,5 @@ if __name__ == '__main__':
         main()
     except Exception as exc:
         write_status('failed', str(exc))
-        print(f'[EM Post-HACS] ERROR: {exc}', flush=True)
+        print(f'[EM Post-Reboot] ERROR: {exc}', flush=True)
         sys.exit(1)
