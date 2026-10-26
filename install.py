@@ -659,6 +659,34 @@ def require_supported_home_assistant():
 
     log(f'Home Assistant Core {version} supported')
 
+def preflight_marketplace_consent():
+    """Check Marketplace readiness and obtain explicit installer consent."""
+    url = (
+        f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/'
+        'config/scripts/marketplace_manager.py'
+    )
+
+    log('Checking Marketplace readiness and consent')
+
+    with urllib.request.urlopen(url, timeout=60) as response:
+        source = response.read()
+
+    compile(source, 'marketplace_manager.py', 'exec')
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix='em-marketplace-') as directory:
+        target = Path(directory) / 'marketplace_manager.py'
+        target.write_bytes(source)
+
+        run([
+            sys.executable,
+            str(target),
+            '--preflight',
+            '--consent',
+        ])
+
+    log('Marketplace ready and consent confirmed')
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
