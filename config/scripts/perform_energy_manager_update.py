@@ -27,9 +27,9 @@ sys.path.append('/config/scripts')
 
 from update_checker import EnergyManagerUpdateChecker, version_tuple
 from file_merger import EnergyManagerFileMerger
-from hacs_manager import (
-    sync_hacs_components_via_ssh,
-    require_component_backend,
+from marketplace_manager import (
+    sync_marketplace_components_via_ssh,
+    require_marketplace,
 )
 
 def create_update_snapshot(manifest):
@@ -59,7 +59,7 @@ def create_update_snapshot(manifest):
         '/config/.energy_manager/managed-sections.json',
         '/config/.energy_manager/version.txt',
         '/config/.energy_manager/installed_branch.txt',
-        '/config/.energy_manager/post-hacs-status.json',
+        '/config/.energy_manager/post-reboot-status.json',
     ))
 
     snapshot_dir = Path(tempfile.mkdtemp(
@@ -243,7 +243,7 @@ def prepare_post_update_reboot():
         raise RuntimeError('Supervisor token unavailable for reboot')
 
     required_scripts = (
-        '/config/scripts/em_post_hacs.py',
+        '/config/scripts/em_post_reboot.py',
         '/config/scripts/configure_em_integrations.py',
     )
     for path in required_scripts:
@@ -281,8 +281,8 @@ def prepare_post_update_reboot():
 
     hook = (
         "sh -c 'nohup python3 "
-        "/config/scripts/em_post_hacs.py > "
-        "/config/.energy_manager/post-hacs.log "
+        "/config/scripts/em_post_reboot.py > "
+        "/config/.energy_manager/post-reboot.log "
         "2>&1 < /dev/null &'"
     )
 
@@ -303,8 +303,8 @@ def prepare_post_update_reboot():
 
     state = Path('/config/.energy_manager')
     state.mkdir(parents=True, exist_ok=True)
-    status = state / 'post-hacs-status.json'
-    temporary = state / 'post-hacs-status.json.tmp'
+    status = state / 'post-reboot-status.json'
+    temporary = state / 'post-reboot-status.json.tmp'
 
     temporary.write_text(
         json.dumps({
@@ -1683,9 +1683,8 @@ try:
             f.write("error:Failed to download manifest")
         sys.exit(1)
 
-    # HA 2026.10 and earlier: HACS.
-    # HA 2026.11 and later: Marketplace (implementation pending).
-    require_component_backend()
+    # Energy Manager 2.0.0 requires Home Assistant 2026.11+ and Marketplace.
+    require_marketplace()
 
     rollback_snapshot = create_update_snapshot(manifest)
     
@@ -1868,18 +1867,18 @@ try:
                 )
     
     if success:
-        print("Processing HACS dependencies...")
+        print("Processing Marketplace dependencies...")
         update_dashboard_status(
-            "Processing HACS dependencies...",
+            "Processing Marketplace dependencies...",
             "info"
         )
         try:
-            hacs_changes = sync_hacs_components_via_ssh(
-                manifest.get('hacs_components', [])
+            marketplace_changes = sync_marketplace_components_via_ssh(
+                manifest.get('marketplace_components', [])
             )
             print(
-                f"✅ HACS dependencies reconciled: "
-                f"{len(hacs_changes)} changes"
+                f"✅ Marketplace dependencies reconciled: "
+                f"{len(marketplace_changes)} changes"
             )
 
             # This file is deployed from the manifest earlier in the
@@ -1901,11 +1900,11 @@ try:
         except Exception as e:
             print(f"❌ Dependency reconciliation failed: {e}")
             update_dashboard_status(
-                f"HACS dependency update failed: {e}",
+                f"Marketplace dependency update failed: {e}",
                 "error"
             )
             success = False
-            update_failures.append(f"HACS dependencies: {e}")
+            update_failures.append(f"Marketplace dependencies: {e}")
 
     if success:
         update_dashboard_status(
