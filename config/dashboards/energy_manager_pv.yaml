@@ -3302,7 +3302,7 @@ views:
             content: >-
               **Important:** All Energy Manager updates will involve a forced reboot of Home Assistant without prompt. Ensure you are ok with a forced reboot before clicking on **Install Update** or **Force Reinstall**.
 
-              A notification will be shown on start of update and then once completed (post-reboot) another confirmation notification will be displayed.
+              A notification will be shown on start of an update. The update and reboot will take a number of minutes and may appear like nothing is happening, but at its completion a completion confirmation notification will be displayed.
           - type: conditional
             conditions:
               - entity: input_boolean.energy_manager_update_available
