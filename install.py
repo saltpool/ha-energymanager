@@ -639,11 +639,34 @@ def check_ssh():
     log('SSH key authentication successful')
     log('Next step: run the existing updater after first-run prerequisites are reviewed.')
 
+def require_supported_home_assistant():
+    """Require Home Assistant Core 2026.11+ before installation."""
+    result = supervisor_request('GET', '/core/info')
+    version = str(result.get('version', ''))
+
+    match = re.match(r'^(\d{4})\.(\d+)(?:\.|b|rc|$)', version)
+    if not match:
+        raise RuntimeError(
+            f'Cannot determine Home Assistant Core version: {version!r}'
+        )
+
+    if (int(match.group(1)), int(match.group(2))) < (2026, 11):
+        raise RuntimeError(
+            f'Energy Manager 2.0.0 requires Home Assistant Core '
+            f'2026.11 or newer. Installed version: {version}. '
+            'Please update Home Assistant before installing Energy Manager.'
+        )
+
+    log(f'Home Assistant Core {version} supported')
+
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
     parser.add_argument('--step', choices=['all', 'prepare', 'install-apps', 'deploy', 'install-hacs', 'finalise', 'configure-ssh', 'check-ssh'], default='all', help='Installation stage (default: all); specific stages for troubleshooting')
     args = parser.parse_args()
+
+    require_supported_home_assistant()
+    
     if not all(part and part.replace('-', '').replace('_', '').replace('.', '').isalnum() for part in REPO.split('/')) or len(REPO.split('/')) != 2:
         raise ValueError('Invalid repository name')
     if not BRANCH or '/' in BRANCH or '..' in BRANCH:
