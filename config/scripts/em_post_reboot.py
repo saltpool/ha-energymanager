@@ -16,6 +16,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 STATE = Path('/config/.energy_manager')
+SECRETS = STATE / 'onboarding-secrets.json'
 STATUS = STATE / 'post-reboot-status.json'
 LOCK = STATE / 'post-reboot.lock'
 SCRIPT = Path('/config/scripts/configure_em_integrations.py')
@@ -207,6 +208,31 @@ def main():
                     )
                     return
 
+                if SECRETS.is_file():
+                    # Initial helper CSV has now been applied; credential values win.
+                    secrets = json.loads(SECRETS.read_text(encoding='utf-8'))
+                    mapping = {
+                        'solcast_key': 'input_text.solcast_key',
+                        'solcast_array_1': 'input_text.solcast_array_1',
+                        'solcast_array_2': 'input_text.solcast_array_2',
+                        'energymanager_key': 'input_text.energymanager_key',
+                    }
+                    for key, entity_id in mapping.items():
+                        value = secrets.get(key, '')
+                        if not value:
+                            continue
+                        request = urllib.request.Request(
+                            'http://supervisor/core/api/services/input_text/set_value',
+                            data=json.dumps({'entity_id': entity_id, 'value': value}).encode('utf-8'),
+                            method='POST',
+                            headers={'Authorization': 'Bearer ' + token,
+                                     'Content-Type': 'application/json'},
+                        )
+                        with urllib.request.urlopen(request, timeout=30):
+                            pass
+                    SECRETS.unlink()
+                    print('[EM Post-Reboot] Onboarding helpers set; staged credentials removed', flush=True)
+                
                 write_status('complete', 'MQTT discovery OFF; Node-RED Companion configured')
                 print('[EM Post-Reboot] Completed successfully', flush=True)
                 return
