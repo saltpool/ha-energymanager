@@ -28,9 +28,9 @@ SCRIPTS = ROOT / 'scripts'
 REQUIRED = (
     'update_checker.py',
     'file_merger.py',
-    'hacs_manager.py',
+    'marketplace_manager.py',
     'em_apps_manager.py',
-    'em_post_hacs.py',
+    'em_post_reboot.py',
     'configure_em_integrations.py',
     'perform_energy_manager_update.py',
 )
@@ -446,8 +446,7 @@ def deploy():
             log('Lovelace resources already registered')
 
     log('Deployment stage complete: files, Node-RED flows, Lovelace resources')
-    log('Inverter-specific configuration, HACS and Home Assistant reload remain separate installation stages')
-
+    log('Inverter-specific onboarding and Home Assistant reboot follow deployment')
 
 
 def core_request(method, endpoint, payload=None, timeout=45):
@@ -464,80 +463,73 @@ def core_request(method, endpoint, payload=None, timeout=45):
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return json.loads(response.read() or b'{}')
 
+def _marketplace_source():
+    """Download and compile manager before altering installation."""
+    url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/config/scripts/marketplace_manager.py'
+    request = urllib.request.Request(url, headers={'User-Agent': 'EnergyManagerBootstrap/2.0'})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        source = response.read(1024 * 1024 + 1)
+    if len(source) > 1024 * 1024:
+        raise RuntimeError('Marketplace manager exceeds size limit')
+    compile(source, 'marketplace_manager.py', 'exec')
+    return source
 
-def install_hacs():
+
+def preflight_marketplace(source):
+    """Obtain consent prior to deployment or App changes."""
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='em-marketplace-') as directory:
+        target = Path(directory) / 'marketplace_manager.py'
+        target.write_bytes(source)
+        run([sys.executable, str(target), '--preflight', '--consent'])
+    log('Marketplace consent confirmed')
+
+
+def install_marketplace():
+    """Reconcile Marketplace components in the main installation."""
     sys.path.insert(0, str(SCRIPTS))
-    from hacs_manager import require_component_backend
+    from marketplace_manager import sync_marketplace_components
+    manifest = json.loads((STATE / 'install-manifest.json').read_text(encoding='utf-8'))
+    entries = manifest.get('marketplace_components', [])
+    if not entries:
+        raise RuntimeError('Manifest is missing marketplace_components')
+    changes = sync_marketplace_components(entries)
+    log(f'Marketplace components reconciled: {len(changes)} changes')
 
-    require_component_backend()
-    
-    destination = ROOT / 'custom_components' / 'hacs'
-    manifest_file = destination / 'manifest.json'
-    if manifest_file.is_file():
-        try:
-            metadata = json.loads(manifest_file.read_text(encoding='utf-8'))
-        except (OSError, ValueError) as exc:
-            raise RuntimeError(f'Existing HACS installation needs attention: {exc}') from exc
-        if metadata.get('domain') != 'hacs':
-            raise RuntimeError('Existing custom_components/hacs is not a valid HACS integration')
-        log('HACS files already installed; leaving the existing installation unchanged')
-        log('GitHub authorisation will be completed through Home Assistant after reboot')
-        return
-    if destination.exists():
-        raise RuntimeError('HACS destination exists but is incomplete; refusing to overwrite it')
 
-    url = 'https://github.com/hacs/integration/releases/latest/download/hacs.zip'
-    log('Downloading official HACS release')
-    request = urllib.request.Request(url, headers={'User-Agent': 'EnergyManagerBootstrap/1.0'})
-    with urllib.request.urlopen(request, timeout=120) as response:
-        archive = response.read(50 * 1024 * 1024 + 1)
-    if len(archive) > 50 * 1024 * 1024:
-        raise RuntimeError('HACS download exceeds expected size limit')
+def register_post_reboot_hook():
+    """Arm SSH App post-reboot configuration before first OS reboot."""
+    script = SCRIPTS / 'em_post_reboot.py'
+    if not script.is_file():
+        raise RuntimeError('Post-reboot script missing: ' + str(script))
+    addon = '/addons/a0d7b954_ssh'
+    info = supervisor_request('GET', addon + '/info')
+    options = dict(info.get('options') or {})
+    commands = list(options.get('init_commands') or [])
+    hook = ("sh -c 'nohup python3 /config/scripts/em_post_reboot.py "
+            "> /config/.energy_manager/post-reboot.log 2>&1 < /dev/null &'")
+    if hook not in commands:
+        commands.append(hook)
+        options['init_commands'] = commands
+        supervisor_request('POST', addon + '/options', {'options': options}, timeout=60)
+    saved = supervisor_request('GET', addon + '/info')
+    if hook not in ((saved.get('options') or {}).get('init_commands') or []):
+        raise RuntimeError('Supervisor did not retain post-reboot init command')
+    _write_atomic(STATE / 'post-reboot-status.json', json.dumps({
+        'status': 'pending', 'kind': 'install',
+        'detail': 'Waiting for Home Assistant OS reboot'
+    }) + '\n')
+    log('Post-reboot MQTT and Node-RED configuration hook registered')
 
-    parent = destination.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    staged = parent / ('.hacs-em-install-' + uuid.uuid4().hex)
-    staged.mkdir()
-    try:
-        with zipfile.ZipFile(io.BytesIO(archive)) as z:
-            for member in z.infolist():
-                # Reject absolute paths, traversal and symlinks in third-party archives.
-                name = member.filename
-                parts = Path(name).parts
-                mode = (member.external_attr >> 16) & 0o170000
-                if not name or name.startswith('/') or '..' in parts or mode == 0o120000:
-                    raise RuntimeError(f'Unsafe HACS archive member: {name!r}')
-                resolved = (staged / name).resolve()
-                if not resolved.is_relative_to(staged.resolve()):
-                    raise RuntimeError(f'Unsafe HACS archive path: {name!r}')
-            z.extractall(staged)
-        candidate = staged / 'manifest.json'
-        if not candidate.is_file() or json.loads(candidate.read_text(encoding='utf-8')).get('domain') != 'hacs':
-            raise RuntimeError('Downloaded archive is not a valid HACS integration')
-        if destination.exists():
-            raise RuntimeError('HACS was installed concurrently; refusing to replace it')
-        staged.rename(destination)
-    finally:
-        if staged.exists():
-            shutil.rmtree(staged)
-    log('HACS integration files installed successfully')
-    log('After the final reboot: Settings > Devices & services > Add integration > HACS')
-    log('Complete GitHub authorisation during onboarding; no GitHub credentials are required here')
 
 
 def finalise():
     sys.path.insert(0, str(SCRIPTS))
-    from hacs_manager import require_component_backend
 
-    require_component_backend()
-    
     if not (ROOT / 'configuration.yaml').is_file():
         raise RuntimeError('Home Assistant configuration missing; run --step deploy first')
     if not (Path('/addon_configs/a0d7b954_nodered') / 'flows.json').is_file():
         raise RuntimeError('Node-RED flows missing; run --step deploy first')
-
-    if not (ROOT / 'custom_components/hacs/manifest.json').is_file():
-        raise RuntimeError('HACS integration files missing; run --step install-hacs first')
 
     log('Validating Home Assistant configuration before reboot')
     try:
@@ -565,7 +557,7 @@ def finalise():
     log('Installation files deployed and Home Assistant configuration validated.')
     log('A full Home Assistant OS reboot will now be requested.')
     log('The SSH terminal will disconnect; this is expected.')
-    log('After Home Assistant is back, continue onboarding: HACS, inverter, BOM, Solcast, electricity provider and Energy Manager keys.')
+    log('After reboot, complete inverter, BOM, Solcast, electricity provider and Energy Manager account setup as required.')
     log('Reboot request status saved to /config/.energy_manager/install-status.json')
 
     try:
@@ -690,10 +682,12 @@ def preflight_marketplace_consent():
 
 def main():
     parser = argparse.ArgumentParser(description='Energy Manager bootstrap installer (development)')
-    parser.add_argument('--step', choices=['all', 'prepare', 'install-apps', 'deploy', 'install-hacs', 'finalise', 'configure-ssh', 'check-ssh'], default='all', help='Installation stage (default: all); specific stages for troubleshooting')
+    parser.add_argument('--step', choices=['all', 'prepare', 'install-apps', 'deploy', 'install-marketplace', 'finalise', 'configure-ssh', 'check-ssh'], default='all', help='Installation stage (default: all); specific stages for troubleshooting')
     args = parser.parse_args()
 
     require_supported_home_assistant()
+    if args.step in ('all', 'install-marketplace'):
+        preflight_marketplace(_marketplace_source())
     
     if args.step == 'all':
         preflight_marketplace_consent()
@@ -711,12 +705,13 @@ def main():
         install_apps()
         log('Stage 3/5: Energy Manager deployment')
         deploy()
-        log('Stage 4/5: HACS integration files')
-        install_hacs()
+        log('Stage 4/5: Marketplace components')
+        install_marketplace()
+        register_post_reboot_hook()
         log('Authorising Energy Manager SSH key for future updates')
         configure_ssh(restart=False)
         log('Stage 5/5: Configuration validation and full OS reboot')
-        log('HACS authorisation and remaining integrations are configured after reboot.')
+        log('MQTT and Node-RED Companion configuration will complete after reboot.')
         log('MQTT discovery must remain disabled; this installer does not alter it.')
         finalise()
     elif args.step == 'prepare':
@@ -725,8 +720,8 @@ def main():
         install_apps()
     elif args.step == 'deploy':
         deploy()
-    elif args.step == 'install-hacs':
-        install_hacs()
+    elif args.step == 'install-marketplace':
+        install_marketplace()
     elif args.step == 'finalise':
         finalise()
     elif args.step == 'configure-ssh':
