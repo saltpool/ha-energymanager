@@ -345,17 +345,17 @@
       "backup_current": true,
       "new_in_version": "1.3.0"
     },
-    "scripts/hacs_manager.py": {
+    "scripts/marketplace_manager.py": {
       "action": "replace",
-      "description": "HACS Updater Script",
+      "description": "Marketplace Component Manager",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
-    "scripts/em_post_hacs.py": {
+    "scripts/em_post_reboot.py": {
       "action": "replace",
-      "description": "Post HACS Script",
+      "description": "Post-reboot Configuration Script",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/configure_em_integrations.py": {
       "action": "replace",
@@ -591,7 +591,7 @@
     "node-red-contrib-time-switch": "1.1.7",
     "node-red-contrib-traffic": "0.2.1"
   },
-  "hacs_components": [
+  "marketplace_components": [
     {
       "repository": "thomasloven/lovelace-state-switch",
       "type": "plugin",
