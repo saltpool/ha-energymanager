@@ -1672,6 +1672,25 @@ automation:
               message: "Unable to check the current version. Please check the logs."
               notification_id: "em_update_result"
     mode: single
+  - id: energy_manager_update_failed_notification
+    alias: "Energy Manager - Update Failed Notification"
+    description: "Notify users when an Energy Manager update fails"
+    trigger:
+      - platform: state
+        entity_id: sensor.energy_manager_update_result
+        to: "error"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "❌ Energy Manager Update Failed"
+          message: >
+            The Energy Manager update was unsuccessful.
+
+            {{ state_attr('sensor.energy_manager_update_result', 'detail') }}
+
+            Home Assistant has not been rebooted.
+          notification_id: em_update_result
+    mode: single
   - id: generate_ssh_key_shell
     alias: "Generate SSH Key (Shell)"
     trigger: []
