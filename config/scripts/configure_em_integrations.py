@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set up MQTT and Node-RED Companion following the HACS component reboot.
+"""Set up MQTT and Node-RED Companion following the Marketplace component reboot.
 
 Uses Home Assistant's HTTP config flows. Never edits .storage directly.
 BOM and Solcast deliberately remain manual onboarding steps.
@@ -71,7 +71,7 @@ def configure_node_red():
         log('Node-RED Companion already configured; existing entry preserved')
         return
     if not Path('/config/custom_components/nodered/manifest.json').is_file():
-        raise RuntimeError('Node-RED Companion files absent; run HACS component installer and reboot first')
+        raise RuntimeError('Node-RED Companion files absent; run Marketplace component installer and reboot first')
     flow = start_flow('nodered')
     log('Node-RED flow: ' + str(flow.get('type')) + ' / ' + str(flow.get('step_id')))
     if flow.get('type') == 'form' and flow.get('step_id') == 'user':
@@ -82,7 +82,7 @@ def configure_node_red():
 
 def correct_nodered_entity_ids():
     """Assign Energy Manager entity IDs using Home Assistant's registry API."""
-    from hacs_manager import HAWebSocket
+    from marketplace_manager import HAWebSocket
 
     entry_ids = {
         entry['entry_id']
@@ -224,7 +224,7 @@ def ensure_mqtt_discovery_off(entry):
 
 def dismiss_stale_mqtt_repair():
     """Dismiss the expected MQTT setup warning after successful configuration."""
-    from hacs_manager import HAWebSocket
+    from marketplace_manager import HAWebSocket
 
     with HAWebSocket() as ws:
         issues = ws.call('repairs/list_issues').get('issues', [])
