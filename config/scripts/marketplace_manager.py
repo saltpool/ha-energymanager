@@ -269,7 +269,12 @@ def sync_marketplace_components(entries, dry_run=False):
             if action == 'remove':
                 ws.call('marketplace/repository/uninstall', repository=identifier)
             else:
-                kwargs = {'repository': identifier}
+                kwargs = {
+                    'repository': identifier,
+                    'confirm_replace_built_in': item.get(
+                        'confirm_replace_built_in', False
+                    ),
+                }
                 if version != 'latest':
                     details = ws.call('marketplace/repository/info', repository_id=identifier)
                     releases = details.get('releases', [])
