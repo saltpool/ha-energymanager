@@ -1696,6 +1696,7 @@ try:
     
     update_dashboard_status(f"Updating to version {manifest['version']}...", "info")
     success = True
+    update_failures = []
     selected_files = {}
     for filepath, file_info in manifest['files'].items():
         selected_files[filepath] = file_info
@@ -1708,6 +1709,7 @@ try:
         temp_path = f"{local_path}.temp"
         if not update_checker.download_file(filepath, temp_path):
             success = False
+            update_failures.append(f"Failed to download: {filepath}")
             continue
         try:
             with open(temp_path, 'r', encoding='utf-8') as f:
@@ -1723,7 +1725,9 @@ try:
                                 file_merger.replace_file(local_path, new_content, manifest['version']))
             else:
                 raise ValueError(f'Unknown action: {action}')
-            success &= bool(file_success)
+            if not file_success:
+                success = False
+                update_failures.append(f"Failed to install: {filepath}")
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
@@ -1741,10 +1745,11 @@ try:
         except Exception as e:
             print(f"❌ App reconciliation failed: {e}")
             success = False
+            update_failures.append(f"Supervisor Apps: {e}")
 
     if not success:
         raise RuntimeError(
-            "Required files or Supervisor App reconciliation failed"
+            "Update failed: " + "; ".join(update_failures)
         )
 
     cleanup_obsolete_em_sections(file_merger, manifest['version'])
@@ -1754,11 +1759,15 @@ try:
     update_dashboard_status("Processing special file operations...", "info")
     special_files_success = handle_special_files(selected_manifest)
     success &= special_files_success
+    if not special_files_success:
+        update_failures.append("Special file operations failed")
 
     print("Processing entity updates...")
     update_dashboard_status("Processing entity updates...", "info")
     entities_success = handle_entities_update(selected_manifest)
     success &= entities_success
+    if not entities_success:
+        update_failures.append("Entity configuration update failed")
 
     print("Processing Lovelace resource updates...")
     update_dashboard_status("Processing Lovelace resource updates...", "info")
@@ -1766,6 +1775,8 @@ try:
         resource for resource in manifest.get('lovelace_resources', [])
         ]))
     success &= lovelace_success
+    if not lovelace_success:
+        update_failures.append("Lovelace resource update failed")
     
     update_flows = ('nodered_flows' in manifest and True)
     if update_flows:
@@ -1791,11 +1802,13 @@ try:
                     else:
                         print("✗ SSH flows update failed")
                         success = False
+                        update_failures.append("Node-RED flows: SSH update failed")
                     
                 else:
                     print("✗ Downloaded Node-RED flows file is invalid JSON")
                     update_dashboard_status("Downloaded Node-RED flows file is invalid JSON", "error")
                     success = False
+                    update_failures.append("Node-RED flows: downloaded JSON invalid")
                 
                 if os.path.exists(flows_temp_path):
                     os.remove(flows_temp_path)
@@ -1803,10 +1816,12 @@ try:
                 print("✗ Failed to download Node-RED flows")
                 update_dashboard_status("Failed to download Node-RED flows", "error")
                 success = False
+                update_failures.append("Node-RED flows: download failed")
         else:
             print("✗ No download URL specified for Node-RED flows")
             update_dashboard_status("No download URL specified for Node-RED flows", "error")
             success = False
+            update_failures.append("Node-RED flows: download URL missing")
     
     if success and update_flows:
         print("Restarting Node-RED to pick up changes...")
@@ -1848,6 +1863,9 @@ try:
             if not _restart_nodered_via_ssh():
                 print("❌ Node-RED restart failed")
                 success = False
+                update_failures.append(
+                    f"Node-RED restart failed: Supervisor error: {exc}; SSH fallback failed"
+                )
     
     if success:
         print("Processing HACS dependencies...")
@@ -1887,6 +1905,7 @@ try:
                 "error"
             )
             success = False
+            update_failures.append(f"HACS dependencies: {e}")
 
     if success:
         update_dashboard_status(
@@ -1915,7 +1934,11 @@ try:
         reboot_home_assistant_os(reboot_token)
         sys.exit(0)
     else:
-        raise RuntimeError("One or more update steps failed")
+        raise RuntimeError(
+            "Update failed: " + "; ".join(update_failures)
+            if update_failures
+            else "Update failed: unknown operation; check update-run.log"
+        )
 
 except Exception as e:
     print(f"Update process failed: {e}")
