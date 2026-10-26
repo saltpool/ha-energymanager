@@ -687,18 +687,29 @@ def collect_onboarding_credentials():
 
     Stored only until the first post-reboot setup succeeds; never log values.
     """
-    log('Solcast credentials are required for this fresh installation.')
-    solcast_key = getpass.getpass('Solcast API key: ').strip()
-    if not solcast_key:
-        raise RuntimeError('Solcast API key is required')
-    resource_1 = input('Solcast resource ID 1 (required): ').strip()
-    if not resource_1:
-        raise RuntimeError('At least one Solcast resource ID is required')
-    resource_2 = input('Solcast resource ID 2 (optional, Enter to skip): ').strip()
-    if resource_2 and resource_2 == resource_1:
-        raise RuntimeError('Solcast resource IDs must be different')
+    print(
+        'Solcast is mandatory for Energy Manager optimisation. Obtain your '
+        'Solcast API key and resource ID(s) from the Solcast website.\n'
+        'You can copy them and right-click in the SSH terminal to paste '
+        '(or use your terminal\'s paste shortcut).\n'
+        'If you do not have the details yet, press Enter to skip Solcast '
+        'onboarding but you will need to manually configure after installation.',
+        flush=True,
+    )
+    solcast_key = getpass.getpass('Solcast API key (Enter to skip): ').strip()
+    resource_1 = ''
+    resource_2 = ''
+    if solcast_key:
+        resource_1 = input('Solcast resource ID 1 (required when using Solcast): ').strip()
+        if not resource_1:
+            raise RuntimeError('A Solcast resource ID is required when an API key is supplied')
+        resource_2 = input('Solcast resource ID 2 (optional, Enter to skip): ').strip()
+        if resource_2 and resource_2 == resource_1:
+            raise RuntimeError('Solcast resource IDs must be different')
+    else:
+        log('Solcast onboarding skipped; configure it manually after installation.')
     print('Energy Manager key is strongly recommended. Without it, automated '
-          'energy optimisation will not operate.', flush=True)
+          'energy optimisation will not occur.', flush=True)
     em_key = getpass.getpass('Energy Manager key (Enter to skip): ').strip()
     if not em_key:
         log('WARNING: No Energy Manager key supplied; optimisation will not operate.')
