@@ -968,7 +968,7 @@ automation:
               - unavailable
               - unknown
       - condition: template
-        value_template: "{{ states('input_select.inverter_brand') in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'fronius', 'solaredege'] }}"
+        value_template: "{{ states('input_select.inverter_brand') in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'fronius', 'solaredge'] }}"
     action:
       - delay: "00:00:10" # Wait for modbus to initialize
       - choose:
@@ -1090,6 +1090,28 @@ automation:
                   entity_id: input_number.inverter_max_soc
                 data:
                   value: "{{ states('sensor.alphaess_charge_cut_soc') | float(0) }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'goodwe_int') }}"
+            sequence:
+              - wait_template: >-
+                  {{ has_value('select.goodwe_inverter_operation_mode')
+                     and has_value('select.goodwe_ems_mode') }}
+                timeout: "00:01:00"
+                continue_on_timeout: false
+              - action: script.set_inverter_charge_discharge_mode
+                data:
+                  option: "Stop"
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_charge_discharge_mode
+                data:
+                  option: "Stop"
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_ems_mode
+                data:
+                  option: "Self-Consumption mode"        
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
