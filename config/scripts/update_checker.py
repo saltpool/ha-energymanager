@@ -148,7 +148,7 @@ class EnergyManagerUpdateChecker:
         if flows:
             manifest_source_path(flows['download_url'])
             version_tuple(flows['new_in_version'])
-        validate_components(data.get('hacs_components', []))
+        validate_components(data.get('marketplace_components', []))
         return data
 
     def check_for_updates(self, force=False):
