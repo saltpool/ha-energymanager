@@ -192,6 +192,20 @@ command_line:
       payload_on: "found"
       payload_off: "not_found"
 
+  - sensor:
+      name: "Energy Manager Update Result"
+      unique_id: energy_manager_update_result
+      command: >-
+        python3 -c 'import json; from pathlib import Path;
+        p=Path("/config/.energy_manager/update_result.txt");
+        s=p.read_text(errors="replace").strip() if p.exists() else "unknown";
+        state="error" if s.startswith("error:") or s=="failed" else ("success" if s.startswith("success:") else s);
+        print(json.dumps({"state":state,"detail":s[:1800]}))'
+      value_template: "{{ value_json.state }}"
+      json_attributes:
+        - detail
+      scan_interval: 10
+
 # === ENERGY_MANAGER_SENSORS_END ===
 
 # === ENERGY_MANAGER_UPDATE_INPUTS_START v1.3.0 ===
