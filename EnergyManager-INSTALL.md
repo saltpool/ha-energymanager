@@ -103,7 +103,7 @@ cat /config/.energy_manager/post-hacs.log
 Then complete the site-specific configuration:
 
 1. **Clear browser cache and force refresh** - Press **F12** and then right-click on the refresh button. Select **Empty Cache and Hard Reload** (then exit developer mode). This is required to remove stale cache which will be displaying "Entity not found" false positive errors.
-2. Configure your inverter and other hardware connections.
+2. Configure your inverter and other hardware connections. For example, configure your inverter IP address in /config/secrets.yaml
 3. Complete any required integration onboarding and credentials, including BOM and Solcast. These can both be installed from **Settings → Devices & services → Add integration** - search for **Bureau of Meteorology** and **Solcast**. Both of these **must** be configured for Energy Manager to function. 
 4. Configure your electricity provider and Energy Manager account/API credentials. These can be found through the **PV Dashboard** ("PV" item on the left menu, then select the **settings** (cog) tab to configure. All the settings on this page must be configured.
 5. Confirm that the Energy Manager dashboards, sensors and required integrations are working correctly.
