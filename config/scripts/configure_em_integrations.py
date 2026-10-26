@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Set up MQTT, Node-RED Companion and BOM following the Marketplace reboot.
+"""Set up MQTT, Node-RED Companion, BOM and Solcast following the Marketplace reboot.
 
 Uses Home Assistant's HTTP config flows. Never edits .storage directly.
-Solcast deliberately remains a manual onboarding step.
+Fresh-install Solcast configuration: API limit 10; automatic updates OFF.
 """
 import json
 import os
@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+SECRETS_FILE = Path('/config/.energy_manager/onboarding-secrets.json')
 API = 'http://supervisor/core/api/config/config_entries'
 TOKEN = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
 
@@ -344,17 +345,47 @@ def configure_bom():
         '7 forecast days; all basenames home'
     )
 
+def configure_solcast():
+    """Configure Solcast once on a vanilla instance; never enable its own scheduler."""
+    domain = 'solcast_solar'
+    if entries(domain):
+        raise RuntimeError('Solcast is already configured; fresh-install onboarding refuses to overwrite it')
+    if not Path('/config/custom_components/solcast_solar/manifest.json').is_file():
+        raise RuntimeError('Solcast files missing; Marketplace must install them before reboot')
+    if not SECRETS_FILE.is_file():
+        raise RuntimeError('Missing staged Solcast credentials from install.py')
+    credentials = json.loads(SECRETS_FILE.read_text(encoding='utf-8'))
+    api_key = credentials.get('solcast_key', '')
+    if not api_key:
+        raise RuntimeError('Solcast API key missing from staged installer credentials')
+    # Solcast's current config flow requires api_key, api_limit and auto_update.
+    # 0 = never update automatically. EM's existing automation owns daily refresh.
+    flow = start_flow(domain)
+    if flow.get('type') != 'form' or flow.get('step_id') != 'user':
+        raise RuntimeError('Unexpected Solcast config flow: ' + repr(flow.get('step_id')))
+    result = submit_flow(flow, {
+        'api_key': api_key,
+        'api_limit': '10',
+        'auto_update': '0',
+    })
+    if result.get('type') != 'create_entry':
+        # Avoid including the result in logs: errors may contain API key details.
+        raise RuntimeError('Solcast onboarding failed; check integration flow errors in Home Assistant')
+    if not entries(domain):
+        raise RuntimeError('Solcast config entry was not created')
+    log('Solcast configured: daily API limit 10, automatic updates DISABLED')
 
 def main():
-    log('Configuring Node-RED Companion, MQTT and Bureau of Meteorology'
+    log('Configuring Node-RED Companion, MQTT, BOM and Solcast')
     configure_node_red()
     entry = configure_mqtt()
     ensure_mqtt_discovery_off(entry)
     dismiss_stale_mqtt_repair()
     correct_nodered_entity_ids()
+    configure_bom()
+    configure_solcast()
     log('MQTT, Node-RED Companion and BOM configured successfully')
-    log('Solcast PV Forecast requires manual onboarding')
-
+    log('Solcast setup complete; its own automatic forecast updates are OFF')
 
 if __name__ == '__main__':
     try:
