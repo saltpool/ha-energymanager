@@ -662,7 +662,8 @@
       "repository": "mletenay/home-assistant-goodwe-inverter",
       "type": "integration",
       "action": "install",
-      "version": "latest"
+      "version": "latest",
+      "confirm_replace_built_in": true
     },
     {
       "repository": "lbbrhzn/ocpp",
