@@ -290,6 +290,41 @@ def sync_marketplace_components(entries, dry_run=False):
             print('[EM Marketplace] %s: %s' % (action, name), flush=True)
     return changes
 
+def sync_marketplace_components_via_ssh(entries, dry_run=False):
+    """Run Marketplace operations in the Advanced SSH App with Supervisor token."""
+    import shlex
+    import subprocess
+    validate_components(entries)
+    if not entries:
+        return []
+    key = '/config/.energy_manager/ssh_key'
+    if not os.path.isfile(key):
+        raise RuntimeError('Energy Manager SSH key is missing')
+    encoded = base64.b64encode(json.dumps({'entries': entries, 'dry_run': dry_run}).encode()).decode()
+    program = (
+        "import sys,json,base64;sys.path.insert(0,'/config/scripts');"
+        "from marketplace_manager import sync_marketplace_components;"
+       "data=json.loads(base64.b64decode(sys.argv[1]));"
+        "print('__EM_MARKETPLACE_RESULT__'+json.dumps(sync_marketplace_components("
+        "data['entries'],dry_run=data['dry_run'])))"
+    )
+    command = 'bash -lc ' + shlex.quote('python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(encoded))
+    result = subprocess.run([
+        'ssh', '-i', key, '-o', 'StrictHostKeyChecking=no',
+        '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes',
+        '-o', 'PasswordAuthentication=no',
+        'hassio@a0d7b954-ssh.local.hass.io', command
+    ], capture_output=True, text=True, timeout=600)
+    if result.stdout:
+        print(result.stdout, end='', flush=True)
+    if result.returncode:
+        raise RuntimeError('Marketplace SSH reconciliation failed: ' + (
+            result.stderr.strip() or result.stdout.strip() or str(result.returncode)))
+    marker = '__EM_MARKETPLACE_RESULT__'
+    if marker not in result.stdout:
+        raise RuntimeError('Marketplace SSH reconciliation returned no result')
+    return json.loads(result.stdout.rsplit(marker, 1)[1].splitlines()[0])
+
 
 def main():
     parser = argparse.ArgumentParser()
