@@ -489,13 +489,35 @@ def preflight_marketplace(source):
 
 def install_marketplace():
     """Reconcile Marketplace components in the main installation."""
+    from contextlib import redirect_stdout
+
+    class Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, text):
+            for stream in self.streams:
+                stream.write(text)
+                stream.flush()
+
+        def flush(self):
+            for stream in self.streams:
+                stream.flush()
+                
     sys.path.insert(0, str(SCRIPTS))
     from marketplace_manager import sync_marketplace_components
     manifest = json.loads((STATE / 'install-manifest.json').read_text(encoding='utf-8'))
     entries = manifest.get('marketplace_components', [])
     if not entries:
         raise RuntimeError('Manifest is missing marketplace_components')
-    changes = sync_marketplace_components(entries)
+
+    log_path = STATE / 'marketplace-install.log'
+    log(f'Saving Marketplace installation log to {log_path}')
+
+    with log_path.open('w', encoding='utf-8', buffering=1) as logfile:
+        with redirect_stdout(Tee(sys.stdout, logfile)):
+            changes = sync_marketplace_components(entries)
+
     log(f'Marketplace components reconciled: {len(changes)} changes')
 
 
