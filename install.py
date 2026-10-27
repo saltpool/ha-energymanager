@@ -700,9 +700,10 @@ def preflight_marketplace_consent():
             str(target),
             '--preflight',
             '--consent',
+            '--github-auth',
         ])
 
-    log('Marketplace ready and consent confirmed')
+    log('Marketplace consent and GitHub authentication confirmed')
 
 def collect_onboarding_credentials():
     """Collect credentials before changing a fresh HA installation.
