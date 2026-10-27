@@ -483,7 +483,7 @@ def preflight_marketplace(source):
     with tempfile.TemporaryDirectory(prefix='em-marketplace-') as directory:
         target = Path(directory) / 'marketplace_manager.py'
         target.write_bytes(source)
-        run([sys.executable, str(target), '--preflight', '--consent'])
+        run([sys.executable, str(target), '--preflight', '--consent', '--github-auth',])
     log('Marketplace consent confirmed')
 
 
