@@ -117,6 +117,38 @@ def correct_nodered_entity_ids():
                             )
                         log(f'Entity already correct: {new_id}')
                         del remaining[old_id]
+                        continue
+                
+                    # Look for a renamed Node-RED entity using the expected
+                    # ID with a numeric suffix, e.g. nodered_buyprice_2.
+                    candidates = [
+                        entity for entity in registry
+                        if entity.get('config_entry_id') in entry_ids
+                        and re.fullmatch(
+                            re.escape(new_id) + r'_[0-9]+',
+                            entity.get('entity_id', '')
+                        )
+                    ]
+                
+                    if len(candidates) > 1:
+                        raise RuntimeError(
+                            f'Multiple possible Node-RED entities for {new_id}: '
+                            + ', '.join(e['entity_id'] for e in candidates)
+                        )
+                
+                    if len(candidates) == 1:
+                        renamed_id = candidates[0]['entity_id']
+                
+                        ws.call(
+                            'config/entity_registry/update',
+                            entity_id=renamed_id,
+                            new_entity_id=new_id
+                        )
+                
+                        log(f'Repaired Node-RED entity: {renamed_id} -> {new_id}')
+                        renamed += 1
+                        del remaining[old_id]
+                
                     continue
 
                 if old.get('config_entry_id') not in entry_ids:
