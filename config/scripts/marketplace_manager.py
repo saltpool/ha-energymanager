@@ -291,7 +291,7 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             else:
                 # Normal updates correct version drift. Force reinstall additionally
                 # repairs components whose installed version already matches.
-                needed = (repair or not installed or files_missing or
+                needed = (not installed or files_missing or
                           bool(target and repo.get('installed_version') != target))
             if not needed:
                 continue
