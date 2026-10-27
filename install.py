@@ -415,37 +415,54 @@ def deploy():
     else:
         log('Node-RED flows already current')
 
+    # Register Lovelace resources through Home Assistant's supported API.
+    # Do not modify .storage/lovelace_resources directly while Core is running.
     resources = manifest.get('lovelace_resources') or []
+
+    if not isinstance(resources, list):
+        raise RuntimeError('Unexpected Lovelace resource manifest format')
+
     if resources:
-        if not isinstance(resources, list):
-            raise RuntimeError('Unexpected Lovelace resource manifest format')
-        resource_path = ROOT / '.storage/lovelace_resources'
-        if resource_path.is_file():
-            data = json.loads(resource_path.read_text(encoding='utf-8'))
-        else:
-            data = {'version': 1, 'minor_version': 1,
-                    'key': 'lovelace_resources', 'data': {'items': []}}
-        items = data.setdefault('data', {}).setdefault('items', [])
-        changed = False
-        for entry in resources:
-            resource_url = entry['url']
-            resource_type = entry.get('type', 'module')
-            existing = next((item for item in items if item.get('url') == resource_url), None)
-            if existing is None:
-                items.append({'id': uuid.uuid4().hex, 'url': resource_url,
-                              'type': resource_type})
-                changed = True
-                log(f'Added Lovelace resource: {resource_url}')
-            elif existing.get('type') != resource_type:
-                existing['type'] = resource_type
-                changed = True
-                log(f'Updated Lovelace resource: {resource_url}')
-        if changed:
-            _backup_file(resource_path, 'lovelace_resources.json')
-            _write_atomic(resource_path, json.dumps(data, indent=2))
-            log('Lovelace resources registered locally (Home Assistant may need a restart to reload them)')
-        else:
-            log('Lovelace resources already registered')
+        from marketplace_manager import HAWebSocket
+
+        with HAWebSocket() as ws:
+            existing_resources = ws.call('lovelace/resources/list')
+            if not isinstance(existing_resources, list):
+                raise RuntimeError(
+                    'Unexpected Lovelace resource registry response'
+                )
+
+            existing_by_url = {
+                item['url']: item
+                for item in existing_resources
+                if isinstance(item, dict) and item.get('url')
+            }
+
+            for resource in resources:
+                url = resource['url']
+                resource_type = resource.get('type', 'module')
+                existing = existing_by_url.get(url)
+
+                if existing is None:
+                    ws.call(
+                        'lovelace/resources/create',
+                        url=url,
+                        res_type=resource_type,
+                    )
+                    log(f'Added Lovelace resource: {url}')
+
+                elif existing.get('type') != resource_type:
+                    ws.call(
+                        'lovelace/resources/update',
+                        resource_id=existing['id'],
+                        res_type=resource_type,
+                    )
+                    log(f'Updated Lovelace resource: {url}')
+
+                else:
+                    log(f'Lovelace resource already correct: {url}')
+
+        log(f'Verified {len(resources)} Lovelace resources')
 
     log('Deployment stage complete: files, Node-RED flows, Lovelace resources')
     log('Inverter-specific onboarding and Home Assistant reboot follow deployment')
