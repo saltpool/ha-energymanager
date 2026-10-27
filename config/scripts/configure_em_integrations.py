@@ -301,11 +301,66 @@ def _bom_step(flow, expected_step, values):
     return result
 
 
-def configure_bom():
-    """Configure new BOM integration using HA location and fixed 'home' names."""
+def repair_bom_config(entry):
+    """Repair BOM through its supported options flow, retaining the entry ID."""
+    # The options flow retains the original configuration entry and its
+    # credentials; unlike removing/recreating it, this preserves ownership.
+    current = {**(entry.get('data') or {}), **(entry.get('options') or {})}
+    fixed = {
+        'weather_name': 'home',
+        'observations_basename': 'home',
+        'forecasts_basename': 'home',
+        'warnings_basename': 'home',
+        'observations_create': True,
+        'forecasts_create': True,
+        'warnings_create': True,
+        'forecasts_days': 7,
+    }
+    # If all stored options are available, and match, use the read-only path.
+    # Where HA hides options, the flow itself supplies current defaults.
+    if all(current.get(k) == v for k, v in fixed.items()):
+        log('BOM required names, enabled groups and seven-day limit verified')
+        return
+
+    flow = request('POST', '/options/flow', {'handler': entry['entry_id']})
+    latitude, longitude = _home_coordinates()
+    flow = _bom_step(flow, 'init', {
+        'latitude': latitude, 'longitude': longitude,
+    })
+    flow = _bom_step(flow, 'weather_name', {'weather_name': 'home'})
+    flow = _bom_step(flow, 'sensors_create', {
+        'observations_create': True,
+        'forecasts_create': True,
+        'warnings_create': True,
+    })
+    observations = _all_form_choices(flow, 'observations_monitored')
+    flow = _bom_step(flow, 'observations_monitored', {
+        'observations_basename': 'home',
+        'observations_monitored': observations,
+    })
+    forecasts = _all_form_choices(flow, 'forecasts_monitored')
+    flow = _bom_step(flow, 'forecasts_monitored', {
+        'forecasts_basename': 'home',
+        'forecasts_monitored': forecasts,
+        'forecasts_days': 7,
+    })
+    flow = _bom_step(flow, 'warnings_basename', {'warnings_basename': 'home'})
+    if flow.get('type') != 'create_entry':
+        raise RuntimeError('BOM options repair did not complete')
+    log('BOM configuration repaired using its existing entry')
+
+
+def configure_bom(repair=False):
+    """Configure BOM if absent, or repair it on update."""
     domain = 'bureau_of_meteorology'
-    if entries(domain):
-        log('BOM already configured; existing entry preserved')
+    existing = entries(domain)
+    if existing:
+        if repair:
+            if len(existing) != 1:
+                raise RuntimeError('Multiple BOM entries; cannot safely choose one to repair')
+            repair_bom_config(existing[0])
+        else:
+            log('BOM already configured; existing entry preserved')
         return
     if not Path(f'/config/custom_components/{domain}/manifest.json').is_file():
         raise RuntimeError('BOM integration files missing; Marketplace install must run first')
@@ -378,16 +433,23 @@ def configure_solcast():
     log('Solcast configured: daily API limit 10, automatic updates DISABLED')
 
 def main():
-    log('Configuring Node-RED Companion, MQTT, BOM and Solcast')
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', choices=('install', 'update'), required=True)
+    args = parser.parse_args()
+    log('Reconciling Node-RED Companion, MQTT and BOM (' + args.mode + ')')
     configure_node_red()
     entry = configure_mqtt()
     ensure_mqtt_discovery_off(entry)
     dismiss_stale_mqtt_repair()
     correct_nodered_entity_ids()
-    configure_bom()
-    configure_solcast()
-    log('MQTT, Node-RED Companion and BOM configured successfully')
-    log('Solcast setup complete; its own automatic forecast updates are OFF')
+    configure_bom(repair=args.mode == 'update')
+    if args.mode == 'install':
+        configure_solcast()
+    else:
+        # Never consume installer secrets or start a Solcast config flow on update.
+        log('Solcast onboarding skipped on update; credentials and settings preserved')
+    log('Integration reconciliation completed successfully')
 
 if __name__ == '__main__':
     try:
