@@ -311,7 +311,7 @@ def _bom_step(flow, expected_step, values, options=False):
 def repair_bom_config(entry):
     """Repair BOM through its supported options flow, retaining the entry ID."""
 
-   def step(flow, expected_step, values):
+    def step(flow, expected_step, values):
        return _bom_step(flow, expected_step, values, options=True)
        
     # The options flow retains the original configuration entry and its
