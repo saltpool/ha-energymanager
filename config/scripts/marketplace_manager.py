@@ -308,7 +308,10 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
                         'confirm_replace_built_in', False
                     ),
                 }
-                if version != 'latest':
+                # Use the catalog installation path when the required version
+                # matches the catalog's available version. Explicit version
+                # selection can require additional GitHub API requests.
+                if version != 'latest' and version != available:
                     details = ws.call('marketplace/repository/info', repository_id=identifier)
                     releases = details.get('releases', [])
                     if version not in releases:
