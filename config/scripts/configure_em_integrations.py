@@ -289,13 +289,20 @@ def _all_form_choices(flow, field_name):
     return choices
 
 
-def _bom_step(flow, expected_step, values):
+def _bom_step(flow, expected_step, values, options=False):
     if flow.get('type') != 'form' or flow.get('step_id') != expected_step:
         raise RuntimeError(
             f'Unexpected BOM step (expected {expected_step}): '
             + json.dumps(flow)[:900]
         )
-    result = submit_flow(flow, values)
+    if options:
+        result = request(
+            'POST',
+            '/options/flow/' + flow['flow_id'],
+            values
+        )
+    else:
+        result = submit_flow(flow, values)
     if result.get('type') == 'form' and result.get('errors'):
         raise RuntimeError('BOM rejected setup values: ' + json.dumps(result)[:900])
     return result
@@ -303,6 +310,10 @@ def _bom_step(flow, expected_step, values):
 
 def repair_bom_config(entry):
     """Repair BOM through its supported options flow, retaining the entry ID."""
+
+   def step(flow, expected_step, values):
+       return _bom_step(flow, expected_step, values, options=True)
+       
     # The options flow retains the original configuration entry and its
     # credentials; unlike removing/recreating it, this preserves ownership.
     current = {**(entry.get('data') or {}), **(entry.get('options') or {})}
@@ -324,27 +335,27 @@ def repair_bom_config(entry):
 
     flow = request('POST', '/options/flow', {'handler': entry['entry_id']})
     latitude, longitude = _home_coordinates()
-    flow = _bom_step(flow, 'init', {
+    flow = step(flow, 'init', {
         'latitude': latitude, 'longitude': longitude,
     })
-    flow = _bom_step(flow, 'weather_name', {'weather_name': 'home'})
-    flow = _bom_step(flow, 'sensors_create', {
+    flow = step(flow, 'weather_name', {'weather_name': 'home'})
+    flow = step(flow, 'sensors_create', {
         'observations_create': True,
         'forecasts_create': True,
         'warnings_create': True,
     })
     observations = _all_form_choices(flow, 'observations_monitored')
-    flow = _bom_step(flow, 'observations_monitored', {
+    flow = step(flow, 'observations_monitored', {
         'observations_basename': 'home',
         'observations_monitored': observations,
     })
     forecasts = _all_form_choices(flow, 'forecasts_monitored')
-    flow = _bom_step(flow, 'forecasts_monitored', {
+    flow = step(flow, 'forecasts_monitored', {
         'forecasts_basename': 'home',
         'forecasts_monitored': forecasts,
         'forecasts_days': 7,
     })
-    flow = _bom_step(flow, 'warnings_basename', {'warnings_basename': 'home'})
+    flow = step(flow, 'warnings_basename', {'warnings_basename': 'home'})
     if flow.get('type') != 'create_entry':
         raise RuntimeError('BOM options repair did not complete')
     log('BOM configuration repaired using its existing entry')
