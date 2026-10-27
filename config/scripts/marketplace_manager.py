@@ -26,34 +26,6 @@ INTEGRATIONS = {
 }
 CATEGORIES = {'integration', 'plugin', 'theme', 'template'}
 
-def log_github_rate_limit(stage):
-    """Record unauthenticated GitHub API quota during Marketplace operations."""
-    try:
-        req = urllib.request.Request(
-            'https://api.github.com/rate_limit',
-            headers={
-                'User-Agent': 'EnergyManager-Marketplace-Diagnostic',
-                'Accept': 'application/vnd.github+json',
-            },
-        )
-        with urllib.request.urlopen(req, timeout=15) as response:
-            data = json.load(response)
-
-        core = data['resources']['core']
-
-        print(
-            f'[EM GitHub API] {stage}: '
-            f'{core["remaining"]}/{core["limit"]} remaining, '
-            f'{core["used"]} used, '
-            f'reset={core["reset"]}',
-            flush=True,
-        )
-    except Exception as exc:
-        print(
-            f'[EM GitHub API] {stage}: quota check unavailable: {exc}',
-            flush=True,
-        )
-
 def require_marketplace():
     """Fail before any installation changes on older Home Assistant Core."""
     token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
@@ -419,9 +391,7 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
     with HAWebSocket() as ws:
         check_marketplace(ws)
         ensure_marketplace_github(ws)
-        log_github_rate_limit('BEFORE Marketplace repository listing')
         repos = ws.call('marketplace/repositories/list')
-        log_github_rate_limit('AFTER Marketplace repository listing')
         lookup = {str(repo.get('full_name', '')).lower(): repo for repo in repos}
         for item in entries:
             name = item['repository']
@@ -456,7 +426,6 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             changes.append({'repository': name, 'action': action, 'version': target})
             if dry_run:
                 continue
-            log_github_rate_limit(f'BEFORE {action}: {name}')
             if action == 'remove':
                 ws.call('marketplace/repository/uninstall', repository=identifier)
             else:
@@ -474,7 +443,6 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
                     kwargs['version'] = version
                 ws.call('marketplace/repository/install', **kwargs)
             verified = ws.call('marketplace/repository/info', repository_id=identifier)
-            log_github_rate_limit(f'AFTER {action}: {name}')
             if action == 'remove' and verified.get('installed'):
                 raise RuntimeError('Marketplace removal could not be verified: ' + name)
             if action == 'install':
@@ -485,7 +453,6 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
                 if domain and not (Path('/config/custom_components') / domain / 'manifest.json').is_file():
                     raise RuntimeError('Marketplace integration files missing: ' + name)
             print('[EM Marketplace] %s: %s' % (action, name), flush=True)
-        log_github_rate_limit('AFTER all Marketplace operations')
     return changes
 
 def sync_marketplace_components_via_ssh(entries, dry_run=False, repair=False):
