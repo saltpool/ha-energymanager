@@ -1,8 +1,8 @@
 {
-  "version": "1.3.0",
-  "changelog": "Github release. <br>Always reboot Home Assistant after an update!",
+  "version": "2.0.0",
+  "changelog": "Github release. <br>Will include forced reboot!",
   "restart_required": true,
-  "generated_at": "2026-05-15T18:00:00Z",
+  "generated_at": "2026-10-27T18:00:00Z",
   "files": {
     "integrations/README.md": {
       "action": "create",
@@ -11,18 +11,18 @@
     },
     "em_initial_states.csv": {
       "action": "create",
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Initial helper states for new installations"
     },
     "scripts/em_initialise_states.py": {
       "action": "replace",
-      "new_in_version": "1.3.0",
+      "new_in_version": "1.2.0",
       "description": "One-time Home Assistant helper initialisation"
     },
     "scripts/em_update_launcher.py": {
       "action": "replace",
       "description": "Launch Energy Manager updates inside Advanced SSH",
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "configuration.yaml": {
       "action": "merge",
@@ -33,7 +33,7 @@
         "SHELL_COMMANDS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Core configuration"
     },
     "integrations/em_automations.yaml": {
@@ -42,7 +42,7 @@
         "AUTOMATIONS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Energy Manager automations"
     },
     "integrations/em_scripts.yaml": {
@@ -51,7 +51,7 @@
         "SCRIPTS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Energy Manager scripts"
     },
     "integrations/em_group.yaml": {
@@ -60,7 +60,7 @@
         "GROUPS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "1.2.0",
       "description": "Entity groups"
     },
     "integrations/em_templates.yaml": {
@@ -69,7 +69,7 @@
         "TEMPLATES"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "1.2.0",
       "description": "Template sensors"
     },
     "integrations/em_helpers.yaml": {
@@ -81,7 +81,7 @@
         "SHELL_COMMANDS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Core helper sensors"
     },
     "integrations/em_ui.yaml": {
@@ -90,7 +90,7 @@
         "UI"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "1.2.0",
       "description": "UI sensors"
     },
     "utility_meter.yaml": {
@@ -99,7 +99,7 @@
         "UTILITY_METERS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "Utility meters"
     },
     "integrations/mqtt_sensors.yaml": {
@@ -108,44 +108,44 @@
         "MQTT_SENSORS"
       ],
       "backup_current": true,
-      "new_in_version": "1.3.0",
+      "new_in_version": "2.0.0",
       "description": "MQTT sensors"
     },
     "sungrow_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Sungrow modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "sigenergy_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Sigenergy modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "alphaess_modbus.yaml.disabled": {
       "action": "replace",
       "description": "AlphaESS modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "goodwe_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Goodwe modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "solaredge_modbus.yaml.disabled": {
       "action": "replace",
       "description": "SolarEdge modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "fronius_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Fronius modbus configuration",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "modbus/modbus.yaml": {
       "action": "create",
@@ -157,193 +157,193 @@
       "action": "replace",
       "description": "Template modbus file",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "automations.yaml": {
       "action": "create",
       "backup_current": true,
       "description": "Home Assistant UI-managed automations; never overwrite existing file",
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
      },
     "scripts.yaml": {
       "action": "create",
       "backup_current": true,
       "description": "Home Assistant UI-managed scripts; never overwrite existing file",
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
      },
     "group.yaml": {
       "action": "create",
       "backup_current": true,
       "description": "User groups; preserve existing file",
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
      },
      "template.yaml": {
        "action": "create",
        "backup_current": true,
        "description": "User templates and Additional PV Power sensor; preserve existing file",
-       "new_in_version": "1.3.0"
+       "new_in_version": "2.0.0"
      },
     "dashboards/energy_manager_costs.yaml": {
       "action": "replace",
       "description": "Costs dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "dashboards/energy_manager_overview.yaml": {
       "action": "replace",
       "description": "Overview dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "dashboards/energy_manager_pv.yaml": {
       "action": "replace",
       "description": "PV dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "dashboards/energy_manager_ev.yaml": {
       "action": "replace",
       "description": "EV dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "www/energy-manager-settings.svg": {
       "action": "replace",
       "description": "Energy Manager Settings Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "www/energy-manager-flowpower.svg": {
       "action": "replace",
       "description": "Energy Manager Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/energy-manager-globird.svg": {
       "action": "replace",
       "description": "Energy Manager Globird Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/energy-flow-card.js": {
       "action": "replace",
       "description": "Energy Flow Javascript",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/addon-iframe-card.js": {
       "action": "replace",
       "description": "Iframe Javascript",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/multiple-entity-row.js": {
       "action": "replace",
       "description": "Multiple Entity Row Javascript",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/em-events-card.js": {
       "action": "replace",
       "description": "Energy Manager Events Card Javascript",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "www/energy-flow.svg": {
       "action": "replace",
       "description": "Energy Flow Light Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/energy-flow-dark.svg": {
       "action": "replace",
       "description": "Energy Flow Dark Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_down_1_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_down_2_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_down_3_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_up_1_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_up_2_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/chev_up_3_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/line_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "www/icons/question_circle_white.svg": {
       "action": "replace",
       "description": "Flow Power Graphic",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "scripts/update_checker.py": {
       "action": "replace",
       "description": "Update checker",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/check_energy_manager_updates.py": {
       "action": "replace",
       "description": "Update checker v2",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/file_merger.py": {
       "action": "replace",
       "description": "Improved file merger with better conflict resolution",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/entity_manager.py": {
       "action": "replace",
       "description": "Updated entity manager with new API support",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/perform_energy_manager_update.py": {
       "action": "replace",
       "description": "Main Updater Script",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/em_apps_manager.py": {
       "action": "replace",
       "description": "Supervisor Apps reconciliation",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/marketplace_manager.py": {
       "action": "replace",
@@ -361,126 +361,126 @@
       "action": "replace",
       "description": "Integration Configuration Script",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "scripts/em_grafana_setup.py": {
       "action": "replace",
       "description": "Grafana Setup Script",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "scripts/em_victoriametrics_setup.py": {
       "action": "replace",
       "description": "Victoria Metrics Setup Script",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "scripts/fix_entity_registry_and_restart.py": {
       "action": "replace",
       "description": "Costings entity registry fix",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "2.0.0"
     },
     "/share/grafana/provisioning/dashboards/dashboards.yaml": {
       "action": "replace",
       "description": "Grafana dashboards",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/provisioning/datasources/datasources.yaml": {
       "action": "replace",
       "description": "Grafana datasources",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "dashboards/grafana_energymanager.yaml": {
       "action": "replace",
       "description": "Energy Manager grafrana dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager.json": {
       "action": "replace",
       "description": "Main Energy Manager Dashboard",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-mobile.json": {
       "action": "replace",
       "description": "Main Energy Manager Dashboard Mobile",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-fp.json": {
       "action": "replace",
       "description": "Main Energy Manager Dashboard Flow Power",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-fp-mobile.json": {
       "action": "replace",
       "description": "Energy Profitability Dashboard Flow Power Mobile",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-gb.json": {
       "action": "replace",
       "description": "Main Energy Manager Dashboard Globird",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-gb-mobile.json": {
       "action": "replace",
       "description": "Energy Profitability Dashboard Glowbird Mobile",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-other.json": {
       "action": "replace",
       "description": "Main Energy Manager Dashboard Other",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/grafana/dashboards/energymanager-other-mobile.json": {
       "action": "replace",
       "description": "Energy Profitability Dashboard Other Mobile",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     },
     "/share/power_load_excluded_sensors.txt": {
       "action": "replace",
       "description": "Sensors to be excluded from Power Load",
       "backup_current": true,
-      "new_in_version": "1.3.0"
+      "new_in_version": "1.2.0"
     }
   },
   "lovelace_resources": [
     {
     "url": "/local/energy-flow-card.js",
     "type": "module",
-    "new_in_version": "1.3.0"
+    "new_in_version": "1.2.0"
     },
     {
     "url": "/local/addon-iframe-card.js",
     "type": "module",
-    "new_in_version": "1.3.0"
+    "new_in_version": "1.2.0"
     },
     {
     "url": "/local/multiple-entity-row.js",
     "type": "module",
-    "new_in_version": "1.3.0"
+    "new_in_version": "1.2.0"
     },
     {
     "url": "/local/em-events-card.js",
     "type": "module",
-    "new_in_version": "1.3.0"
+    "new_in_version": "1.2.0"
     }
     ],
   "nodered_flows": {
     "download_url": "nodered/flows.json",
     "description": "Updated Node-RED flows",
     "backup_current": true,
-    "new_in_version": "1.3.0"
+    "new_in_version": "2.0.0"
   },
 "apps": [
    {
