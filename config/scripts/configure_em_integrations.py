@@ -271,7 +271,7 @@ def _home_coordinates():
 
 def _all_form_choices(flow, field_name):
     """Select every choice actually offered by the integration's form."""
-   field = _option_fields(flow).get(field_name)
+    field = _option_fields(flow).get(field_name)
     if not field:
         raise RuntimeError(f'BOM form has no {field_name}: {json.dumps(flow)[:900]}')
     options = field.get('options')
