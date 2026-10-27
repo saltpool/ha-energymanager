@@ -15,6 +15,7 @@ import secrets
 import shutil
 import socket
 import struct
+import time
 import urllib.request
 
 CORE_MINIMUM = (2026, 11)
@@ -253,6 +254,162 @@ def check_marketplace(ws, ask_consent=False):
     print('[EM Marketplace] Warning acknowledgement verified', flush=True)
     return info
 
+def marketplace_api(method, path, data=None):
+    """Call Home Assistant's config-flow API without exposing credentials."""
+    token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
+    if not token:
+        raise RuntimeError('Supervisor token unavailable')
+
+    body = None if data is None else json.dumps(data).encode('utf-8')
+    req = urllib.request.Request(
+        'http://supervisor/core/api/config/config_entries' + path,
+        data=body,
+        method=method,
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+        },
+    )
+    with urllib.request.urlopen(req, timeout=40) as response:
+        return json.load(response)
+
+
+def ensure_marketplace_github(ws, interactive=False):
+    """Connect Marketplace to GitHub through its existing OAuth device flow."""
+    info = ws.call('marketplace/info')
+    if info.get('github_connected') is True:
+        print('[EM Marketplace] GitHub authentication verified', flush=True)
+        return
+
+    if not interactive:
+        raise RuntimeError(
+            'Marketplace is not connected to GitHub. '
+            'Run the Energy Manager installer to complete one-time '
+            'GitHub authorisation before installing Marketplace components.'
+        )
+
+    print(
+        '\n[EM Marketplace] GitHub authorisation required.\n'
+        'You will authorise Home Assistant Marketplace using your GitHub account.\n'
+        'Energy Manager will not receive or store your GitHub token.\n',
+        flush=True,
+    )
+
+    marketplace_entries = [
+        entry for entry in marketplace_api('GET', '/entry')
+        if entry.get('domain') == 'marketplace'
+    ]
+
+    if len(marketplace_entries) != 1:
+        raise RuntimeError(
+            'Expected one Marketplace configuration entry; found '
+            + str(len(marketplace_entries))
+        )
+
+    # Passing entry_id initiates the reconfigure flow rather than
+    # creating another Marketplace integration.
+    flow = marketplace_api('POST', '/flow', {
+        'handler': 'marketplace',
+        'entry_id': marketplace_entries[0]['entry_id'],
+    })
+
+    if flow.get('type') != 'form' or flow.get('step_id') != 'reconfigure':
+        raise RuntimeError(
+            'Unexpected Marketplace reconfigure step: '
+            + str(flow.get('type')) + '/' + str(flow.get('step_id'))
+        )
+
+    flow_id = flow['flow_id']
+    path = '/flow/' + flow_id
+
+    try:
+        # Accept the initial confirmation form. Home Assistant then
+        # registers the GitHub device-authorisation request.
+        flow = marketplace_api('POST', path, {})
+
+        if flow.get('type') != 'show_progress':
+            raise RuntimeError(
+                'Marketplace did not initiate GitHub authorisation: '
+                + str(flow.get('type'))
+            )
+
+        placeholders = flow.get('description_placeholders') or {}
+        url = placeholders.get('url', 'https://github.com/login/device')
+        code = placeholders.get('code')
+
+        if not code:
+            raise RuntimeError(
+                'Marketplace did not return a GitHub authorisation code'
+            )
+
+        print('\n' + '=' * 58, flush=True)
+        print('  CONNECT HOME ASSISTANT MARKETPLACE TO GITHUB', flush=True)
+        print('=' * 58, flush=True)
+        print('  1. Open: ' + url, flush=True)
+        print('  2. Enter code: ' + code, flush=True)
+        print('  3. Authorise Home Assistant Marketplace', flush=True)
+        print('=' * 58 + '\n', flush=True)
+
+        # Home Assistant's device flow checks for GitHub approval.
+        # Advance the same flow until authentication completes.
+        deadline = time.monotonic() + 600
+
+        while time.monotonic() < deadline:
+            time.sleep(5)
+            flow = marketplace_api('POST', path, {})
+
+            if flow.get('type') == 'show_progress':
+                continue
+
+            if flow.get('type') == 'show_progress_done':
+                flow = marketplace_api('POST', path, {})
+
+            if flow.get('type') == 'abort':
+                if flow.get('reason') != 'reconfigure_successful':
+                    raise RuntimeError(
+                        'Marketplace GitHub authorisation ended: '
+                        + str(flow.get('reason'))
+                    )
+                break
+
+            raise RuntimeError(
+                'Unexpected GitHub authorisation result: '
+                + str(flow.get('type'))
+            )
+        else:
+            raise RuntimeError(
+                'GitHub authorisation timed out. '
+                'Restart the Energy Manager installer to retry.'
+            )
+
+    except Exception:
+        # Abandon the unfinished flow when possible.
+        try:
+            marketplace_api('DELETE', path)
+        except Exception:
+            pass
+        raise
+
+    # Marketplace reloads after a successful reconfiguration.
+    deadline = time.monotonic() + 60
+
+    while time.monotonic() < deadline:
+        try:
+            info = ws.call('marketplace/info')
+            if info.get('github_connected') is True:
+                print(
+                    '[EM Marketplace] GitHub authentication successful',
+                    flush=True,
+                )
+                return
+        except Exception:
+            pass
+        time.sleep(3)
+
+    raise RuntimeError(
+        'GitHub authorisation completed, but Marketplace did not '
+        'confirm the authenticated connection.'
+    )
 
 def sync_marketplace_components(entries, dry_run=False, repair=False):
     """Reconcile required versions; repair also reinstalls matching versions."""
@@ -261,6 +418,7 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
     changes = []
     with HAWebSocket() as ws:
         check_marketplace(ws)
+        ensure_marketplace_github(ws)
         log_github_rate_limit('BEFORE Marketplace repository listing')
         repos = ws.call('marketplace/repositories/list')
         log_github_rate_limit('AFTER Marketplace repository listing')
@@ -373,13 +531,16 @@ def main():
     parser.add_argument('--preflight', action='store_true')
     parser.add_argument('--consent', action='store_true',
                         help='Interactively request consent if Marketplace needs acknowledgement')
+    parser.add_argument('--github-auth', action='store_true',
+                        help='Interactively connect Marketplace to GitHub')
     parser.add_argument('--manifest')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     require_marketplace()
     with HAWebSocket() as ws:
         info = check_marketplace(ws, ask_consent=args.consent)
-        print('[EM Marketplace] Ready; GitHub connected: %s' % info.get('github_connected'), flush=True)
+        ensure_marketplace_github(ws, interactive=args.github_auth)
+        print('[EM Marketplace] Ready; GitHub connected: %s' % ws.call('marketplace/info').get('github_connected'), flush=True,)
     if args.manifest and not args.preflight:
         with open(args.manifest, encoding='utf-8') as handle:
             manifest = json.load(handle)
