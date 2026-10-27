@@ -260,7 +260,10 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             if action == 'remove':
                 needed = installed
             else:
-                needed = (not installed or files_missing or bool(target and repo.get('installed_version') != target))
+                # Normal updates correct version drift. Force reinstall additionally
+                # repairs components whose installed version already matches.
+                needed = (repair or not installed or files_missing or
+                          bool(target and repo.get('installed_version') != target))
             if not needed:
                 continue
             changes.append({'repository': name, 'action': action, 'version': target})
@@ -295,7 +298,7 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             print('[EM Marketplace] %s: %s' % (action, name), flush=True)
     return changes
 
-def sync_marketplace_components_via_ssh(entries, dry_run=False):
+def sync_marketplace_components_via_ssh(entries, dry_run=False, repair=False):
     """Run Marketplace operations in the Advanced SSH App with Supervisor token."""
     import shlex
     import subprocess
@@ -305,13 +308,15 @@ def sync_marketplace_components_via_ssh(entries, dry_run=False):
     key = '/config/.energy_manager/ssh_key'
     if not os.path.isfile(key):
         raise RuntimeError('Energy Manager SSH key is missing')
-    encoded = base64.b64encode(json.dumps({'entries': entries, 'dry_run': dry_run}).encode()).decode()
+    encoded = base64.b64encode(json.dumps({
+        'entries': entries, 'dry_run': dry_run, 'repair': repair
+    }).encode()).decode()
     program = (
         "import sys,json,base64;sys.path.insert(0,'/config/scripts');"
         "from marketplace_manager import sync_marketplace_components;"
-       "data=json.loads(base64.b64decode(sys.argv[1]));"
+        "data=json.loads(base64.b64decode(sys.argv[1]));"
         "print('__EM_MARKETPLACE_RESULT__'+json.dumps(sync_marketplace_components("
-        "data['entries'],dry_run=data['dry_run'])))"
+        "data['entries'],dry_run=data['dry_run'],repair=data['repair'])))"
     )
     command = 'bash -lc ' + shlex.quote('python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(encoded))
     result = subprocess.run([
