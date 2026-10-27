@@ -327,7 +327,7 @@ def ensure_marketplace_github(ws, interactive=False):
         # registers the GitHub device-authorisation request.
         flow = marketplace_api('POST', path, {})
 
-        if flow.get('type') != 'show_progress':
+        if flow.get('type') not in ('progress', 'show_progress'):
             raise RuntimeError(
                 'Marketplace did not initiate GitHub authorisation: '
                 + str(flow.get('type'))
@@ -358,10 +358,10 @@ def ensure_marketplace_github(ws, interactive=False):
             time.sleep(5)
             flow = marketplace_api('POST', path, {})
 
-            if flow.get('type') == 'show_progress':
+            if flow.get('type') in ('progress', 'show_progress'):
                 continue
 
-            if flow.get('type') == 'show_progress_done':
+            if flow.get('type') in ('progress_done', 'show_progress_done'):
                 flow = marketplace_api('POST', path, {})
 
             if flow.get('type') == 'abort':
