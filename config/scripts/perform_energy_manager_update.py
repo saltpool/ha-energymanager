@@ -1342,146 +1342,85 @@ def reload_home_assistant_config():
         return False
 
 def update_lovelace_resources(manifest):
-    print("=== Updating Lovelace Resources via SSH ===")
+    """Reconcile Lovelace resources using Home Assistant's WebSocket API."""
+    print("=== Reconciling Lovelace Resources ===")
 
-    resources_config = manifest.get('lovelace_resources')
+    resources_config = manifest.get('lovelace_resources') or []
 
     if not resources_config:
         print("No Lovelace resources to update")
         return True
 
-    if isinstance(resources_config, list):
-        resources = resources_config
-    elif isinstance(resources_config, dict):
-        values = list(resources_config.values())
-        if values and all(isinstance(v, dict) and 'url' in v for v in values):
-            resources = values
-        else:
-            resources = [resources_config]
-    else:
-        print(f"ERROR: lovelace_resources unexpected type {type(resources_config)}")
+    if not isinstance(resources_config, list):
+        print(
+            f"ERROR: lovelace_resources unexpected type "
+            f"{type(resources_config)}"
+        )
         return False
 
     try:
-        resources_file = '/config/.storage/lovelace_resources'
-        
-        existing_items = []
-        
-        read_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            f'sudo cat {resources_file}'
-        ]
-        
-        try:
-            result = subprocess.run(read_cmd, capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                resources_data = json.loads(result.stdout)
-                existing_items = resources_data.get('data', {}).get('items', [])
-            else:
-                print(f"Warning: Failed to read existing resources via SSH: {result.stderr}")
-                resources_data = {
-                    "version": 1,
-                    "minor_version": 1,
-                    "key": "lovelace_resources",
-                    "data": {
-                        "items": []
-                    }
-                }
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as e:
-            print(f"Could not retrieve existing Lovelace resources: {e}")
-            resources_data = {
-                "version": 1,
-                "minor_version": 1,
-                "key": "lovelace_resources",
-                "data": {
-                    "items": []
-                }
+        from marketplace_manager import HAWebSocket
+
+        with HAWebSocket() as ws:
+            existing_resources = ws.call('lovelace/resources/list')
+
+            if not isinstance(existing_resources, list):
+                raise RuntimeError(
+                    'Unexpected Lovelace resource registry response'
+                )
+
+            existing_by_url = {
+                item['url']: item
+                for item in existing_resources
+                if isinstance(item, dict) and item.get('url')
             }
 
-        
-        for i, resource in enumerate(resources):
-            if not isinstance(resource, dict):
-                print(f"ERROR: Resource {i} is not a dict, got {type(resource)}: {resource}")
-                continue
-            
-            url = resource.get('url')
-            resource_type = resource.get('type', 'module')
-            
-            if not url:
-                print("ERROR: Resource missing URL")
-                continue
-            
-            existing = next((item for item in existing_items if item.get('url') == url), None)
-            
-            if existing:
-                print(f"Resource {url} already exists, updating...")
-                existing['type'] = resource_type
-            else:
-                print(f"Adding new resource: {url}")
-                new_resource = {
-                    "id": str(uuid.uuid4()).replace('-', ''),
-                    "url": url,
-                    "type": resource_type
-                }
-                existing_items.append(new_resource)
-        
-        resources_data['version'] = 1
-        resources_data['minor_version'] = 1
+            added = 0
+            updated = 0
+            unchanged = 0
 
-        local_temp_file = '/config/.energy_manager/lovelace_resources_temp.json'
-        with open(local_temp_file, 'w') as f:
-            json.dump(resources_data, f, indent=2)
+            for resource in resources_config:
+                if not isinstance(resource, dict) or not resource.get('url'):
+                    raise RuntimeError(
+                        f'Invalid Lovelace resource: {resource!r}'
+                    )
 
-        print("Copying Lovelace resources to temp directory via SSH...")
-        copy_to_temp_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            'cat > /tmp/lovelace_resources.json'
-        ]
-        
-        with open(local_temp_file, 'r') as f:
-            result = subprocess.run(copy_to_temp_cmd, input=f.read(), text=True, capture_output=True, timeout=30)
-        
-        if result.returncode != 0:
-            error_msg = f"Failed to copy resources to temp: {result.stderr}"
-            print(f"❌ {error_msg}")
-            update_dashboard_status(error_msg, "error")
-            return False
-            
-        print("✅ Lovelace resources copied to temp directory")
+                url = resource['url']
+                resource_type = resource.get('type', 'module')
+                existing = existing_by_url.get(url)
 
-        print("Moving Lovelace resources to .storage directory...")
-        move_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            f'sudo mv /tmp/lovelace_resources.json {resources_file}'
-        ]
-        
-        result = subprocess.run(move_cmd, capture_output=True, text=True, timeout=15)
-        
-        if result.returncode != 0:
-            error_msg = f"Failed to move resources to final location: {result.stderr}"
-            print(f"❌ {error_msg}")
-            update_dashboard_status(error_msg, "error")
-            return False
-        
-        print(f"✅ Updated Lovelace resources with {len(resources)} items")
-        
-        if os.path.exists(local_temp_file):
-            os.remove(local_temp_file)
-            print("✅ Local temp file cleaned up")
-            
+                if existing is None:
+                    created = ws.call(
+                        'lovelace/resources/create',
+                        url=url,
+                        res_type=resource_type,
+                    )
+                    existing_by_url[url] = created
+                    print(f"Added Lovelace resource: {url}")
+                    added += 1
+
+                elif existing.get('type') != resource_type:
+                    ws.call(
+                        'lovelace/resources/update',
+                        resource_id=existing['id'],
+                        res_type=resource_type,
+                    )
+                    print(f"Updated Lovelace resource: {url}")
+                    updated += 1
+
+                else:
+                    print(f"Lovelace resource already correct: {url}")
+                    unchanged += 1
+
+        print(
+            f"✅ Lovelace resources reconciled: "
+            f"{added} added, {updated} updated, "
+            f"{unchanged} already correct"
+        )
         return True
-    
-    except Exception as e:
-        print(f"❌ Error updating Lovelace resources via SSH: {e}")
+
+    except Exception as exc:
+        print(f"❌ Lovelace resource reconciliation failed: {exc}")
         return False
 
 def cleanup_legacy_placeholder_files(file_merger, version):
