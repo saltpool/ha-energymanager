@@ -1874,7 +1874,8 @@ try:
         )
         try:
             marketplace_changes = sync_marketplace_components_via_ssh(
-                manifest.get('marketplace_components', [])
+                manifest.get('marketplace_components', []),
+                repair=args.force_reinstall
             )
             print(
                 f"✅ Marketplace dependencies reconciled: "
