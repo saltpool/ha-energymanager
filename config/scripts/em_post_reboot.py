@@ -159,9 +159,7 @@ def main():
             return
         print('[EM Post-Reboot] Configuring MQTT and Node-RED Companion', flush=True)
         for attempt in range(1, 4):
-            proc = subprocess.run([sys.executable, '-u', str(SCRIPT)],
-                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  text=True, timeout=180)
+            proc = subprocess.run([sys.executable, '-u', str(SCRIPT), '--mode', 'update' if update_mode else 'install'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=180)
             print(proc.stdout, flush=True)
             if proc.returncode == 0:
                 if update_mode:
