@@ -659,6 +659,12 @@
       "version": "latest"
     },
     {
+      "repository": "benct/lovelace-multiple-entity-row",
+      "type": "plugin",
+      "action": "install",
+      "version": "latest"
+    },
+    {
       "repository": "mletenay/home-assistant-goodwe-inverter",
       "type": "integration",
       "action": "install",
