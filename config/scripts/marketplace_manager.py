@@ -227,8 +227,8 @@ def check_marketplace(ws, ask_consent=False):
     return info
 
 
-def sync_marketplace_components(entries, dry_run=False):
-    """Reconcile manifest components and verify them using Marketplace WebSocket."""
+def sync_marketplace_components(entries, dry_run=False, repair=False):
+    """Reconcile required versions; repair also reinstalls matching versions."""
     validate_components(entries)
     require_marketplace()
     changes = []
