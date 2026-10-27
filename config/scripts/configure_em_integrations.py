@@ -6,6 +6,7 @@ Fresh-install Solcast configuration: API limit 10; automatic updates OFF.
 """
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
