@@ -14,6 +14,9 @@
   * Removal of backup restoration method for new deployments
   * Automatic BOM configuration
   * Minimum requirement: Home Assistant Core 2026.11+
+* Updated Energy Flow visual
+  * Includes weather animations
+  * Include EV charging animations
 * New split news page. One column version specific, one for general information, and one for changelog
 * Safe-guard added for Flow Power users if EM tag detection file not present
 * All entities now YAML based (removal of UI entities via migration script)
