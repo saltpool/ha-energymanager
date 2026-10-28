@@ -229,7 +229,7 @@
       "action": "replace",
       "description": "Energy Flow Javascript",
       "backup_current": true,
-      "new_in_version": "1.2.0"
+      "new_in_version": "2.0.0"
     },
     "www/addon-iframe-card.js": {
       "action": "replace",
@@ -250,16 +250,94 @@
       "new_in_version": "2.0.0"
     },
     "www/energy-flow.svg": {
-      "action": "replace",
+      "action": "remove",
       "description": "Energy Flow Light Graphic",
-      "backup_current": true,
+      "backup_current": false,
       "new_in_version": "1.2.0"
     },
     "www/energy-flow-dark.svg": {
-      "action": "replace",
+      "action": "remove",
       "description": "Energy Flow Dark Graphic",
-      "backup_current": true,
+      "backup_current": false,
       "new_in_version": "1.2.0"
+    },
+    "www/energy-flow/brands/other.png": {
+      "action": "replace",
+      "description": "Other EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/byd.png": {
+      "action": "replace",
+      "description": "BYD EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/chery.png": {
+      "action": "replace",
+      "description": "Chery EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/geely.png": {
+      "action": "replace",
+      "description": "Geely EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/Jaecoo.png": {
+      "action": "replace",
+      "description": "Jaecoo EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/kia.png": {
+      "action": "replace",
+      "description": "Kia EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/mg.png": {
+      "action": "replace",
+      "description": "MG EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/tesla.png": {
+      "action": "replace",
+      "description": "Tesla EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/brands/zeekr.png": {
+      "action": "replace",
+      "description": "Zeekr EV image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow-house.png": {
+      "action": "replace",
+      "description": "Default Energy Flow image",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },    
+    "www/energy-flow/weather/weather-cloud.png": {
+      "action": "replace",
+      "description": "Energy Flow Clouds",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "www/energy-flow/weather/weather-rain.png": {
+      "action": "replace",
+      "description": "Energy Flow Rain",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+      "www/energy-flow/weather/weather-storm-cloud.png": {
+      "action": "replace",
+      "description": "Energy Flow Storm Clouds",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
     },
     "www/icons/chev_down_1_circle_white.svg": {
       "action": "replace",
