@@ -693,7 +693,7 @@ template:
         unit_of_measurement: "C/day"
         state_class: measurement
         state: >
-          {% set charge = states("sensor.total_battery_charge") | float(0) %}
+          {% set charge = states("sensor.inverter_total_battery_charge") | float(0) %}
           {% set age = states("sensor.battery_age_days") | float(1) %}
           {% set capacity = states("input_number.battery_capacity") | float(19.2) %}
           {% if charge > 0 and age > 0 and capacity > 0 %}
