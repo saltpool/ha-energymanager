@@ -2734,7 +2734,7 @@ script:
             {% if brand == 'sungrow' %}
               {{ states('sensor.sungrow_accumulated_charge_energy') | float(0) }}
             {% elif brand == 'sigenergy' %}
-              {{ states('sensor.sigenergy_accumulated_charge_energy') | float(0) }}
+              {{ states('sensor.sigenergy_total_charge_energy') | float(0) }}
             {% elif brand == 'alphaess' %}
               {{ states('sensor.alphaess_battery_charge_energy') | float(0) }}
             {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
@@ -2752,7 +2752,7 @@ script:
             {% if brand == 'sungrow' %}
               {{ states('sensor.sungrow_accumulated_discharge_energy') | float(0) }}
             {% elif brand == 'sigenergy' %}
-              {{ states('sensor.sigenergy_accumulated_discharge_energy') | float(0) }}
+              {{ states('sensor.sigenergy_total_discharge_energy') | float(0) }}
             {% elif brand == 'alphaess' %}
               {{ states('sensor.alphaess_battery_discharge_energy') | float(0) }}
             {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
