@@ -736,7 +736,7 @@ def collect_onboarding_credentials():
         'onboarding but you will need to manually configure after installation.',
         flush=True,
     )
-    solcast_key = getpass.getpass('Solcast API key (Enter to skip): ').strip()
+    solcast_key = input('Solcast API key (Enter to skip): ').strip()
     resource_1 = ''
     resource_2 = ''
     if solcast_key:
@@ -750,7 +750,7 @@ def collect_onboarding_credentials():
         log('Solcast onboarding skipped; configure it manually after installation.')
     print('Energy Manager key is strongly recommended. Without it, automated '
           'energy optimisation will not occur.', flush=True)
-    em_key = getpass.getpass('Energy Manager key (Enter to skip): ').strip()
+    em_key = input('Energy Manager key (Enter to skip): ').strip()
     if not em_key:
         log('WARNING: No Energy Manager key supplied; optimisation will not operate.')
     secrets = {
