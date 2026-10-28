@@ -29,6 +29,7 @@
 * House load not calculated correctly in "Other\DIY" provider Node-RED
 * Bug where if export price (for Other\DIY) is for a 24hr period that it would fail to detect the period
 * Removal of "# Goodwe not supported" in em_scripts.yaml (current_reserved_soc_backup), was producing entry in system log
+* Sigenergy - fixed accumulated energy (charge/discharge) sensors in em_scripts.yaml
 
 </details>
 
