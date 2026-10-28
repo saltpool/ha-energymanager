@@ -536,7 +536,7 @@
     {
     "url": "/local/energy-flow-card.js",
     "type": "module",
-    "new_in_version": "1.2.0"
+    "new_in_version": "2.0.0"
     },
     {
     "url": "/local/addon-iframe-card.js",
