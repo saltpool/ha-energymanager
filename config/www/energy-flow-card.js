@@ -1,6 +1,6 @@
-/* Energy Manager 3D Energy Flow Card — experimental. */
+/* Energy Manager 3D Energy Flow Card. */
 (() => {
-  if (customElements.get('energy-flow-3d-card')) return;
+  if (customElements.get('energy-flow-card')) return;
   const NS = 'http://www.w3.org/2000/svg';
   const VIEW_W = 1536, VIEW_H = 1024;
   const DEFAULTS = {
@@ -18,20 +18,17 @@
     export_limit_entity: 'input_number.inverter_export_power_hardlimit',
     solar_array_size_entity: 'input_number.solar_array_size',
     import_limit: 15000, animation_speed: 1, threshold_w: 30,
-    show_labels: true, show_title: true, solar_panel_glow: true, glow_intensity: 1,
-    weather_entity: '', weather_effects: true, weather_intensity: 1, weather_test_condition: '',
+    show_labels: true, show_title: true, solar_panel_glow: false, glow_intensity: 1,
+    weather_entity: 'weather.home', weather_effects: true, weather_intensity: 1, weather_test_condition: '',
     weather_cloud_image: '/local/energy-flow/weather/weather-cloud.png', weather_storm_cloud_image: '/local/energy-flow/weather/weather-storm-cloud.png',
-    weather_rain_image: '/local/energy-flow/weather/weather-rain.png',
+    weather_sun_image: '/local/energy-flow/weather/weather-sun.png', weather_rain_image: '/local/energy-flow/weather/weather-rain.png',
   };
-  // Coordinates measured against the 1536×1024 supplied master image.
-  // Routes converge at the centre of the wall-mounted inverter (772, 607).
-  // Grid runs straight to the lower-left at approximately 245 degrees.
   const ROUTES = {
-    solar:   {d:'M 918 166 C 924 251 916 332 878 428 S 813 542 772 607', color:'#f9c94d'},
-    house:   {d:'M 772 607 C 840 575 903 547 1015 518',color:'#65b6ff'},
-    battery: {d:'M 772 607 C 852 643 948 705 1064 764',color:'#43e3b6'},
-    grid:    {d:'M 772 607 L 30 953',color:'#f28b52'},
-    ev:      {d:'M 772 607 C 689 610 602 645 433 622',color:'#66f5d1'},
+    solar:   {d:'M 918 166 L 772 607', color:'#f9c94d'},
+    house:   {d:'M 772 607 L 1015 518',color:'#0070d3'},
+    battery: {d:'M 772 607 L 1064 764',color:'#006e4f'},
+    grid:    {d:'M 772 607 L 215 840',color:'#ff3f3f'},
+    ev:      {d:'M 772 607 L 433 622',color:'#00e038'},
   };
   class EnergyFlow3DCard extends HTMLElement {
     constructor() { super(); this.attachShadow({mode:'open'}); this._hass=null; this._displayedImage=''; this._failedImages=new Set(); this._last={}; this._rainRaf=0; this._rainDrops=[]; this._snowRaf=0; this._snowflakes=[]; }
@@ -69,11 +66,13 @@
           .stage > img, .stage > svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
           .house { object-fit:contain; z-index:0; }
           .flows { z-index:1; overflow:visible; pointer-events:none; }
-          .trail { fill:none; stroke-width:3.5; opacity:.40; stroke-dasharray:4 10; stroke-linecap:round; }
-          .route.active .trail { filter:drop-shadow(0 0 4px currentColor); }
+          .trail { fill:none; stroke-width:7; opacity:.85; stroke-dasharray:12 16; stroke-linecap:round; }
+          .flow-pulse { fill:none; stroke-width:5; opacity:.95; stroke-dasharray:4 32; stroke-linecap:round; animation:energy-dash 1.25s linear infinite; filter:drop-shadow(0 0 7px currentColor); }
+          @keyframes energy-dash {to{stroke-dashoffset:-36}}
+          .route.active .trail { filter:drop-shadow(0 0 8px currentColor); }
           .core { stroke:white; stroke-width:1.2; opacity:.95; }
-          .solar-panel-glow { pointer-events:none; opacity:0; transition:opacity .6s ease; }
-          .solar-panel-glow.on { opacity:1; }
+          .solar-panel-glow { display:none !important; pointer-events:none; opacity:0; transition:opacity .6s ease; }
+          .solar-panel-glow.on { opacity:0; }
           .solar-panel-glow .panel-wash { animation:panel-breathe 3.8s ease-in-out infinite alternate; mix-blend-mode:screen; }
           .solar-panel-glow .panel-border { animation:panel-breathe 3.8s ease-in-out infinite alternate; }
           .weather-overlay { pointer-events:none; opacity:0; transition:opacity .7s ease; }
@@ -94,11 +93,11 @@
           .metric { position:absolute; z-index:3; padding:5px 9px; border:1px solid var(--divider-color,#7777);
             border-radius:11px; background:var(--ha-card-background,var(--card-background-color,#222));
             color:var(--primary-text-color,#eee); box-shadow:0 2px 9px #0002;
-            font-size:clamp(9px,1.25vw,13px); text-align:center; white-space:nowrap; max-width:calc(100% - 16px); box-sizing:border-box; line-height:1.35; }
+            font-size:clamp(10px,1.35vw,14px); text-align:center; white-space:nowrap; max-width:calc(100% - 16px); box-sizing:border-box; line-height:1.35; padding:6px 10px; border-radius:12px; }
           .metric strong { font-weight:650; }
           .solar-label { left:57%; top:6%; } .load-label {left:64%; top:44%;}
-          .battery-label {right:2%; top:79%;} .grid-label {left:10%; top:71%;}
-          .ev-label {left:17%;top:53%;}
+          .battery-label {right:2%; top:78%; max-width:47%; font-size:clamp(10px,1.2vw,13px); padding:6px 8px;} .grid-label {left:3%; top:82%; max-width:43%; font-size:clamp(10px,1.2vw,13px); padding:6px 8px;}
+          .ev-label {left:9%;top:39%;}
 
           .weather-scene { position:absolute; inset:0; z-index:2; overflow:hidden; pointer-events:none; opacity:0; transition:opacity 1s ease; }
           .weather-scene.on {opacity:1}
@@ -136,20 +135,21 @@
           .weather-scene.stormy .weather-tint {opacity:.75}
           .weather-mist {position:absolute;inset:0;opacity:0;background:linear-gradient(90deg,#c5d5db10,#e1e8e650,#bcc7cf16);filter:blur(14px);animation:mist-drift 15s ease-in-out infinite alternate}
           .weather-scene.foggy .weather-mist {opacity:.8}
-          .weather-sunshine {position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse 32% 34% at 32% 9%,rgba(255,247,202,.65) 0%,rgba(255,219,129,.36) 25%,rgba(255,200,100,.14) 57%,transparent 100%),linear-gradient(132deg,rgba(255,220,130,.18),transparent 60%);mix-blend-mode:screen;animation:sunshimmer 6s ease-in-out infinite alternate;}
-          .weather-scene.sunny .weather-sunshine {opacity:1} .weather-scene.partlycloudy .weather-sunshine {opacity:.55}
-          .weather-scene:not(.sunny):not(.partlycloudy) .weather-sunshine {display:none !important}
+          .weather-sunshine {display:none !important;}
+          .sunsprite {position:absolute; width:26%; height:auto; left:16%; top:-2%; opacity:0; filter:drop-shadow(0 0 10px rgba(255,243,205,.24)); animation:sun-float 12s ease-in-out infinite alternate;}
+          .weather-scene.sunny .sunsprite {opacity:.95} .weather-scene.partlycloudy .sunsprite {opacity:.65}
+          .weather-scene:not(.sunny):not(.partlycloudy) .sunsprite {display:none !important}
           .weather-lightning {position:absolute;inset:0;opacity:0;background:#eaf7ff78;animation:lightning-strike 11s linear infinite;}
           .weather-scene.stormy .weather-lightning {animation-play-state:running}
           .weather-scene:not(.stormy) .weather-lightning {display:none}
           @keyframes cloud-move {to{transform:translate(3%,1%)}}
           @keyframes rain-scroll {to{background-position:-70px 180px}}
           @keyframes mist-drift {to{transform:translateX(12%)}}
-          @keyframes sunshimmer {to{opacity:.65}}
+          @keyframes sun-float {from{transform:translateY(0)}to{transform:translateY(6px)}}
           @keyframes lightning-strike {0%,84%,85%,87%,89%,100%{opacity:0}84.2%,86.1%,88.1%{opacity:.8}}
           .error { position:absolute; inset:auto 10% 40%; text-align:center; background:var(--ha-card-background,#222); padding:10px; z-index:4; display:none; }
-          @media (max-width:480px) { .metric { padding:3px 5px; border-radius:7px; font-size:9px; } }
-          @media (max-width:360px) { .battery-label {top:88%;} .load-label {left:59%;top:48%;} }
+          @media (max-width:480px) { .metric { padding:5px 7px; border-radius:9px; font-size:10px; } }
+          @media (max-width:360px) { .battery-label {top:79%;} .grid-label {top:84%;} .load-label {left:59%;top:48%;} .ev-label {left:3%;top:38%;} }
           @media (prefers-reduced-motion: reduce) { .weather-rain-sprite { display:none !important; }  .solar-panel-glow .panel-wash,.solar-panel-glow .panel-border,.weather-cloud,.weather-rays,.weather-rain,.weather-flash {animation:none;} }
         </style>
         <ha-card>
@@ -191,7 +191,7 @@
             </svg>
             <div class="weather-scene" data-weather-scene>
               <div class="weather-tint"></div><div class="weather-sunshine"></div><div class="weather-mist"></div><div class="weather-nightshade"></div>
-              <img class="cloudsprite cloud1" alt="" /><img class="cloudsprite cloud2" alt="" />
+              <img class="sunsprite" alt="" /><img class="cloudsprite cloud1" alt="" /><img class="cloudsprite cloud2" alt="" />
               <canvas class="weather-rain-canvas" width="960" height="640" aria-hidden="true"></canvas>
               <canvas class="weather-snow-canvas" width="960" height="640" aria-hidden="true"></canvas>
               <div class="weather-lightning"></div>
@@ -217,11 +217,12 @@
       const reversed = id==='battery';
       return `<g class="route inactive" data-route="${id}">
         <path d="${route.d}" class="trail" stroke="${route.color}"/>
-        ${Array.from({length:5},(_,i)=>`<g>
-          <circle r="13" fill="${route.color}" class="halo"/>
-          <circle r="5.2" fill="${route.color}" class="particle"/>
-          <circle r="2.9" fill="#ffffff" class="core"/>
-          <animateMotion class="motion" dur="3s" begin="${-i*0.6}s" repeatCount="indefinite" path="${route.d}" ${reversed ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/>
+        <path d="${route.d}" class="flow-pulse" stroke="${route.color}"/>
+        ${Array.from({length:6},(_,i)=>`<g>
+          <circle r="26" fill="${route.color}" class="halo"/>
+          <circle r="11.5" fill="${route.color}" class="particle"/>
+          <circle r="5.5" fill="#ffffff" class="core"/>
+          <animateMotion class="motion" dur="3s" begin="${-i*0.5}s" repeatCount="indefinite" path="${route.d}" ${reversed ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/>
         </g>`).join('')}
       </g>`;
     }
@@ -230,8 +231,10 @@
       const active=power>Number(this.config.threshold_w||0);
       route.classList.toggle('inactive',!active); route.classList.toggle('active',active);
       if (!active) return;
+      const dash=route.querySelector('.flow-pulse');
+      if(dash) dash.style.animationDirection=((name==='grid' || name==='battery') && reverse)?'reverse':'normal';
       const fraction=Math.min(1,Math.max(0,power/Math.max(1,max)));
-      const duration=(5-3.8*Math.sqrt(fraction))/Math.max(0.1,Number(this.config.animation_speed)||1);
+      const duration=(4.1-3.0*Math.sqrt(fraction))/Math.max(0.1,Number(this.config.animation_speed)||1);
       route.querySelectorAll('.motion').forEach((a,i)=>{
         // SVG uses reverse travel for export / discharge, forward for import / charge.
         a.setAttribute('dur',duration.toFixed(2)+'s');
@@ -265,6 +268,8 @@
       scene.querySelectorAll('.cloudsprite').forEach(img=>{
         if(img.getAttribute('src')!==cloud) img.setAttribute('src',cloud);
       });
+      const sun=scene.querySelector('.sunsprite');
+      if(sun && sun.getAttribute('src')!==this.config.weather_sun_image) sun.setAttribute('src',this.config.weather_sun_image);
       if(active && (kind==='rainy'||kind==='pouring'||kind==='stormy')) this._startRain(); else this._stopRain();
       if(active && kind==='snowy') this._startSnow(); else this._stopSnow();
       scene.style.opacity=active?Math.min(1,Math.max(0,Number(this.config.weather_intensity??1))):0;
@@ -396,7 +401,7 @@
       const evLabel=this.shadowRoot.querySelector('[data-label="ev"]');
       if(evLabel)evLabel.style.display=c.show_labels && evCharging?'block':'none';
       this._label('ev',this._fmt(evWatts),'#66f5d1');
-      const roof=this.shadowRoot.querySelector('[data-solar-glow]'); const weatherState=String(c.weather_test_condition||this._hass?.states?.[c.weather_entity]?.state||'').toLowerCase();const night=weatherState==='clear-night'; const glowEnabled=!night&&Boolean(c.solar_panel_glow)&&solar>0; if(roof){roof.classList.toggle('on',glowEnabled);roof.style.opacity=glowEnabled?Math.min(1,Math.max(.48, .4+.6*solar/Math.max(1,solarLimit))*Math.max(0,Number(c.glow_intensity??1))):0;}
+      const roof=this.shadowRoot.querySelector('[data-solar-glow]'); if(roof){roof.classList.remove('on');roof.style.opacity=0;}
       this._updateWeather();
       this._setFlow('solar',solar,solarLimit);
       this._setFlow('house',load,10000);
