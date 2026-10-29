@@ -327,6 +327,12 @@
       "backup_current": true,
       "new_in_version": "2.0.0"
     },
+      "www/energy-flow/weather/weather-sun.png": {
+      "action": "replace",
+      "description": "Energy Flow Sun",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
     "www/energy-flow/weather/weather-rain.png": {
       "action": "replace",
       "description": "Energy Flow Rain",
