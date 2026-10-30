@@ -546,7 +546,7 @@
   },
   "lovelace_resources": [
     {
-    "url": "/local/energy-flow-card.js",
+    "url": "/local/energy-flow-card.js?v=16",
     "type": "module",
     "new_in_version": "2.0.0"
     },
@@ -564,6 +564,11 @@
     "url": "/local/em-events-card.js",
     "type": "module",
     "new_in_version": "1.2.0"
+    },
+    {
+    "url": "/local/energy-manager-wholesale-pricing-card.js?v=5",
+    "type": "module",
+    "new_in_version": "2.0.0"
     }
     ],
   "nodered_flows": {
