@@ -220,7 +220,7 @@
       "new_in_version": "1.2.0"
     },
     "www/energy-manager-globird.svg": {
-      "action": "replace",
+      "action": "remove",
       "description": "Energy Manager Globird Graphic",
       "backup_current": true,
       "new_in_version": "1.2.0"
@@ -272,7 +272,13 @@
       "description": "Energy Manager Flow Power Card Javascript",
       "backup_current": true,
       "new_in_version": "2.0.0"
-    },   
+    },
+     "www/energy-manager-globird-pricing-card.js": {
+      "action": "replace",
+      "description": "Energy Manager GloBird Card Javascript",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
     "www/energy-flow/brands/other.png": {
       "action": "replace",
       "description": "Other EV image",
@@ -578,6 +584,11 @@
     },
     {
     "url": "/local/energy-manager-flow-power-pricing-card.js?v=3",
+    "type": "module",
+    "new_in_version": "2.0.0"
+    },
+    {
+    "url": "/local/energy-manager-globird-pricing-card.js?v=1",
     "type": "module",
     "new_in_version": "2.0.0"
     }
