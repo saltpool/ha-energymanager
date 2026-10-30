@@ -261,6 +261,12 @@
       "backup_current": false,
       "new_in_version": "1.2.0"
     },
+     "www/energy-manager-wholesale-pricing-card.js": {
+      "action": "replace",
+      "description": "Energy Manager Wholesale Card Javascript",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },   
     "www/energy-flow/brands/other.png": {
       "action": "replace",
       "description": "Other EV image",
