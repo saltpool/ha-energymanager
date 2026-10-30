@@ -1172,120 +1172,14 @@ views:
       - type: custom:state-switch
         entity: input_select.electricity_provider
         states:
-          "LocalVolts": &shared_card
+          "LocalVolts":
             type: custom:energy-manager-wholesale-pricing-card
-          "Amber Electric": *shared_card
+          "Amber Electric":
+            type: custom:energy-manager-wholesale-pricing-card
           "Flow Power":
             type: custom:energy-manager-flow-power-pricing-card 
           "Globird":
-            type: vertical-stack
-            cards:
-             - type: custom:mod-card
-                card_mod_templates:
-                  responsive_text_24: &responsive_24
-                    card_mod:
-                      style: |
-                        :host {
-                          @media (max-width: 768px) { font-size: 16px !important; }
-                          @media (max-width: 480px) { font-size: 12px !important; }
-                          @media (max-width: 360px) { font-size: 10px !important; }
-                        }
-                  responsive_text_20:
-                    card_mod:
-                      style: |
-                        :host {
-                          @media (max-width: 768px) { font-size: 14px !important; }
-                          @media (max-width: 480px) { font-size: 10px !important; }
-                          @media (max-width: 360px) { font-size: 8px !important; }
-                        }
-              - type: custom:mod-card
-                card:
-                  type: picture-elements
-                  image: /local/energy-manager-globird.svg
-                  card_mod:
-                    style: |
-                      ha-card {
-                        @media (max-width: 768px) { --state-label-font-size: 16px; }
-                        @media (max-width: 480px) { --state-label-font-size: 12px; }
-                        @media (max-width: 360px) { --state-label-font-size: 10px; }
-                      }
-                  elements:
-                    - type: state-label
-                      entity: input_number.bad_weather_rain_today
-                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
-                      style:
-                        top: 40%
-                        left: 68%
-                        color: gray
-                        font-size: 24px
-                      suffix: mm
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.bad_weather_rain_tomorrow
-                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
-                      style:
-                        top: 68%
-                        left: 68%
-                        color: gray
-                        font-size: 24px
-                      suffix: mm
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.globird_super_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 75%
-                        left: 8.5%
-                        color: white
-                        font-size: 24px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.globird_super_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 77%
-                        left: 19%
-                        color: gray
-                        font-size: 28px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: sensor.globird_super_battery_usable
-                      title: "This is the maximum amount of usable battery capacity that can be exported during the Super export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount, so it will stop at the first met, either your kWh limit or your battery reserve."
-                      style:
-                        top: 45%
-                        left: 8%
-                        color: white
-                        font-size: 28px
-                      suffix: "%"
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.globird_std_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 75%
-                        left: 33%
-                        color: white
-                        font-size: 24px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.globird_std_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 77%
-                        left: 44%
-                        color: gray
-                        font-size: 28px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: sensor.globird_std_battery_usable
-                      title: "This is the maximum amount of usable battery capacity that can be exported during the Standard (not Super) export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount."
-                      style:
-                        top: 45%
-                        left: 33%
-                        color: white
-                        font-size: 28px
-                      suffix: "%"
-                      <<: *responsive_24
+            type: custom:energy-manager-globird-pricing-card
           "Other":
             type: vertical-stack
             cards:
