@@ -1176,9 +1176,11 @@ views:
             type: custom:energy-manager-wholesale-pricing-card
           "Amber Electric": *shared_card
           "Flow Power":
+            type: custom:energy-manager-flow-power-pricing-card 
+          "Globird":
             type: vertical-stack
             cards:
-              - type: custom:mod-card
+             - type: custom:mod-card
                 card_mod_templates:
                   responsive_text_24: &responsive_24
                     card_mod:
@@ -1196,87 +1198,6 @@ views:
                           @media (max-width: 480px) { font-size: 10px !important; }
                           @media (max-width: 360px) { font-size: 8px !important; }
                         }
-              - type: custom:mod-card
-                card:
-                  type: picture-elements
-                  image: /local/energy-manager-flowpower.svg
-                  card_mod:
-                    style: |
-                      ha-card {
-                        @media (max-width: 768px) { --state-label-font-size: 16px; }
-                        @media (max-width: 480px) { --state-label-font-size: 12px; }
-                        @media (max-width: 360px) { --state-label-font-size: 10px; }
-                      }
-                  elements:
-                    - type: state-label
-                      entity: input_number.bad_weather_rain_today
-                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
-                      style:
-                        top: 40%
-                        left: 68%
-                        color: gray
-                        font-size: 24px
-                      suffix: mm
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.bad_weather_rain_tomorrow
-                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
-                      style:
-                        top: 68%
-                        left: 68%
-                        color: gray
-                        font-size: 24px
-                      suffix: mm
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.flowpower_peak_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 75%
-                        left: 8.5%
-                        color: white
-                        font-size: 24px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.flowpower_peak_battery_reserve
-                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
-                      style:
-                        top: 77%
-                        left: 19%
-                        color: gray
-                        font-size: 28px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: sensor.flowpower_peak_battery_usable
-                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
-                      style:
-                        top: 45%
-                        left: 8.5%
-                        color: white
-                        font-size: 28px
-                      suffix: "%"
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_select.flow_power_price_signal_charge_limit
-                      title: "This is the PEA signal that you are willing to purchase electricity UP TO. Energy Manager will not restrict to purchasing AT this price, but will still purchase at the cheapest period UP UNTIL (and including) this price, IF REQUIRED. Note that the PEA here is estimated, it may not reflect exactly what Flow Power define."
-                      style:
-                        top: 45%
-                        left: 37%
-                        color: gray
-                        font-size: 28px
-                      <<: *responsive_24
-                    - type: state-label
-                      entity: input_number.flowpower_max_grid_soc
-                      title: "This is the maximum SOC that you are willing to charge your battery up to if electricity is required to be purchased from the grid. It will not affect the maximum SOC that natural solar generation will take your battery to. Your inverter-configured maximum SOC will override this if it is set lower than here."
-                      style:
-                        top: 80%
-                        left: 37%
-                        color: gray
-                        font-size: 28px
-                      <<: *responsive_24
-          "Globird":
-            type: vertical-stack
-            cards:
               - type: custom:mod-card
                 card:
                   type: picture-elements
