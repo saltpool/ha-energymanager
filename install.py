@@ -749,7 +749,7 @@ def collect_onboarding_credentials():
     else:
         log('Solcast onboarding skipped; configure it manually after installation.')
     print('Energy Manager key is strongly recommended. Without it, automated '
-          'energy optimisation will not occur.', flush=True)
+          'energy optimisation will not occur. You can get one from https://energymanager.com.au.', flush=True)
     em_key = input('Energy Manager key (Enter to skip): ').strip()
     if not em_key:
         log('WARNING: No Energy Manager key supplied; optimisation will not operate.')
