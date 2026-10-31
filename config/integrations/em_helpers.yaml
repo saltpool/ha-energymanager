@@ -694,31 +694,24 @@ input_boolean:
 
   pv_dashboard_solar:
     name: PV Solar Forecasts
-    icon: mdi:solar-power-variant
 
   pv_dashboard_entities:
     name: PV Entities
-    icon: mdi:list-box
 
   pv_dashboard_future:
     name: PV Future Decisions
-    icon: mdi:format-list-bulleted
   
   pv_dashboard_12hr:
     name: PV 12hr History
-    icon: mdi:chart-areaspline
 
   pv_dashboard_profile:
     name: PV Power Profile
-    icon: mdi:chart-box-outline
 
   pv_dashboard_ev:
     name: PV EV Forecast
-    icon: chart-bell-curve-cumulative
 
   pv_dashboard_pricing:
     name: PV Pricing Forecast
-    icon: mdi:finance
 
 input_button:
   energy_profile_save:
