@@ -442,11 +442,6 @@ input_boolean:
     initial: false
     icon: mdi:car-brake-alert
 
-  energy_flow_visual:
-    name: "Energy Flow Visual"
-    initial: true
-    icon: mdi:home-plus-outline
-
   electricity_distributor_demand_enabled:
     name: "I am on a demand plan"
     icon: mdi:home-alert
