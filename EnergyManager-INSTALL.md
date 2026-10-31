@@ -45,7 +45,7 @@ After the prompts, the installer automatically:
 1. Downloads and prepares Energy Manager's support scripts.
 2. Installs and configures the required Home Assistant Apps and Node-RED dependencies.
 3. Deploys Home Assistant configuration, dashboards, automations and Node-RED flows.
-4. Installs the required **Marketplace components** listed in the release manifest.
+4. Installs the required Marketplace components listed in the release manifest.
 5. Configures SSH-key access for future Energy Manager updates.
 6. Registers automated post-reboot configuration for MQTT and Node-RED.
 7. Checks the Home Assistant configuration and requests a **full Home Assistant OS reboot**.
