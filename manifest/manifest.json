@@ -417,6 +417,12 @@
       "backup_current": true,
       "new_in_version": "2.0.0"
     },
+    "scripts/em_updater_bootstrap.py": {
+      "action": "replace",
+      "description": "Bootstrap latest updater scripts before checking or installing",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
     "scripts/check_energy_manager_updates.py": {
       "action": "replace",
       "description": "Update checker v2",
