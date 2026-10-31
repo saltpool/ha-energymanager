@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 sys.path.insert(0, '/config/scripts')
-from update_checker import EnergyManagerUpdateChecker
+from em_updater_bootstrap import refresh_updater, resolve_branch
 
 EM_DIR = '/config/.energy_manager'
 
@@ -35,7 +35,12 @@ def main():
     args = parser.parse_args()
     selected_branch = args.branch or 'unknown'
     try:
-        checker = EnergyManagerUpdateChecker(branch=args.branch)
+        selected_branch = resolve_branch(args.branch)
+        refresh_updater(selected_branch, mode='check')
+        # Import only after refreshing the checker and its dependencies.
+        from update_checker import EnergyManagerUpdateChecker
+
+        checker = EnergyManagerUpdateChecker(branch=selected_branch)
         selected_branch = checker.branch
         result = checker.check_for_updates()
         if result['error']:
