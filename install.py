@@ -344,9 +344,10 @@ def deploy():
     downloads = {}
     for name, entry in manifest['files'].items():
         path = safe_repo_path(name)
-        if not isinstance(entry, dict) or entry.get('action', 'merge') not in ('merge', 'replace', 'create'):
+        if not isinstance(entry, dict) or entry.get('action', 'merge') not in ('merge', 'replace', 'create', 'remove'):
             raise ValueError(f'Invalid manifest file entry: {name}')
-        downloads[name] = _download_text(name)
+        if entry.get('action') != 'remove':
+            downloads[name] = _download_text(name)
     flow_config = manifest.get('nodered_flows') or {}
     if not flow_config.get('download_url'):
         raise RuntimeError('Manifest lacks Node-RED flows download URL')
@@ -364,6 +365,13 @@ def deploy():
         action = info.get('action', 'merge')
         log(f'{action}: {destination}')
         try:
+            if action == 'remove':
+                if destination.is_file() or destination.is_symlink():
+                    destination.unlink()
+                    log(f'Removed obsolete file: {destination}')
+                else:
+                    log(f'Already absent, skipping: {destination}')
+                continue
             destination.parent.mkdir(parents=True, exist_ok=True)
             content = downloads[name]
             if action == 'replace':
