@@ -21,6 +21,7 @@ FILES = (
     'scripts/perform_energy_manager_update.py',
     'scripts/hacs_manager.py',
     'scripts/em_apps_manager.py',
+    'scripts/em_updater_bootstrap.py',
     'integrations/em_helpers.yaml',
 )
 CONFIG = Path('/config')
