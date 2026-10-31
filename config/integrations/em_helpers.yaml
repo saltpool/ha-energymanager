@@ -17,13 +17,13 @@ shell_command:
   list_modbus_files: ls -la /config/*modbus* > /config/modbus_files_list.txt
   check_config_files: "cd /config; ls -la *modbus.yaml*"
   get_available_version: "cat /config/.energy_manager/update_status.txt 2>/dev/null || echo 'unknown'"
-  get_changelog_direct: 'python3 -c "import json; data=json.load(open(''/config/.energy_manager/update_details.json'')); print(data.get(''changelog'', ''No changelog available''))" 2>/dev/null || echo ''No changelog available'''
+  get_changelog_direct: "python3 -c \"import json; data=json.load(open('/config/.energy_manager/update_details.json')); print(data.get('changelog', 'No changelog available'))\" 2>/dev/null || echo 'No changelog available'"
   check_energy_manager_updates: "python3 /config/scripts/check_energy_manager_updates.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
   perform_energy_manager_update: "python3 /config/scripts/em_update_launcher.py --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
   perform_energy_manager_update_force: "python3 /config/scripts/em_update_launcher.py --force-reinstall --branch {{ states('input_select.em_update_branch') if states('input_select.em_update_branch') in ['main', 'early', 'test', 'development'] else 'main' }}"
   em_read_update_result: "cat /config/.energy_manager/update_result.txt 2>/dev/null || echo unknown"
-  generate_ssh_key: 'mkdir -p /config/.energy_manager && ssh-keygen -t ed25519 -f /config/.energy_manager/ssh_key -N "" -C "energy_manager_automation"'
-  read_ssh_key: 'cat /config/.energy_manager/ssh_key.pub 2>/dev/null || echo "no_key"'
+  generate_ssh_key: "mkdir -p /config/.energy_manager && ssh-keygen -t ed25519 -f /config/.energy_manager/ssh_key -N \"\" -C \"energy_manager_automation\""
+  read_ssh_key: "cat /config/.energy_manager/ssh_key.pub 2>/dev/null || echo \"no_key\""
   em_victoriametrics_setup: "python3 /config/scripts/em_victoriametrics_setup.py"
   em_read_update_status: python3 -c "from pathlib import Path; print(Path('/config/.energy_manager/update_status.txt').read_text().strip())"
   em_read_update_version: python3 -c "import json; print(json.load(open('/config/.energy_manager/update_details.json'))['version'])"
@@ -34,15 +34,15 @@ rest_command:
     url: "http://localhost:1880/endpoint/em/motd/mark_read"
     method: POST
     content_type: "application/json"
-    payload: '{"source":"dashboard"}'
+    payload: "{\"source\":\"dashboard\"}"
   em_general_mark_read:
     url: "http://localhost:1880/endpoint/em/motd_general/mark_read"
     method: POST
     content_type: "application/json"
-    payload: '{"source":"dashboard"}'
+    payload: "{\"source\":\"dashboard\"}"
 # === ENERGY_MANAGER_SHELL_COMMANDS_END ===
 
-# === ENERGY_MANAGER_SENSORS_START v1.3.0 ===
+# === ENERGY_MANAGER_SENSORS_START v2.0.0 ===
 sensor:
   - platform: integration
     source: sensor.inverter_import_power
@@ -188,7 +188,7 @@ command_line:
   - binary_sensor:
       name: "SSH Key Exists"
       unique_id: ssh_key_exists
-      command: 'test -f /config/.energy_manager/ssh_key && echo "found" || echo "not_found"'
+      command: "test -f /config/.energy_manager/ssh_key && echo \"found\" || echo \"not_found\""
       payload_on: "found"
       payload_off: "not_found"
 
@@ -208,7 +208,7 @@ command_line:
 
 # === ENERGY_MANAGER_SENSORS_END ===
 
-# === ENERGY_MANAGER_UPDATE_INPUTS_START v1.3.0 ===
+# === ENERGY_MANAGER_UPDATE_INPUTS_START v2.0.0 ===
 input_select:
   inverter_brand:
     name: Inverter Brand
@@ -2748,7 +2748,7 @@ template:
   - name: battery_2a
     unique_id: em_yaml_battery_2a
     default_entity_id: number.battery_2a
-    state: '{{ (states(''input_number.battery_1'') | float(0)) - 1 }}'
+    state: "{{ (states('input_number.battery_1') | float(0)) - 1 }}"
     min: -1
     max: 100
     step: 1
@@ -2757,7 +2757,7 @@ template:
   - name: battery_3a
     unique_id: em_yaml_battery_3a
     default_entity_id: number.battery_3a
-    state: '{{ (states(''input_number.battery_2'') | float(0)) - 1 }}'
+    state: "{{ (states('input_number.battery_2') | float(0)) - 1 }}"
     min: -1
     max: 100
     step: 1
@@ -2766,7 +2766,7 @@ template:
   - name: battery_4a
     unique_id: em_yaml_battery_4a
     default_entity_id: number.battery_4a
-    state: '{{ (states(''input_number.battery_3'') | float(0)) - 1 }}'
+    state: "{{ (states('input_number.battery_3') | float(0)) - 1 }}"
     min: -1
     max: 100
     step: 1
@@ -2775,7 +2775,7 @@ template:
   - name: battery_5a
     unique_id: em_yaml_battery_5a
     default_entity_id: number.battery_5a
-    state: '{{ (states(''input_number.battery_4'') | float(0)) - 1 }}'
+    state: "{{ (states('input_number.battery_4') | float(0)) - 1 }}"
     min: -1
     max: 100
     step: 1
@@ -2784,7 +2784,7 @@ template:
   - name: battery_6a
     unique_id: em_yaml_battery_6a
     default_entity_id: number.battery_6a
-    state: '{{ (states(''input_number.battery_5'') | float(0)) - 1 }}'
+    state: "{{ (states('input_number.battery_5') | float(0)) - 1 }}"
     min: -1
     max: 100
     step: 1
@@ -2793,7 +2793,7 @@ template:
   - name: battery_high_sell_mode_usable
     unique_id: em_yaml_battery_high_sell_mode_usable
     default_entity_id: number.battery_high_sell_mode_usable
-    state: '{{ 100 - (states(''input_number.high_sell_battery_reserve'') | float(0)) }}'
+    state: "{{ 100 - (states('input_number.high_sell_battery_reserve') | float(0)) }}"
     min: 0
     max: 100
     step: 1
@@ -2803,22 +2803,22 @@ template:
   - name: Grid Buy Price
     unique_id: em_yaml_grid_buy_price
     default_entity_id: sensor.grid_buy_price
-    state: '{{ states('sensor.nodered_buyprice') | float(0) | round(5) }}'
+    state: "{{ states('sensor.nodered_buyprice') | float(0) | round(5) }}"
     unit_of_measurement: "$/kWh"
     availability: "{{ has_value('sensor.nodered_buyprice') }}"
     
   - name: Grid Sell Price
     unique_id: em_yaml_grid_sell_price
     default_entity_id: sensor.grid_sell_price
-    state: '{{ states('sensor.nodered_sellprice') | float(0) | round(5) }}'
+    state: "{{ states('sensor.nodered_sellprice') | float(0) | round(5) }}"
     unit_of_measurement: "$/kWh"
     availability: "{{ has_value('sensor.nodered_sellprice') }}"
     
   - name: BOM Last Updated
     unique_id: em_yaml_bom_last_updated
     default_entity_id: sensor.bom_last_updated
-    state: '{% set s = states.sensor.home_temp %}{{ as_timestamp(s.last_updated) | timestamp_custom(''%B %-d, %Y at %-I:%M
-      %p'') if s is defined else ''Unavailable'' }}'
+    state: "{% set s = states.sensor.home_temp %}{{ as_timestamp(s.last_updated) | timestamp_custom('%B %-d, %Y at %-I:%M
+      %p') if s is defined else 'Unavailable' }}"
 
 # === ENERGY_MANAGER_UPDATE_INPUTS_END ===
 
