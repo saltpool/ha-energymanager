@@ -50,7 +50,7 @@ After the prompts, the installer automatically:
 6. Registers automated post-reboot configuration for MQTT and Node-RED.
 7. Checks the Home Assistant configuration and requests a **full Home Assistant OS reboot**.
 
-The terminal **will** disconnect during the reboot under normal circumstances; this is expected. If configuration validation fails, the installer does not request the reboot: review the error shown in the terminal first.
+The terminal **will disconnect during the reboot** under normal circumstances; this is expected. If configuration validation fails, the installer does not request the reboot: review the error shown in the terminal first.
 
 ## 5. Complete the Home Assistant setup
 
