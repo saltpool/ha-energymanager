@@ -368,7 +368,7 @@ views:
 
                 {% else %}
 
-                No forecast available.
+                No forecast available. Are you subscribed to Premium?
 
                 {% endif %}
               view_layout:
