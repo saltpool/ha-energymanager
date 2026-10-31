@@ -285,89 +285,94 @@ views:
                     font-weight: bold;
                     font-size: 1.2em;
                   }
-          - type: markdown
-            entity_id:
-              - sensor.energy_manager_plan
-            content: >
-              {% set plan = state_attr('sensor.energy_manager_plan',
-              'energy_plan') %}
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_future
+                state: "on"
+            card:
+              type: markdown
+              entity_id:
+                - sensor.energy_manager_plan
+              content: >
+                {% set plan = state_attr('sensor.energy_manager_plan',
+                'energy_plan') %}
 
-              {% if plan is string %}
-                {% set plan = plan | from_json(default={}) %}
-              {% endif %}
+                {% if plan is string %}
+                  {% set plan = plan | from_json(default={}) %}
+                {% endif %}
 
-              {% set plan = plan if plan is mapping else {} %}
+                {% set plan = plan if plan is mapping else {} %}
 
-              {% set timeline = plan.get('timeline', []) %}
-
-
-              ### 🔮 Future Decisions
-
-
-              {% if timeline %}
-
-              {% set ns = namespace(rows=[
-                '| Time | Decision | Buy | Sell | Load | Solar | Grid | EV | Batt |',
-                '|:---|:---|---:|---:|---:|---:|---:|---:|---:|'
-              ]) %}
+                {% set timeline = plan.get('timeline', []) %}
 
 
-              {% for r in timeline[:10] %}
-                {% set pv = r.inputs.pv_kw | float(0) %}
-                {% set load = r.inputs.load_kw | float(0) %}
-                {% set ev = r.inputs.ev_charge_kw | float(0) %}
-                {% set charge = r.expected.battery_charge_kw | float(0) %}
-                {% set discharge = r.expected.battery_discharge_kw | float(0) %}
-                {% set imp = r.expected.grid_import_kw | float(0) %}
-                {% set exp = r.expected.grid_export_kw | float(0) %}
-                {% set battery = charge - discharge %}
-                {% set grid = imp - exp %}
+                ### 🔮 Future Decisions
 
-                {% if exp > 0.05 %}
-                  {% set action = '⚡ Export → Grid' %}
-                {% elif imp > 0.05 and charge > 0.05 %}
-                  {% set action = '⚡ Grid → Battery' %}
-                {% elif pv > 0.05 and charge > 0.05 %}
-                  {% set action = '☀️ Solar → Battery' %}
-                {% elif pv > 0.05 %}
-                  {% set action = '☀️ Solar → Home' %}
-                {% elif discharge > 0.05 %}
-                  {% set action = '🔋 Battery → Home' %}
-                {% elif imp > 0.05 %}
-                  {% set action = '⚡ Grid → Home' %}
+
+                {% if timeline %}
+
+                {% set ns = namespace(rows=[
+                  '| Time | Decision | Buy | Sell | Load | Solar | Grid | EV | Batt |',
+                  '|:---|:---|---:|---:|---:|---:|---:|---:|---:|'
+                ]) %}
+
+
+                {% for r in timeline[:10] %}
+                  {% set pv = r.inputs.pv_kw | float(0) %}
+                  {% set load = r.inputs.load_kw | float(0) %}
+                  {% set ev = r.inputs.ev_charge_kw | float(0) %}
+                  {% set charge = r.expected.battery_charge_kw | float(0) %}
+                  {% set discharge = r.expected.battery_discharge_kw | float(0) %}
+                  {% set imp = r.expected.grid_import_kw | float(0) %}
+                  {% set exp = r.expected.grid_export_kw | float(0) %}
+                  {% set battery = charge - discharge %}
+                  {% set grid = imp - exp %}
+
+                  {% if exp > 0.05 %}
+                    {% set action = '⚡ Export → Grid' %}
+                  {% elif imp > 0.05 and charge > 0.05 %}
+                    {% set action = '⚡ Grid → Battery' %}
+                  {% elif pv > 0.05 and charge > 0.05 %}
+                    {% set action = '☀️ Solar → Battery' %}
+                  {% elif pv > 0.05 %}
+                    {% set action = '☀️ Solar → Home' %}
+                  {% elif discharge > 0.05 %}
+                    {% set action = '🔋 Battery → Home' %}
+                  {% elif imp > 0.05 %}
+                    {% set action = '⚡ Grid → Home' %}
+                  {% else %}
+                    {% set action = '⏸️ Standby' %}
+                  {% endif %}
+
+                  {% if ev > 0.05 %}
+                    {% set action = action ~ ' + 🚗 EV' %}
+                  {% endif %}
+
+                  {% set row = '| ' ~
+                    (as_timestamp(r.ts) | timestamp_custom('%H:%M', true)) ~ ' | ' ~
+                    action ~ ' | ' ~
+                    ('%.3f' | format(r.inputs.buy_price | float(0))) ~ ' | ' ~
+                    ('%.3f' | format(r.inputs.sell_price | float(0))) ~ ' | ' ~
+                    ('%.2f' | format(load)) ~ ' | ' ~
+                    ('%.2f' | format(pv)) ~ ' | ' ~
+                    ('%+.2f' | format(grid)) ~ ' | ' ~
+                    ('%.2f' | format(ev)) ~ ' | ' ~
+                    ('%+.2f' | format(battery)) ~ ' |'
+                  %}
+                  {% set ns.rows = ns.rows + [row] %}
+                {% endfor %}
+
+
+                {{ ns.rows | join('\n') }}
+
+
                 {% else %}
-                  {% set action = '⏸️ Standby' %}
+
+                No forecast available.
+
                 {% endif %}
-
-                {% if ev > 0.05 %}
-                  {% set action = action ~ ' + 🚗 EV' %}
-                {% endif %}
-
-                {% set row = '| ' ~
-                  (as_timestamp(r.ts) | timestamp_custom('%H:%M', true)) ~ ' | ' ~
-                  action ~ ' | ' ~
-                  ('%.3f' | format(r.inputs.buy_price | float(0))) ~ ' | ' ~
-                  ('%.3f' | format(r.inputs.sell_price | float(0))) ~ ' | ' ~
-                  ('%.2f' | format(load)) ~ ' | ' ~
-                  ('%.2f' | format(pv)) ~ ' | ' ~
-                  ('%+.2f' | format(grid)) ~ ' | ' ~
-                  ('%.2f' | format(ev)) ~ ' | ' ~
-                  ('%+.2f' | format(battery)) ~ ' |'
-                %}
-                {% set ns.rows = ns.rows + [row] %}
-              {% endfor %}
-
-
-              {{ ns.rows | join('\n') }}
-
-
-              {% else %}
-
-              No forecast available.
-
-              {% endif %}
-            view_layout:
-              grid-column: span 5
+              view_layout:
+                grid-column: span 5
       - type: grid
         cards:
           - type: horizontal-stack
@@ -463,500 +468,532 @@ views:
               - input_select.inverter_charge_discharge_mode
             view_layout:
               grid-column: span 3
-          - type: custom:entity-progress-card
-            entity: sensor.daily_imported_energy
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: red
-            force_circular_background: false
-            bar_orientation: ltr
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:transmission-tower-import
-            icon_animation: spin
-            custom_theme: []
-            bar_effect: []
-            name: Grid Import
-            bar_size: small
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'')}}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: red;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_exported_energy
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: green
-            force_circular_background: false
-            bar_orientation: ltr
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:transmission-tower-export
-            icon_animation: spin
-            custom_theme: []
-            bar_effect: []
-            name: Grid Export
-            bar_size: small
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'')}}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: green;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.inverter_battery_charge
-            name: Battery Charge
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: green
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              below:
-                jinja: >
-                  {% set capacity =
-                  states("input_number.battery_capacity")|float(0) %}
 
-                  {{ capacity * 0.2 }}
-              highlight: background
-              color: red
-            frameless: false
-            marginless: false
-            icon: mdi:battery-arrow-up
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: green;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.inverter_daily_battery_discharge
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            bar_scale: linear
-            bar_color: orange
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-              above:
-                jinja: >-
-                  {% set capacity =
-                  states("input_number.battery_capacity")|float(0) %}
 
-                  {{ capacity * 0.8 }}
-            frameless: false
-            marginless: false
-            name: Battery Discharge
-            icon: mdi:battery-arrow-down
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: orange;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_battery_charge
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: tomato
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:battery-arrow-up
-            name: Total Charge
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: tomato;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_battery_discharge
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: darkorange
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:battery-arrow-down
-            name: Total Discharge
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: darkorange;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_daytime_consumption
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: goldenrod
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            name: Daytime Consumption
-            icon: mdi:sun-clock
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: goldenrod;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.overnight_consumption
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: slategrey
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            icon: mdi:bed-clock
-            name: Night Consumption
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: slategrey;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_house_energy_from_pv
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: khaki
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              below:
-                jinja: >
-                  {% set capacity =
-                  states("input_number.battery_capacity")|float(0) %}
 
-                  {{ capacity * 0.2 }}
-              highlight: background
-              color: red
-            frameless: false
-            marginless: false
-            icon: mdi:solar-power-variant
-            name: Consumed from PV
-            max_value: 80
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: khaki;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_house_energy_from_battery
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: plum
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:battery
-            max_value: 80
-            name: Consumed from Battery
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: plum;
-                }
-          - type: custom:entity-progress-card
-            entity: sensor.daily_house_energy_from_grid
-            decimal: 1
-            value_compact: false
-            value_sign: false
-            bar_scale: linear
-            bar_color: lightcoral
-            force_circular_background: false
-            bar_orientation: ltr
-            bar_effect: []
-            hide: []
-            alert_when:
-              highlight: background
-            frameless: false
-            marginless: false
-            icon: mdi:transmission-tower-import
-            max_value:
-              jinja: '{{ states(''input_number.battery_capacity'') }}'
-            name: Consumed from Grid
-            card_mod:
-              style: |
-                ha-state-icon {
-                  color: lightcoral;
-                }
-          - type: custom:apexcharts-card
-            graph_span: 12h
-            update_interval: 5min
-            header:
-              show: true
-              title: Inverter Power - Last 12 Hours
-              show_states: true
-              colorize_states: true
-              standard_format: false
-            yaxis:
-              - id: power
-                decimals: 2
-                apex_config:
-                  title:
-                    text: Power (W)
-                  labels:
-                    formatter: |
-                      EVAL:function(value) {
-                        if (value >= 1000) {
-                          return (value / 1000).toFixed(1) + 'kW';
+
+
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_entities
+                state: "on"
+            card:
+              type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: repeat(2, 1fr)
+                margin: 0px
+                padding: 0px
+              cards:
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_imported_energy
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: red
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:transmission-tower-import
+                  icon_animation: spin
+                  custom_theme: []
+                  bar_effect: []
+                  name: Grid Import
+                  bar_size: small
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: red;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_exported_energy
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: green
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:transmission-tower-export
+                  icon_animation: spin
+                  custom_theme: []
+                  bar_effect: []
+                  name: Grid Export
+                  bar_size: small
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: green;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.inverter_battery_charge
+                  name: Battery Charge
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: green
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    below:
+                      jinja: >
+                        {% set capacity = states("input_number.battery_capacity")|float(0) %}
+                        {{ capacity * 0.2 }}
+                    highlight: background
+                    color: red
+                  frameless: false
+                  marginless: false
+                  icon: mdi:battery-arrow-up
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: green;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.inverter_daily_battery_discharge
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  bar_scale: linear
+                  bar_color: orange
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                    above:
+                      jinja: >-
+                        {% set capacity = states("input_number.battery_capacity")|float(0) %}
+                        {{ capacity * 0.8 }}
+                  frameless: false
+                  marginless: false
+                  name: Battery Discharge
+                  icon: mdi:battery-arrow-down
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: orange;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_battery_charge
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: tomato
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:battery-arrow-up
+                  name: Total Charge
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: tomato;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_battery_discharge
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: darkorange
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:battery-arrow-down
+                  name: Total Discharge
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: darkorange;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_daytime_consumption
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: goldenrod
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  name: Daytime Consumption
+                  icon: mdi:sun-clock
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: goldenrod;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.overnight_consumption
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: slategrey
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  icon: mdi:bed-clock
+                  name: Night Consumption
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: slategrey;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_house_energy_from_pv
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: khaki
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    below:
+                      jinja: >
+                        {% set capacity = states("input_number.battery_capacity")|float(0) %}
+                        {{ capacity * 0.2 }}
+                    highlight: background
+                    color: red
+                  frameless: false
+                  marginless: false
+                  icon: mdi:solar-power-variant
+                  name: Consumed from PV
+                  max_value: 80
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: khaki;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_house_energy_from_battery
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: plum
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:battery
+                  max_value: 80
+                  name: Consumed from Battery
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: plum;
+                      }
+
+                - type: custom:entity-progress-card
+                  entity: sensor.daily_house_energy_from_grid
+                  decimal: 1
+                  value_compact: false
+                  value_sign: false
+                  bar_scale: linear
+                  bar_color: lightcoral
+                  force_circular_background: false
+                  bar_orientation: ltr
+                  bar_effect: []
+                  hide: []
+                  alert_when:
+                    highlight: background
+                  frameless: false
+                  marginless: false
+                  icon: mdi:transmission-tower-import
+                  max_value:
+                    jinja: "{{ states('input_number.battery_capacity') }}"
+                  name: Consumed from Grid
+                  card_mod:
+                    style: |
+                      ha-state-icon {
+                        color: lightcoral;
+                      }
+
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_12hr
+                state: "on"
+            card:
+              type: custom:apexcharts-card
+              graph_span: 12h
+              update_interval: 5min
+              header:
+                show: true
+                title: Inverter Power - Last 12 Hours
+                show_states: true
+                colorize_states: true
+                standard_format: false
+              yaxis:
+                - id: power
+                  decimals: 2
+                  apex_config:
+                    title:
+                      text: Power (W)
+                    labels:
+                      formatter: |
+                        EVAL:function(value) {
+                          if (value >= 1000) {
+                            return (value / 1000).toFixed(1) + 'kW';
+                          }
+                          return value.toFixed(0) + 'W';
                         }
-                        return value.toFixed(0) + 'W';
-                      }
-              - id: percentage
-                opposite: true
-                decimals: 1
-                max: 100
-                min: 0
-                apex_config:
-                  title:
-                    text: Battery Level (%)
-            series:
-              - entity: sensor.inverter_pv_power
-                name: PV Power
-                type: area
-                color: '#FFD700'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_load_power
-                name: Load Power
-                type: area
-                color: '#87CEEB'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_import_power
-                name: Grid Import
-                type: area
-                color: '#FF6B6B'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_export_power
-                name: Grid Export
-                type: area
-                color: '#90EE90'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_battery_charging_power
-                name: Battery Charging
-                type: area
-                color: '#FFA500'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_battery_discharging_power
-                name: Battery Discharging
-                type: area
-                color: '#DDA0DD'
-                opacity: 0.3
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: power
-              - entity: sensor.inverter_battery_level
-                name: Battery Level
-                type: line
-                color: '#32CD32'
-                stroke_width: 1
-                group_by:
-                  func: avg
-                  duration: 5min
-                yaxis_id: percentage
-            apex_config:
-              chart:
-                height: 250
-                animations:
+                - id: percentage
+                  opposite: true
+                  decimals: 1
+                  max: 100
+                  min: 0
+                  apex_config:
+                    title:
+                      text: Battery Level (%)
+              series:
+                - entity: sensor.inverter_pv_power
+                  name: PV Power
+                  type: area
+                  color: '#FFD700'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_load_power
+                  name: Load Power
+                  type: area
+                  color: '#87CEEB'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_import_power
+                  name: Grid Import
+                  type: area
+                  color: '#FF6B6B'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_export_power
+                  name: Grid Export
+                  type: area
+                  color: '#90EE90'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_battery_charging_power
+                  name: Battery Charging
+                  type: area
+                  color: '#FFA500'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_battery_discharging_power
+                  name: Battery Discharging
+                  type: area
+                  color: '#DDA0DD'
+                  opacity: 0.3
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: power
+                - entity: sensor.inverter_battery_level
+                  name: Battery Level
+                  type: line
+                  color: '#32CD32'
+                  stroke_width: 1
+                  group_by:
+                    func: avg
+                    duration: 5min
+                  yaxis_id: percentage
+              apex_config:
+                chart:
+                  height: 250
+                  animations:
+                    enabled: true
+                stroke:
+                  curve: smooth
+                  dashArray:
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 5
+                dataLabels:
+                  enabled: false
+                legend:
+                  show: true
+                  position: bottom
+                tooltip:
                   enabled: true
-              stroke:
-                curve: smooth
-                dashArray:
-                  - 0
-                  - 0
-                  - 0
-                  - 0
-                  - 0
-                  - 0
-                  - 5
-              dataLabels:
-                enabled: false
-              legend:
+                  shared: true
+                  x:
+                    format: HH:mm dd/MM
+                  'y':
+                    formatter: |
+                      EVAL:function(value, { seriesIndex }) {
+                        if (seriesIndex === 6) {
+                          return value.toFixed(1) + '%';
+                        }
+                        if (value >= 1000) {
+                          return (value / 1000).toFixed(2) + ' kW';
+                        }
+                        return value.toFixed(0) + ' W';
+                      }
+                grid:
+                  show: true
+                  strokeDashArray: 3
+                xaxis:
+                  type: datetime
+                  labels:
+                    format: HH:mm
+              card_mod:
+                style: |
+                  #header {
+                    padding: 5px 10px 0 !important;
+                  }
+
+                  #header__title {
+                    font-size: 13px !important;
+                    padding-bottom: 2px !important;
+                  }
+
+                  #header__states {
+                    margin: -2px !important;
+                    gap: 2px;
+                  }
+
+                  #header__states > * {
+                    margin: 2px !important;
+                  }
+
+                  #state__value > #state {
+                    font-size: 1.3em !important;
+                  }
+
+                  #state__value > #uom {
+                    font-size: 0.75em !important;
+                  }
+
+                  #state__name {
+                    font-size: 0.7em !important;
+                  }
+              view_layout:
+                grid-column: span 5
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_profile
+                state: "on"
+            card:
+              type: custom:apexcharts-card
+              header:
                 show: true
-                position: bottom
-              tooltip:
-                enabled: true
-                shared: true
-                x:
-                  format: HH:mm dd/MM
-                'y':
-                  formatter: |
-                    EVAL:function(value, { seriesIndex }) {
-                      if (seriesIndex === 6) {
-                        return value.toFixed(1) + '%';
-                      }
-                      if (value >= 1000) {
-                        return (value / 1000).toFixed(2) + ' kW';
-                      }
-                      return value.toFixed(0) + ' W';
-                    }
-              grid:
+                title: Current Power Usage Profile by Hour (W)
+              graph_span: 24h
+              span:
+                start: day
+              now:
                 show: true
-                strokeDashArray: 3
-              xaxis:
-                type: datetime
-                labels:
-                  format: HH:mm
-            card_mod:
-              style: |
-                #header {
-                  padding: 5px 10px 0 !important;
-                }
-
-                #header__title {
-                  font-size: 13px !important;
-                  padding-bottom: 2px !important;
-                }
-
-                #header__states {
-                  margin: -2px !important;
-                  gap: 2px;
-                }
-
-                #header__states > * {
-                  margin: 2px !important;
-                }
-
-                #state__value > #state {
-                  font-size: 1.3em !important;
-                }
-
-                #state__value > #uom {
-                  font-size: 0.75em !important;
-                }
-
-                #state__name {
-                  font-size: 0.7em !important;
-                }
-            view_layout:
-              grid-column: span 5
-          - type: custom:apexcharts-card
-            header:
-              show: true
-              title: Current Power Usage Profile by Hour (W)
-            graph_span: 24h
-            span:
-              start: day
-            now:
-              show: true
-              label: Now
-            series:
-              - entity: sensor.power_estimate_profile
-                name: Predicted Power (W)
-                type: column
-                data_generator: >
-                  let data = []; const attributes =
-                  entity.attributes.attributes; const today = new Date(); if
-                  (attributes) {
-                    for (let i = 0; i < 24; i++) {
-                      let hourKey = 'hour_' + String(i).padStart(2, '0');
-                      let value = attributes[hourKey];
-                      if (value !== null && value !== undefined) {
-                        let timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), i, 0, 0, 0);
-                        data.push([timestamp.getTime(), parseFloat(value)]);
+                label: Now
+              series:
+                - entity: sensor.power_estimate_profile
+                  name: Predicted Power (W)
+                  type: column
+                  data_generator: >
+                    let data = []; const attributes =
+                    entity.attributes.attributes; const today = new Date(); if
+                    (attributes) {
+                      for (let i = 0; i < 24; i++) {
+                        let hourKey = 'hour_' + String(i).padStart(2, '0');
+                        let value = attributes[hourKey];
+                        if (value !== null && value !== undefined) {
+                          let timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), i, 0, 0, 0);
+                          data.push([timestamp.getTime(), parseFloat(value)]);
+                        }
                       }
-                    }
-                  } return data;
-            view_layout:
-              grid-column: span 3
+                    } return data;
+              view_layout:
+                grid-column: span 3
       - type: grid
         cards:
           - type: custom:energy-flow-card
@@ -991,100 +1028,113 @@ views:
                     font-weight: bold;
                     font-size: 1.2em;
                   }
-          - type: custom:modern-circular-gauge
-            entity: sensor.solcast_pv_forecast_forecast_today
-            gauge_foreground_style:
-              color: adaptive
-            gauge_background_style:
-              width: 3
-              color: adaptive
-            max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
-            min: 0
-            smooth_segments: true
-            adaptive_icon_color: true
-            segments:
-              - from: 0
-                color:
-                  - 255
-                  - 0
-                  - 0
-              - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
-                color:
-                  - 243
-                  - 156
-                  - 18
-              - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
-                color:
-                  - 224
-                  - 220
-                  - 111
-              - color:
-                  - 40
-                  - 180
-                  - 99
-                from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
-            secondary: {}
-            tertiary: {}
-            grid_options:
-              columns: 6
-              rows: 3
-            name: Solar Forecast Today
-            needle: false
-            start_from_zero: false
-            show_state: true
-            show_unit: true
-            unit_superscript: true
-            show_seconds: true
-            adaptive_state_color: false
-            adaptive_label_color: false
-            inverted_mode: false
-            show_in_graph: true
-            adaptive_graph_range: false
-            needle_config: {}
-            header_position: bottom
-            show_header: true
-            show_icon: true
-            show_entity_picture: false
-            gauge_type: standard
-          - type: custom:modern-circular-gauge
-            entity: sensor.solcast_pv_forecast_forecast_tomorrow
-            name: Forecast Tomorrow
-            gauge_foreground_style:
-              color: adaptive
-            gauge_background_style:
-              width: 3
-              color: adaptive
-            max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
-            min: 0
-            smooth_segments: true
-            adaptive_icon_color: true
-            segments:
-              - from: 0
-                color:
-                  - 255
-                  - 0
-                  - 0
-              - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
-                color:
-                  - 243
-                  - 156
-                  - 18
-              - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
-                color:
-                  - 224
-                  - 220
-                  - 111
-              - color:
-                  - 40
-                  - 180
-                  - 99
-                from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
-            secondary:
-              entity: sensor.day_tomorrow
-            tertiary: {}
-            grid_options:
-              columns: 6
-              rows: 3
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_solar
+                state: "on"
+            card:
+              type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: repeat(2, 1fr)
+                margin: 0px
+                padding: 0px
+              cards:
+                - type: custom:modern-circular-gauge
+                  entity: sensor.solcast_pv_forecast_forecast_today
+                  gauge_foreground_style:
+                    color: adaptive
+                  gauge_background_style:
+                    width: 3
+                    color: adaptive
+                  max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
+                  min: 0
+                  smooth_segments: true
+                  adaptive_icon_color: true
+                  segments:
+                    - from: 0
+                      color:
+                        - 255
+                        - 0
+                        - 0
+                    - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
+                      color:
+                        - 243
+                        - 156
+                        - 18
+                    - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
+                      color:
+                        - 224
+                        - 220
+                        - 111
+                    - color:
+                        - 40
+                        - 180
+                        - 99
+                      from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
+                  secondary: {}
+                  tertiary: {}
+                  grid_options:
+                    columns: 6
+                    rows: 3
+                  name: Solar Forecast Today
+                  needle: false
+                  start_from_zero: false
+                  show_state: true
+                  show_unit: true
+                  unit_superscript: true
+                  show_seconds: true
+                  adaptive_state_color: false
+                  adaptive_label_color: false
+                  inverted_mode: false
+                  show_in_graph: true
+                  adaptive_graph_range: false
+                  needle_config: {}
+                  header_position: bottom
+                  show_header: true
+                  show_icon: true
+                  show_entity_picture: false
+                  gauge_type: standard
+
+                - type: custom:modern-circular-gauge
+                  entity: sensor.solcast_pv_forecast_forecast_tomorrow
+                  name: Forecast Tomorrow
+                  gauge_foreground_style:
+                    color: adaptive
+                  gauge_background_style:
+                    width: 3
+                    color: adaptive
+                  max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
+                  min: 0
+                  smooth_segments: true
+                  adaptive_icon_color: true
+                  segments:
+                    - from: 0
+                      color:
+                        - 255
+                        - 0
+                        - 0
+                    - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
+                      color:
+                        - 243
+                        - 156
+                        - 18
+                    - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
+                      color:
+                        - 224
+                        - 220
+                        - 111
+                    - color:
+                        - 40
+                        - 180
+                        - 99
+                      from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
+                  secondary:
+                    entity: sensor.day_tomorrow
+                  tertiary: {}
+                  grid_options:
+                    columns: 6
+                    rows: 3
           - type: custom:state-switch
             entity: input_boolean.em_api_server
             states:
@@ -1232,156 +1282,167 @@ views:
                       columnWidth: 95%
                   stroke:
                     width: 2
-          - type: custom:state-switch
-            entity: input_boolean.em_api_server
-            states:
-              'on':
-                type: custom:apexcharts-card
-                header:
-                  title: Next 24hr's Price & Curtailment Forecast (subject to change)
-                  show: true
-                graph_span: 24h
-                span:
-                  start: minute
-                now:
-                  show: true
-                apex_config:
-                  chart:
-                    height: 220
-                  legend:
+
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_pricing
+                state: "on"
+            card:
+              type: custom:state-switch
+              entity: input_boolean.em_api_server
+              states:
+                'on':
+                  type: custom:apexcharts-card
+                  header:
+                    title: Next 24hr's Price & Curtailment Forecast (subject to change)
                     show: true
-                    formatter: EVAL:function(seriesName, opts) { return seriesName; }
-                yaxis:
-                  - id: price
-                    decimals: 3
-                    apex_config:
-                      title:
-                        text: $/kWh
-                  - id: curtail
-                    opposite: true
-                    min: 0
-                    max: 100
-                    decimals: 0
-                    apex_config:
-                      title:
-                        text: Curtail (%)
-                series:
-                  - entity: sensor.energy_manager_plan
-                    name: Buy Price ($/kWh)
-                    type: area
-                    color: red
-                    opacity: 0.3
-                    yaxis_id: price
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.inputs?.buy_price ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: Sell Price ($/kWh)
-                    type: area
-                    color: green
-                    opacity: 0.3
-                    yaxis_id: price
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.inputs?.sell_price ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: Curtailment (%)
-                    type: column
-                    yaxis_id: curtail
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.setpoints?.curtail_pct ?? 0)]);
-          - type: custom:state-switch
-            entity: binary_sensor.ocpp_active
-            states:
-              'on':
-                type: custom:apexcharts-card
-                header:
-                  title: Next 24hr's EV Charging Forecast (subject to change)
-                  show: true
-                graph_span: 24h
-                span:
-                  start: minute
-                now:
-                  show: true
-                apex_config:
-                  chart:
-                    height: 220
-                  legend:
+                  graph_span: 24h
+                  span:
+                    start: minute
+                  now:
                     show: true
-                    formatter: EVAL:function(seriesName, opts) { return seriesName; }
-                yaxis:
-                  - id: power
-                    min: 0
-                    decimals: 1
-                    apex_config:
-                      title:
-                        text: Power (kW)
-                  - id: battery
-                    decimals: 0
-                    opposite: true
-                    apex_config:
-                      title:
-                        text: '%'
-                series:
-                  - entity: sensor.energy_manager_plan
-                    name: Solar Charge
-                    type: area
-                    color: yellow
-                    opacity: 0.3
-                    yaxis_id: power
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.ev?.solar_kw ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: Grid Charge
-                    type: area
-                    color: red
-                    opacity: 0.1
-                    yaxis_id: power
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.ev?.grid_kw ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: Battery Charge
-                    type: line
-                    color: blue
-                    yaxis_id: power
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.ev?.battery_kw ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: Total Charge
-                    type: line
-                    color: green
-                    opacity: 0.1
-                    yaxis_id: power
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.ev?.charge_kw ?? 0)]);
-                  - entity: sensor.energy_manager_plan
-                    name: EV SOC
-                    type: line
-                    color: purple
-                    yaxis_id: battery
-                    stroke_width: 2
-                    data_generator: >
-                      const t = entity.attributes.energy_plan?.timeline || [];
-                      return t.map(p => [new Date(p.ts).getTime(),
-                      Number(p.ev?.ev_soc ?? 0)]);
+                  apex_config:
+                    chart:
+                      height: 220
+                    legend:
+                      show: true
+                      formatter: EVAL:function(seriesName, opts) { return seriesName; }
+                  yaxis:
+                    - id: price
+                      decimals: 3
+                      apex_config:
+                        title:
+                          text: $/kWh
+                    - id: curtail
+                      opposite: true
+                      min: 0
+                      max: 100
+                      decimals: 0
+                      apex_config:
+                        title:
+                          text: Curtail (%)
+                  series:
+                    - entity: sensor.energy_manager_plan
+                      name: Buy Price ($/kWh)
+                      type: area
+                      color: red
+                      opacity: 0.3
+                      yaxis_id: price
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.inputs?.buy_price ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: Sell Price ($/kWh)
+                      type: area
+                      color: green
+                      opacity: 0.3
+                      yaxis_id: price
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.inputs?.sell_price ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: Curtailment (%)
+                      type: column
+                      yaxis_id: curtail
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.setpoints?.curtail_pct ?? 0)]);
+          - type: conditional
+            conditions:
+              - entity: input_boolean.pv_dashboard_ev
+                state: "on"
+            card:
+              type: custom:state-switch
+              entity: binary_sensor.ocpp_active
+              states:
+                'on':
+                  type: custom:apexcharts-card
+                  header:
+                    title: Next 24hr's EV Charging Forecast (subject to change)
+                    show: true
+                  graph_span: 24h
+                  span:
+                    start: minute
+                  now:
+                    show: true
+                  apex_config:
+                    chart:
+                      height: 220
+                    legend:
+                      show: true
+                      formatter: EVAL:function(seriesName, opts) { return seriesName; }
+                  yaxis:
+                    - id: power
+                      min: 0
+                      decimals: 1
+                      apex_config:
+                        title:
+                          text: Power (kW)
+                    - id: battery
+                      decimals: 0
+                      opposite: true
+                      apex_config:
+                        title:
+                          text: '%'
+                  series:
+                    - entity: sensor.energy_manager_plan
+                      name: Solar Charge
+                      type: area
+                      color: yellow
+                      opacity: 0.3
+                      yaxis_id: power
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.ev?.solar_kw ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: Grid Charge
+                      type: area
+                      color: red
+                      opacity: 0.1
+                      yaxis_id: power
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.ev?.grid_kw ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: Battery Charge
+                      type: line
+                      color: blue
+                      yaxis_id: power
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.ev?.battery_kw ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: Total Charge
+                      type: line
+                      color: green
+                      opacity: 0.1
+                      yaxis_id: power
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.ev?.charge_kw ?? 0)]);
+                    - entity: sensor.energy_manager_plan
+                      name: EV SOC
+                      type: line
+                      color: purple
+                      yaxis_id: battery
+                      stroke_width: 2
+                      data_generator: >
+                        const t = entity.attributes.energy_plan?.timeline || [];
+                        return t.map(p => [new Date(p.ts).getTime(),
+                        Number(p.ev?.ev_soc ?? 0)]);
         column_span: 1
     cards: []
   - type: sections
@@ -3797,4 +3858,3 @@ views:
                ---
               _Title: Changelog
               Updated: {{ state_attr('sensor.energy_manager_changelog', 'updated') }}_
-
