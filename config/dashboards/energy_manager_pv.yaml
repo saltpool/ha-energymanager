@@ -1,10 +1,10 @@
-# energy_manager_pv.yaml v1.3.0
+# Energy Manager PV Dashboard — v2.0.0
 views:
   - type: sections
     max_columns: 3
     icon: mdi:home-lightning-bolt
-    path: em-inverter
-    title: Inverter
+    path: em-overview
+    title: Overview
     sections:
       - type: grid
         cards:
@@ -90,6 +90,1308 @@ views:
                   tap_action:
                     action: call-service
                     service: rest_command.em_general_mark_read
+          - type: sensor
+            entity: sensor.grid_buy_price
+            graph: line
+            detail: 1
+            name: Buy Price
+            icon: mdi:currency-usd
+            unit: $/kWh
+            view_layout:
+              grid-column: span 2
+          - type: sensor
+            entity: sensor.grid_sell_price
+            graph: line
+            detail: 1
+            name: Grid Sell Price
+            icon: mdi:currency-usd
+            unit: $/kWh
+            view_layout:
+              grid-column: span 2
+          - type: markdown
+            content: >
+              {% if is_state('switch.energy_control_on_off', 'on') %}
+                <h1 style="color: orange; margin-top: 0;">✅ Energy Manager Decision</h1>
+              {% else %}
+                <h1 style="color: black; margin-top: 0;">❌ Energy Manager Decision</h1>
+                <h2>Energy Control is disabled.</h2>
+                <h3>The last update received was:</h3>
+              {% endif %}
+
+              {% set file_content = states('sensor.energy_manager_decision') |
+              string %}
+
+              {% if file_content | trim == '' or file_content in ['unknown',
+              'unavailable', 'Unknown'] %}
+                <i>The decision will be displayed once you have successfully queried the Energy Manager API.<p>Connectivity will not occur until your Amber Electric/LocalVolts pricing is received (if applicable), and your BOM integration is working. You must also have entered your Energy Manager API key. Only after this will Energy Manager attempt to connect through to the Energy Manager API servers.</p></i>
+              {% else %}
+                {% set translated_content = file_content
+                  .replace('Mode: Self', 'Mode: Self Consumption')
+                  .replace('Mode: Imp', 'Mode: Import')
+                  .replace('Mode: Exp', 'Mode: Export')
+                  .replace('Reason: Self', 'Reason: Ordinary Self Consumption')
+                  .replace('Reason: export_','Reason: Export period ')
+                  .replace('Reason: FPFC','Reason: Free period, force charge')
+                  .replace('Reason: SCT','Reason: Scheduled charge, charge to')
+                  .replace('Reason: SCH','Reason: Scheduled charge, target reached, hold')
+                  .replace('Reason: CHGRQD','Reason: Charge required - ')
+                  .replace('Reason: BATTR','Reason: Battery discharge restricted. Less than ')
+                  .replace('Reason: FPPB','Reason: Free period, preserve battery')
+                  .replace('Reason: CAPRFP','Reason: Free import cap reached')
+                  .replace('Reason: EXPCP','Reason: Export cap reached')
+                  .replace('Reason: CRTE','Reason: Curtail Export')
+                  .replace('Reason: FICB','Reason: Free import - charging battery')
+                  .replace('Batt:', 'Battery SoC:')
+                  .replace('Exp SOC:', 'Battery reserve:')
+                  .replace('free_', 'Free Tariff #')
+                  .replace('peak_', 'Peak Tariff #')
+                  .replace('offpeak_', 'Offpeak Tariff #')
+                  .replace('shoulder_', 'Shoulder Tariff #')
+                  .replace('export_', 'Export Tariff #')
+                  .replace('Curtail:', 'Curtail Exports:')
+                  .replace('Chg','Charge')
+                  .replace('Dchg','Discharge')
+                  .replace('MD:','Mode:')
+                  .replace('BY:','Buy band:')
+                  .replace('SL:','Sell band:')
+                  .replace('CT:','Curtailment:')
+                  .replace('ENOW:','Export now:')
+                  .replace('Plan: NSCR','Plan: No scheduled charge required')
+                  .replace('CRFEH','Charge reduced: Forecasted export headroom')
+                  .replace('DRUNAV:','Dynamic reserve unavailable:')
+                  .replace('DRSV','Dynamic reserve:')
+                  .replace('CREEEI','cap reached; exporting eligible excess in')
+                  .replace('STRSV','Stop reserve')
+                  .replace('Imp remain:','Import cap remaining:')
+                  .replace('Exp remain:','Export cap remaining:')
+                  .replace('Exp now:', 'Export Now:')
+                  .replace('EUTO','exporting up to')
+                  .replace('KWHEI','kWh excess in')
+                  .replace('KWHFHT','kWh for a higher tariff. Stop reserve')
+                  .replace('EXIN','exporting in')
+                  .replace('SOTPKC','SOC or the provider kWh cap.')
+                  .replace('DRRH','Dynamic reserve reached: holding')
+                  .replace('SFFSOL','SOC for forecast use until solar recovery.')
+                  .replace('DR:H','Dynamic reserve: holding')
+                  .replace('KFAHPEP','kWh for a higher-priced export period. Target reserve')
+                  .replace('DRWFEB','Dynamic reserve: waiting for an enabled battery-export period. Target reserve')
+                  .replace('DYNRES','Dynamic reserve:')
+                  .replace('PKCR','provider kWh cap reached; battery export stopped.')
+                  .replace('DRNBER','Dynamic reserve: no battery export required now. Target reserve')
+                %}
+                <ul style="padding-left: 20px; font-size: 1.1em; line-height: 1.6;">
+                  {{ translated_content }}
+                </ul>
+                {% set epoch = states('sensor.energy_manager_decision_timestamp') | int(0) %}
+                **Last Updated:** {{ epoch | timestamp_custom('%d %b %Y at %I:%M %p', true) }}
+              {% endif %}
+            view_layout:
+              grid-column: span 3
+          - show_name: true
+            show_icon: true
+            type: button
+            tap_action:
+              action: toggle
+            entity: switch.energy_control_on_off
+            name: Energy Control
+            show_state: true
+            icon: mdi:home-battery
+            grid_options:
+              columns: 4
+              rows: 3
+          - type: conditional
+            grid_options:
+              columns: 4
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              show_name: true
+              show_icon: true
+              type: button
+              entity: input_boolean.high_sell_price_toggle
+              name: High Sell Price Mode
+              show_state: true
+              icon: mdi:currency-usd
+          - type: conditional
+            grid_options:
+              columns: 4
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              show_name: true
+              show_icon: true
+              type: button
+              entity: input_boolean.sellbuy_mode_enabled
+              name: Sell/Buy Mode
+              show_state: true
+              icon: mdi:autorenew
+          - type: conditional
+            grid_options:
+              columns: 8
+              rows: 3
+            conditions:
+              - entity: input_select.electricity_provider
+                state: ["Flow Power", "Globird", "Other"]
+            card:
+              type: entities
+              show_header_toggle: false
+              entities:
+                - entity: input_boolean.energy_control_auto_reenable
+                  name: Auto re-enable Energy Control
+          - type: conditional
+            conditions:
+              - entity: input_select.electricity_provider
+                state_not: ["Flow Power", "Globird", "Other"]
+            card:
+              type: entities
+              entities:
+                - entity: input_boolean.energy_control_auto_reenable
+                  name: Auto re-enable Energy Control
+          - type: conditional
+            conditions:
+              - entity: input_boolean.energy_control_auto_reenable
+                state: "on"
+            card:
+              type: entities
+              title: Energy Control Disable Timer
+              entities:
+                - entity: input_text.energy_control_duration
+                  name: Disable Duration
+                - entity: timer.energy_control
+                  name: Energy Control Disable Timer Status
+          - type: conditional
+            conditions:
+              - entity: input_text.nodered_last_error
+                state_not: ["", "unknown", "unavailable"]
+            card:
+              type: markdown
+              content: >
+                <div>
+                ⚠️ Warning: {{ states('input_text.nodered_last_error')}}
+                <br><br>Energy Manager will not function until this error is fixed.
+                <br><br>If you believe this is in error, you can clear the message from input_text.nodered_last_error.
+                </div>
+              card_mod:
+                style: |
+                  ha-card {
+                    background-color: #ffe6e7;
+                    color: #ff0000ff;
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    font-size: 1.2em;
+                  }
+          - type: markdown
+            entity_id:
+              - sensor.energy_manager_plan
+            content: >
+              {% set plan = state_attr('sensor.energy_manager_plan',
+              'energy_plan') %}
+
+              {% if plan is string %}
+                {% set plan = plan | from_json(default={}) %}
+              {% endif %}
+
+              {% set plan = plan if plan is mapping else {} %}
+
+              {% set timeline = plan.get('timeline', []) %}
+
+
+              ### 🔮 Future Decisions
+
+
+              {% if timeline %}
+
+              {% set ns = namespace(rows=[
+                '| Time | Decision | Buy | Sell | Load | Solar | Grid | EV | Batt |',
+                '|:---|:---|---:|---:|---:|---:|---:|---:|---:|'
+              ]) %}
+
+
+              {% for r in timeline[:10] %}
+                {% set pv = r.inputs.pv_kw | float(0) %}
+                {% set load = r.inputs.load_kw | float(0) %}
+                {% set ev = r.inputs.ev_charge_kw | float(0) %}
+                {% set charge = r.expected.battery_charge_kw | float(0) %}
+                {% set discharge = r.expected.battery_discharge_kw | float(0) %}
+                {% set imp = r.expected.grid_import_kw | float(0) %}
+                {% set exp = r.expected.grid_export_kw | float(0) %}
+                {% set battery = charge - discharge %}
+                {% set grid = imp - exp %}
+
+                {% if exp > 0.05 %}
+                  {% set action = '⚡ Export → Grid' %}
+                {% elif imp > 0.05 and charge > 0.05 %}
+                  {% set action = '⚡ Grid → Battery' %}
+                {% elif pv > 0.05 and charge > 0.05 %}
+                  {% set action = '☀️ Solar → Battery' %}
+                {% elif pv > 0.05 %}
+                  {% set action = '☀️ Solar → Home' %}
+                {% elif discharge > 0.05 %}
+                  {% set action = '🔋 Battery → Home' %}
+                {% elif imp > 0.05 %}
+                  {% set action = '⚡ Grid → Home' %}
+                {% else %}
+                  {% set action = '⏸️ Standby' %}
+                {% endif %}
+
+                {% if ev > 0.05 %}
+                  {% set action = action ~ ' + 🚗 EV' %}
+                {% endif %}
+
+                {% set row = '| ' ~
+                  (as_timestamp(r.ts) | timestamp_custom('%H:%M', true)) ~ ' | ' ~
+                  action ~ ' | ' ~
+                  ('%.3f' | format(r.inputs.buy_price | float(0))) ~ ' | ' ~
+                  ('%.3f' | format(r.inputs.sell_price | float(0))) ~ ' | ' ~
+                  ('%.2f' | format(load)) ~ ' | ' ~
+                  ('%.2f' | format(pv)) ~ ' | ' ~
+                  ('%+.2f' | format(grid)) ~ ' | ' ~
+                  ('%.2f' | format(ev)) ~ ' | ' ~
+                  ('%+.2f' | format(battery)) ~ ' |'
+                %}
+                {% set ns.rows = ns.rows + [row] %}
+              {% endfor %}
+
+
+              {{ ns.rows | join('\n') }}
+
+
+              {% else %}
+
+              No forecast available.
+
+              {% endif %}
+            view_layout:
+              grid-column: span 5
+      - type: grid
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: >
+                  ## Net
+
+                  {% set cost = states('sensor.grid_energy_net_daily_cost') |
+                  float(0) %}
+
+                  ## {% if cost < 0 -%}-${{ cost | abs | round(2) }}{% else
+                  %}${{ cost |  round(2) }}{% endif %}
+                card_mod:
+                  style: |
+                    ha-markdown {
+                      color: {% if states('sensor.grid_energy_net_daily_cost') | float(0) > 0 %}#43a047{% else %}#e53935{% endif %};
+                    }
+              - type: markdown
+                content: |
+                  ## Buy
+                  ## {{ states('sensor.import_formatted') }}
+              - type: markdown
+                content: |
+                  ## Sell
+                  ## {{ states('sensor.export_formatted') }}
+          - type: custom:entity-progress-card
+            entity: sensor.daily_pv_generation_alt
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: yellow
+            force_circular_background: false
+            bar_orientation: ltr
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:white-balance-sunny
+            icon_animation: spin
+            custom_theme: []
+            bar_effect: []
+            name: Generation
+            max_value:
+              jinja: >-
+                {% set size = states('input_number.solar_array_size') | float(0)
+                %}
+
+                {{ size * 7 }}
+            bar_size: small
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: yellow;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_consumed_energy
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: dodgerblue
+            force_circular_background: false
+            bar_orientation: ltr
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:home-lightning-bolt
+            icon_animation: spin
+            custom_theme: []
+            bar_effect: []
+            max_value:
+              jinja: >-
+                {% set size = states('input_number.solar_array_size') | float(0)
+                %}
+
+                {{ size * 7 }}
+            bar_size: small
+            name: Total Consumed
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: dodgerblue;
+                }
+          - type: entities
+            title: EMS Control
+            entities:
+              - input_select.inverter_ems_mode
+              - input_select.inverter_charge_discharge_mode
+            view_layout:
+              grid-column: span 3
+          - type: custom:entity-progress-card
+            entity: sensor.daily_imported_energy
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: red
+            force_circular_background: false
+            bar_orientation: ltr
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:transmission-tower-import
+            icon_animation: spin
+            custom_theme: []
+            bar_effect: []
+            name: Grid Import
+            bar_size: small
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'')}}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: red;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_exported_energy
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: green
+            force_circular_background: false
+            bar_orientation: ltr
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:transmission-tower-export
+            icon_animation: spin
+            custom_theme: []
+            bar_effect: []
+            name: Grid Export
+            bar_size: small
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'')}}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: green;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.inverter_battery_charge
+            name: Battery Charge
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: green
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              below:
+                jinja: >
+                  {% set capacity =
+                  states("input_number.battery_capacity")|float(0) %}
+
+                  {{ capacity * 0.2 }}
+              highlight: background
+              color: red
+            frameless: false
+            marginless: false
+            icon: mdi:battery-arrow-up
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: green;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.inverter_daily_battery_discharge
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            bar_scale: linear
+            bar_color: orange
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+              above:
+                jinja: >-
+                  {% set capacity =
+                  states("input_number.battery_capacity")|float(0) %}
+
+                  {{ capacity * 0.8 }}
+            frameless: false
+            marginless: false
+            name: Battery Discharge
+            icon: mdi:battery-arrow-down
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: orange;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_battery_charge
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: tomato
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:battery-arrow-up
+            name: Total Charge
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: tomato;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_battery_discharge
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: darkorange
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:battery-arrow-down
+            name: Total Discharge
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: darkorange;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_daytime_consumption
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: goldenrod
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            name: Daytime Consumption
+            icon: mdi:sun-clock
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: goldenrod;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.overnight_consumption
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: slategrey
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            icon: mdi:bed-clock
+            name: Night Consumption
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: slategrey;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_house_energy_from_pv
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: khaki
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              below:
+                jinja: >
+                  {% set capacity =
+                  states("input_number.battery_capacity")|float(0) %}
+
+                  {{ capacity * 0.2 }}
+              highlight: background
+              color: red
+            frameless: false
+            marginless: false
+            icon: mdi:solar-power-variant
+            name: Consumed from PV
+            max_value: 80
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: khaki;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_house_energy_from_battery
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: plum
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:battery
+            max_value: 80
+            name: Consumed from Battery
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: plum;
+                }
+          - type: custom:entity-progress-card
+            entity: sensor.daily_house_energy_from_grid
+            decimal: 1
+            value_compact: false
+            value_sign: false
+            bar_scale: linear
+            bar_color: lightcoral
+            force_circular_background: false
+            bar_orientation: ltr
+            bar_effect: []
+            hide: []
+            alert_when:
+              highlight: background
+            frameless: false
+            marginless: false
+            icon: mdi:transmission-tower-import
+            max_value:
+              jinja: '{{ states(''input_number.battery_capacity'') }}'
+            name: Consumed from Grid
+            card_mod:
+              style: |
+                ha-state-icon {
+                  color: lightcoral;
+                }
+          - type: custom:apexcharts-card
+            graph_span: 12h
+            update_interval: 5min
+            header:
+              show: true
+              title: Inverter Power - Last 12 Hours
+              show_states: true
+              colorize_states: true
+              standard_format: false
+            yaxis:
+              - id: power
+                decimals: 2
+                apex_config:
+                  title:
+                    text: Power (W)
+                  labels:
+                    formatter: |
+                      EVAL:function(value) {
+                        if (value >= 1000) {
+                          return (value / 1000).toFixed(1) + 'kW';
+                        }
+                        return value.toFixed(0) + 'W';
+                      }
+              - id: percentage
+                opposite: true
+                decimals: 1
+                max: 100
+                min: 0
+                apex_config:
+                  title:
+                    text: Battery Level (%)
+            series:
+              - entity: sensor.inverter_pv_power
+                name: PV Power
+                type: area
+                color: '#FFD700'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_load_power
+                name: Load Power
+                type: area
+                color: '#87CEEB'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_import_power
+                name: Grid Import
+                type: area
+                color: '#FF6B6B'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_export_power
+                name: Grid Export
+                type: area
+                color: '#90EE90'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_battery_charging_power
+                name: Battery Charging
+                type: area
+                color: '#FFA500'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_battery_discharging_power
+                name: Battery Discharging
+                type: area
+                color: '#DDA0DD'
+                opacity: 0.3
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: power
+              - entity: sensor.inverter_battery_level
+                name: Battery Level
+                type: line
+                color: '#32CD32'
+                stroke_width: 1
+                group_by:
+                  func: avg
+                  duration: 5min
+                yaxis_id: percentage
+            apex_config:
+              chart:
+                height: 250
+                animations:
+                  enabled: true
+              stroke:
+                curve: smooth
+                dashArray:
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 5
+              dataLabels:
+                enabled: false
+              legend:
+                show: true
+                position: bottom
+              tooltip:
+                enabled: true
+                shared: true
+                x:
+                  format: HH:mm dd/MM
+                'y':
+                  formatter: |
+                    EVAL:function(value, { seriesIndex }) {
+                      if (seriesIndex === 6) {
+                        return value.toFixed(1) + '%';
+                      }
+                      if (value >= 1000) {
+                        return (value / 1000).toFixed(2) + ' kW';
+                      }
+                      return value.toFixed(0) + ' W';
+                    }
+              grid:
+                show: true
+                strokeDashArray: 3
+              xaxis:
+                type: datetime
+                labels:
+                  format: HH:mm
+            card_mod:
+              style: |
+                #header {
+                  padding: 5px 10px 0 !important;
+                }
+
+                #header__title {
+                  font-size: 13px !important;
+                  padding-bottom: 2px !important;
+                }
+
+                #header__states {
+                  margin: -2px !important;
+                  gap: 2px;
+                }
+
+                #header__states > * {
+                  margin: 2px !important;
+                }
+
+                #state__value > #state {
+                  font-size: 1.3em !important;
+                }
+
+                #state__value > #uom {
+                  font-size: 0.75em !important;
+                }
+
+                #state__name {
+                  font-size: 0.7em !important;
+                }
+            view_layout:
+              grid-column: span 5
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Current Power Usage Profile by Hour (W)
+            graph_span: 24h
+            span:
+              start: day
+            now:
+              show: true
+              label: Now
+            series:
+              - entity: sensor.power_estimate_profile
+                name: Predicted Power (W)
+                type: column
+                data_generator: >
+                  let data = []; const attributes =
+                  entity.attributes.attributes; const today = new Date(); if
+                  (attributes) {
+                    for (let i = 0; i < 24; i++) {
+                      let hourKey = 'hour_' + String(i).padStart(2, '0');
+                      let value = attributes[hourKey];
+                      if (value !== null && value !== undefined) {
+                        let timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), i, 0, 0, 0);
+                        data.push([timestamp.getTime(), parseFloat(value)]);
+                      }
+                    }
+                  } return data;
+            view_layout:
+              grid-column: span 3
+      - type: grid
+        cards:
+          - type: custom:energy-flow-3d-card
+            image: /local/energy-flow-house.png
+            animation_speed: 1
+            threshold_w: 30
+            show_labels: true
+            solar_panel_glow: true
+            glow_intensity: 0.5
+            weather_effects: true
+            weather_entity: weather.home
+            weather_intensity: 1
+            view_layout:
+              grid-column: span 5
+          - type: conditional
+            conditions:
+              - entity: sensor.demand_interval
+                state: "True"
+            card:
+              type: markdown
+              content: >
+                <div>
+                <center>⚡ Demand Period Active ⚡</center>
+                </div>
+              card_mod:
+                style: |
+                  ha-card {
+                    background-color:rgb(249, 228, 217);
+                    color:rgb(247, 115, 0);
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    font-size: 1.2em;
+                  }
+          - type: custom:modern-circular-gauge
+            entity: sensor.solcast_pv_forecast_forecast_today
+            gauge_foreground_style:
+              color: adaptive
+            gauge_background_style:
+              width: 3
+              color: adaptive
+            max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
+            min: 0
+            smooth_segments: true
+            adaptive_icon_color: true
+            segments:
+              - from: 0
+                color:
+                  - 255
+                  - 0
+                  - 0
+              - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
+                color:
+                  - 243
+                  - 156
+                  - 18
+              - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
+                color:
+                  - 224
+                  - 220
+                  - 111
+              - color:
+                  - 40
+                  - 180
+                  - 99
+                from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
+            secondary: {}
+            tertiary: {}
+            grid_options:
+              columns: 6
+              rows: 3
+            name: Solar Forecast Today
+            needle: false
+            start_from_zero: false
+            show_state: true
+            show_unit: true
+            unit_superscript: true
+            show_seconds: true
+            adaptive_state_color: false
+            adaptive_label_color: false
+            inverted_mode: false
+            show_in_graph: true
+            adaptive_graph_range: false
+            needle_config: {}
+            header_position: bottom
+            show_header: true
+            show_icon: true
+            show_entity_picture: false
+            gauge_type: standard
+          - type: custom:modern-circular-gauge
+            entity: sensor.solcast_pv_forecast_forecast_tomorrow
+            name: Forecast Tomorrow
+            gauge_foreground_style:
+              color: adaptive
+            gauge_background_style:
+              width: 3
+              color: adaptive
+            max: '{{states(''input_number.solar_array_size'') | float(0) * 7}}'
+            min: 0
+            smooth_segments: true
+            adaptive_icon_color: true
+            segments:
+              - from: 0
+                color:
+                  - 255
+                  - 0
+                  - 0
+              - from: '{{states(''input_number.solar_array_size'') | float(0) * 2}}'
+                color:
+                  - 243
+                  - 156
+                  - 18
+              - from: '{{states(''input_number.solar_array_size'') | float(0) * 3.5}}'
+                color:
+                  - 224
+                  - 220
+                  - 111
+              - color:
+                  - 40
+                  - 180
+                  - 99
+                from: '{{states(''input_number.solar_array_size'') | float(0) * 5}}'
+            secondary:
+              entity: sensor.day_tomorrow
+            tertiary: {}
+            grid_options:
+              columns: 6
+              rows: 3
+          - type: custom:state-switch
+            entity: input_boolean.em_api_server
+            states:
+              'off':
+                type: markdown
+                content: >
+                  <div style="background-color: var(--primary-color); color:
+                  white; padding: 10px 16px; border-radius: 4px 4px 0 0;
+                  font-weight: bold; font-size: 1.2em;"> <h3>Next 24hr's Energy
+                  Plan</h3>
+
+                  Premium subscribers will receive a 24hr forecast of their
+                  energy use in chart format.
+
+
+                  This will include solar generation, battery charge and
+                  discharge, battery SoC, grid import and export. It will also
+                  show when any scheduled charges are planned, and when any
+                  energy exports are planned due to current sell price
+                  forecasts.
+
+                  This is useful when planning ahead for your energy usage, to
+                  see an estimate of what your battery level is likely to get
+                  down to over night, and by when it will be charged the next
+                  day. </div>
+              'on':
+                type: custom:apexcharts-card
+                header:
+                  title: Next 24hr's Energy Plan (forecast only, subject to change)
+                  show: true
+                graph_span: 24h
+                span:
+                  start: minute
+                now:
+                  show: true
+                yaxis:
+                  - id: kw
+                    min: 0
+                    decimals: 1
+                    apex_config:
+                      title:
+                        text: kW
+                  - id: soc
+                    min: 0
+                    max: 100
+                    decimals: 0
+                    opposite: true
+                    apex_config:
+                      title:
+                        text: SoC %
+                series:
+                  - entity: sensor.energy_manager_plan
+                    name: PV (kW)
+                    yaxis_id: kw
+                    type: area
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.inputs?.pv_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Load (kW)
+                    yaxis_id: kw
+                    type: line
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.inputs?.load_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Grid import (kW)
+                    yaxis_id: kw
+                    type: column
+                    stroke_width: 0
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.expected?.grid_import_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Grid export (kW)
+                    yaxis_id: kw
+                    type: column
+                    stroke_width: 0
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.expected?.grid_export_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Battery charge (kW)
+                    yaxis_id: kw
+                    type: column
+                    stroke_width: 0
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.expected?.battery_charge_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Battery discharge (kW)
+                    yaxis_id: kw
+                    type: column
+                    stroke_width: 0
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.expected?.battery_discharge_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Forced charge (kW)
+                    yaxis_id: kw
+                    type: line
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.setpoints?.force_charge_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Forced export (kW)
+                    yaxis_id: kw
+                    type: line
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.setpoints?.force_export_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Battery SoC (%)
+                    yaxis_id: soc
+                    type: line
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.expected?.soc_pct_end ?? 0)]);
+                apex_config:
+                  chart:
+                    height: 320
+                  legend:
+                    show: true
+                    formatter: EVAL:function(seriesName, opts) { return seriesName; }
+                  tooltip:
+                    shared: true
+                    intersect: false
+                    followCursor: true
+                  plotOptions:
+                    bar:
+                      columnWidth: 95%
+                  stroke:
+                    width: 2
+          - type: custom:state-switch
+            entity: input_boolean.em_api_server
+            states:
+              'on':
+                type: custom:apexcharts-card
+                header:
+                  title: Next 24hr's Price & Curtailment Forecast (subject to change)
+                  show: true
+                graph_span: 24h
+                span:
+                  start: minute
+                now:
+                  show: true
+                apex_config:
+                  chart:
+                    height: 220
+                  legend:
+                    show: true
+                    formatter: EVAL:function(seriesName, opts) { return seriesName; }
+                yaxis:
+                  - id: price
+                    decimals: 3
+                    apex_config:
+                      title:
+                        text: $/kWh
+                  - id: curtail
+                    opposite: true
+                    min: 0
+                    max: 100
+                    decimals: 0
+                    apex_config:
+                      title:
+                        text: Curtail (%)
+                series:
+                  - entity: sensor.energy_manager_plan
+                    name: Buy Price ($/kWh)
+                    type: area
+                    color: red
+                    opacity: 0.3
+                    yaxis_id: price
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.inputs?.buy_price ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Sell Price ($/kWh)
+                    type: area
+                    color: green
+                    opacity: 0.3
+                    yaxis_id: price
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.inputs?.sell_price ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Curtailment (%)
+                    type: column
+                    yaxis_id: curtail
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.setpoints?.curtail_pct ?? 0)]);
+          - type: custom:state-switch
+            entity: binary_sensor.ocpp_active
+            states:
+              'on':
+                type: custom:apexcharts-card
+                header:
+                  title: Next 24hr's EV Charging Forecast (subject to change)
+                  show: true
+                graph_span: 24h
+                span:
+                  start: minute
+                now:
+                  show: true
+                apex_config:
+                  chart:
+                    height: 220
+                  legend:
+                    show: true
+                    formatter: EVAL:function(seriesName, opts) { return seriesName; }
+                yaxis:
+                  - id: power
+                    min: 0
+                    decimals: 1
+                    apex_config:
+                      title:
+                        text: Power (kW)
+                  - id: battery
+                    decimals: 0
+                    opposite: true
+                    apex_config:
+                      title:
+                        text: '%'
+                series:
+                  - entity: sensor.energy_manager_plan
+                    name: Solar Charge
+                    type: area
+                    color: yellow
+                    opacity: 0.3
+                    yaxis_id: power
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.ev?.solar_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Grid Charge
+                    type: area
+                    color: red
+                    opacity: 0.1
+                    yaxis_id: power
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.ev?.grid_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Battery Charge
+                    type: line
+                    color: blue
+                    yaxis_id: power
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.ev?.battery_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: Total Charge
+                    type: line
+                    color: green
+                    opacity: 0.1
+                    yaxis_id: power
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.ev?.charge_kw ?? 0)]);
+                  - entity: sensor.energy_manager_plan
+                    name: EV SOC
+                    type: line
+                    color: purple
+                    yaxis_id: battery
+                    stroke_width: 2
+                    data_generator: >
+                      const t = entity.attributes.energy_plan?.timeline || [];
+                      return t.map(p => [new Date(p.ts).getTime(),
+                      Number(p.ev?.ev_soc ?? 0)]);
+        column_span: 1
+    cards: []
+  - type: sections
+    max_columns: 3
+    icon: mdi:list-box-outline
+    path: em-inverter
+    title: Inverter
+    sections:
+      - type: grid
+        cards:
           - type: entities
             title: System Information
             entities:
@@ -421,191 +1723,8 @@ views:
                           }
                           :host .state {color: var(--temp-color) !important; }
             state_color: true
-          - show_name: true
-            show_icon: true
-            type: button
-            tap_action:
-              action: toggle
-            entity: switch.energy_control_on_off
-            name: Energy Control
-            show_state: true
-            icon: mdi:home-battery
-            grid_options:
-              columns: 4
-              rows: 3
-          - type: conditional
-            grid_options:
-              columns: 4
-              rows: 3
-            conditions:
-              - entity: input_select.electricity_provider
-                state_not: ["Flow Power", "Globird", "Other"]
-            card:
-              show_name: true
-              show_icon: true
-              type: button
-              entity: input_boolean.high_sell_price_toggle
-              name: High Sell Price Mode
-              show_state: true
-              icon: mdi:currency-usd
-          - type: conditional
-            grid_options:
-              columns: 4
-              rows: 3
-            conditions:
-              - entity: input_select.electricity_provider
-                state_not: ["Flow Power", "Globird", "Other"]
-            card:
-              show_name: true
-              show_icon: true
-              type: button
-              entity: input_boolean.sellbuy_mode_enabled
-              name: Sell/Buy Mode
-              show_state: true
-              icon: mdi:autorenew
-          - type: conditional
-            grid_options:
-              columns: 8
-              rows: 3
-            conditions:
-              - entity: input_select.electricity_provider
-                state: ["Flow Power", "Globird", "Other"]
-            card:
-              type: entities
-              show_header_toggle: false
-              entities:
-                - entity: input_boolean.energy_control_auto_reenable
-                  name: Auto re-enable Energy Control
-          - type: conditional
-            conditions:
-              - entity: input_select.electricity_provider
-                state_not: ["Flow Power", "Globird", "Other"]
-            card:
-              type: entities
-              entities:
-                - entity: input_boolean.energy_control_auto_reenable
-                  name: Auto re-enable Energy Control
-          - type: conditional
-            conditions:
-              - entity: input_boolean.energy_control_auto_reenable
-                state: "on"
-            card:
-              type: entities
-              title: Energy Control Disable Timer
-              entities:
-                - entity: input_text.energy_control_duration
-                  name: Disable Duration
-                - entity: timer.energy_control
-                  name: Energy Control Disable Timer Status
-          - type: conditional
-            conditions:
-              - entity: input_text.nodered_last_error
-                state_not: ["", "unknown", "unavailable"]
-            card:
-              type: markdown
-              content: >
-                <div>
-                ⚠️ Warning: {{ states('input_text.nodered_last_error')}}
-                <br><br>Energy Manager will not function until this error is fixed.
-                <br><br>If you believe this is in error, you can clear the message from input_text.nodered_last_error.
-                </div>
-              card_mod:
-                style: |
-                  ha-card {
-                    background-color: #ffe6e7;
-                    color: #ff0000ff;
-                    padding: 10px 16px;
-                    border-radius: 10px;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                  }
-          - type: markdown
-            content: |
-              {% if is_state('switch.energy_control_on_off', 'on') %}
-                <h1 style="color: orange; margin-top: 0;">✅ Energy Manager Decision</h1>
-              {% else %}
-                <h1 style="color: black; margin-top: 0;">❌ Energy Manager Decision</h1>
-                <h2>Energy Control is disabled.</h2>
-                <h3>The last update received was:</h3>
-              {% endif %}
-              {% set file_content = states('sensor.energy_manager_decision') | string %}
-              {% if file_content | trim == '' or file_content in ['unknown', 'unavailable', 'Unknown'] %}
-                <i>The decision will be displayed once you have successfully queried the Energy Manager API.<p>Connectivity will not occur until your Amber Electric/LocalVolts pricing is received (if applicable), and your BOM integration is working. You must also have entered your Energy Manager API key. Only after this will Energy Manager attempt to connect through to the Energy Manager API servers.</p></i>
-              {% else %}
-                {% set translated_content = file_content
-                  .replace('Mode: Self', 'Mode: Self Consumption')
-                  .replace('Mode: Imp', 'Mode: Import')
-                  .replace('Mode: Exp', 'Mode: Export')
-                  .replace('Reason: Self', 'Reason: Ordinary Self Consumption')
-                  .replace('Reason: export_','Reason: Export period ')
-                  .replace('Reason: FPFC','Reason: Free period, force charge')
-                  .replace('Reason: SCT','Reason: Scheduled charge, charge to')
-                  .replace('Reason: SCH','Reason: Scheduled charge, target reached, hold')
-                  .replace('Reason: CHGRQD','Reason: Charge required - ')
-                  .replace('Reason: BATTR','Reason: Battery discharge restricted. Less than ')
-                  .replace('Reason: FPPB','Reason: Free period, preserve battery')
-                  .replace('Reason: CAPRFP','Reason: Free import cap reached')
-                  .replace('Reason: EXPCP','Reason: Export cap reached')
-                  .replace('Reason: CRTE','Reason: Curtail Export')
-                  .replace('Reason: FICB','Reason: Free import - charging battery')
-                  .replace('Batt:', 'Battery SoC:')
-                  .replace('Exp SOC:', 'Battery reserve:')
-                  .replace('free_', 'Free Tariff #')
-                  .replace('peak_', 'Peak Tariff #')
-                  .replace('offpeak_', 'Offpeak Tariff #')
-                  .replace('shoulder_', 'Shoulder Tariff #')
-                  .replace('export_', 'Export Tariff #')
-                  .replace('Curtail:', 'Curtail Exports:')
-                  .replace('Chg','Charge')
-                  .replace('Dchg','Discharge')
-                  .replace('MD:','Mode:')
-                  .replace('BY:','Buy band:')
-                  .replace('SL:','Sell band:')
-                  .replace('CT:','Curtailment:')
-                  .replace('ENOW:','Export now:')
-                  .replace('Plan: NSCR','Plan: No scheduled charge required')
-                  .replace('CRFEH','Charge reduced: Forecasted export headroom')
-                  .replace('DRUNAV:','Dynamic reserve unavailable:')
-                  .replace('DRSV','Dynamic reserve:')
-                  .replace('CREEEI','cap reached; exporting eligible excess in')
-                  .replace('STRSV','Stop reserve')
-                  .replace('Imp remain:','Import cap remaining:')
-                  .replace('Exp remain:','Export cap remaining:')
-                  .replace('Exp now:', 'Export Now:')
-                  .replace('EUTO','exporting up to')
-                  .replace('KWHEI','kWh excess in')
-                  .replace('KWHFHT','kWh for a higher tariff. Stop reserve')
-                  .replace('EXIN','exporting in')
-                  .replace('SOTPKC','SOC or the provider kWh cap.')
-                  .replace('DRRH','Dynamic reserve reached: holding')
-                  .replace('SFFSOL','SOC for forecast use until solar recovery.')
-                  .replace('DR:H','Dynamic reserve: holding')
-                  .replace('KFAHPEP','kWh for a higher-priced export period. Target reserve')
-                  .replace('DRWFEB','Dynamic reserve: waiting for an enabled battery-export period. Target reserve')
-                  .replace('DYNRES','Dynamic reserve:')
-                  .replace('PKCR','provider kWh cap reached; battery export stopped.')
-                  .replace('DRNBER','Dynamic reserve: no battery export required now. Target reserve')
-                %}
-                <ul style="padding-left: 20px; font-size: 1.1em; line-height: 1.6;">
-                  {{ translated_content }}
-                </ul>
-                {% set epoch = states('sensor.energy_manager_decision_timestamp') | int(0) %}
-                **Last Updated:** {{ epoch | timestamp_custom('%d %b %Y at %I:%M %p', true) }}
-              {% endif %}
       - type: grid
         cards:
-          - type: entities
-            title: EMS Control
-            entities:
-              - type: conditional
-                conditions:
-                  - entity: input_select.inverter_brand
-                    state_not: ["fronius", "goodwe", "goodwe_et", "goodwe_int"]
-                row:
-                  entity: input_select.inverter_ems_mode
-                  name: EMS Mode
-              - entity: input_select.inverter_charge_discharge_mode
-                name: Forced Charge/Discharge
           - type: entities
             title: Battery SOC Settings
             entities:
@@ -739,63 +1858,8 @@ views:
                 row:
                   entity: input_select.scheduled_charge_signal
                   name: Max buy price Signal
-          - type: custom:apexcharts-card
-            header:
-              show: true
-              title: Current Power Usage Profile by Hour (W)
-            graph_span: 24h
-            span:
-              start: day
-            now:
-              show: true
-              label: Now
-            series:
-              - entity: sensor.power_estimate_profile
-                name: Predicted Power (W)
-                type: column
-                data_generator: >
-                  let data = []; const attributes =
-                  entity.attributes.attributes; const today = new Date(); if
-                  (attributes) {
-                    for (let i = 0; i < 24; i++) {
-                      let hourKey = 'hour_' + String(i).padStart(2, '0');
-                      let value = attributes[hourKey];
-                      if (value !== null && value !== undefined) {
-                        let timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), i, 0, 0, 0);
-                        data.push([timestamp.getTime(), parseFloat(value)]);
-                      }
-                    }
-                  } return data;
       - type: grid
         cards:
-          - type: custom:energy-flow-card
-            image: /local/energy-flow-house.png
-            animation_speed: 1
-            threshold_w: 100
-            show_labels: true
-            weather_effects: true
-            weather_entity: weather.home
-            weather_intensity: 1
-          - type: conditional
-            conditions:
-              - entity: sensor.demand_interval
-                state: "True"
-            card:
-              type: markdown
-              content: >
-                <div>
-                <center>⚡ Demand Period Active ⚡</center>
-                </div>
-              card_mod:
-                style: |
-                  ha-card {
-                    background-color:rgb(249, 228, 217);
-                    color:rgb(247, 115, 0);
-                    padding: 10px 16px;
-                    border-radius: 10px;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                  }
           - type: conditional
             conditions:
               - entity: input_select.electricity_provider
@@ -1167,14 +2231,644 @@ views:
       - type: custom:state-switch
         entity: input_select.electricity_provider
         states:
-          "LocalVolts":
-            type: custom:energy-manager-wholesale-pricing-card
-          "Amber Electric":
-            type: custom:energy-manager-wholesale-pricing-card
+          "LocalVolts": &shared_card
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card_mod_templates:
+                  responsive_text_24: &responsive_24
+                    card_mod:
+                      style: |
+                        :host {
+                          @media (max-width: 768px) { font-size: 16px !important; }
+                          @media (max-width: 480px) { font-size: 12px !important; }
+                          @media (max-width: 360px) { font-size: 10px !important; }
+                        }
+                  responsive_text_20: &responsive_20
+                    card_mod:
+                      style: |
+                        :host {
+                          @media (max-width: 768px) { font-size: 14px !important; }
+                          @media (max-width: 480px) { font-size: 10px !important; }
+                          @media (max-width: 360px) { font-size: 8px !important; }
+                        }
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-settings.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_select.energy_profile_slot
+                      title: "Energy profile slot."
+                      style:
+                        top: 11%
+                        left: 65%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: icon
+                      icon: mdi:content-save
+                      title: "Save Profile to currently selected slot."
+                      tap_action:
+                        action: call-service
+                        service: input_button.press
+                        target:
+                          entity_id: input_button.energy_profile_save
+                      style:
+                        top: 13%
+                        left: 64%
+                        color: blue
+                      <<: *responsive_24
+                    - type: icon
+                      icon: mdi:autorenew
+                      title: "Load Profile from currently selected slot."
+                      tap_action:
+                        action: call-service
+                        service: input_button.press
+                        target:
+                          entity_id: input_button.energy_profile_load
+                      style:
+                        top: 13%
+                        left: 66%
+                        color: blue
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_sell_price_night
+                      title: "Enter the definition of a price spike for the morning shoulder period. If the sell price exceeds this figure between the hours of 6-8am, export may occur."
+                      style:
+                        top: 29%
+                        left: 29%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_sell_price_day
+                      title: "Enter the definition of a day/evening price spike. If the sell price exceeds this figure (all hours outside of 6-8am), export may occur."
+                      style:
+                        top: 20%
+                        left: 62%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_night_spike_prep
+                      title: "This is the price that you are willing to pay to charge your battery up if a morning shoulder price spike is detected (as defined)."
+                      style:
+                        top: 36%
+                        left: 20%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_day_spike_prep
+                      title: "This is the price that you are willing to pay to charge your battery up if a day/evening price spike is detected (as defined)."
+                      style:
+                        top: 36%
+                        left: 63%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.grid_buy_price_day
+                      title: "This is the price that you are willing to pay to buy electricity if EM has detected that you can't generate enough to charge your battery purely from solar. Note that if you have this set too low, charging may not occur."
+                      style:
+                        top: 34%
+                        left: 43%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.curtail_cents
+                      title: "Curtailing of excess generation will occur when the sell price is under this amount, if curtailing has been enabled on the PV Settings tab."
+                      style:
+                        top: 18%
+                        left: 27%
+                        color: blue
+                        font-size: 24px
+                    - type: state-label
+                      entity: input_number.battery_use_cost
+                      title: "If there is not enough solar generation, import from the grid when the buy price is under this figure. If the buy price is over this figure it will discharge from the battery instead."
+                      style:
+                        top: 39%
+                        left: 44%
+                        color: blue
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_morning_prep
+                      title: "If an upcoming morning shoulder spike has been detected, and the buy price is under the maximum charging price, charge the battery up to this percentage."
+                      style:
+                        top: 27%
+                        left: 10%
+                        color: white
+                        font-size: 20px
+                      suffix: "%"
+                      <<: *responsive_20
+                    - type: state-label
+                      entity: input_number.battery_morning_limit
+                      title: "If a morning shoulder spike export is in progress, discharge the battery down to this percentage only."
+                      style:
+                        top: 29.5%
+                        left: 10%
+                        color: white
+                        font-size: 20px
+                      suffix: "%"
+                      <<: *responsive_20
+                    - type: state-label
+                      entity: input_number.battery_evening_prep
+                      title: "This is the maximum percentage that you want the battery to charge to during the day. Note that this is independent of any maximum SoC setting you may have configured and your maximum SoC will override this if set lower."
+                      style:
+                        top: 26%
+                        left: 40.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_capacity
+                      title: "The total battery capacity in kWh, as defined on the PV Settings tab."
+                      style:
+                        left: 19.5%
+                        top: 11.25%
+                        color: gray
+                        font-size: 24px
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_1_normal_mode
+                      title: "The minimum price to sell at if the tier 1 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 58%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_2_normal_mode
+                      title: "The minimum price to sell at if the tier 2 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 62%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_3_normal_mode
+                      title: "The minimum price to sell at if the tier 3 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 66%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_4_normal_mode
+                      title: "The minimum price to sell at if the tier 4 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 70%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_5_normal_mode
+                      title: "The minimum price to sell at if the tier 5 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 74%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.price_6_normal_mode
+                      title: "The minimum price to sell at if the tier 6 battery SoC range to the left has been met."
+                      prefix: "$"
+                      style:
+                        top: 78%
+                        left: 19%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_1
+                      title: "Tier 1: Battery percentage range that apply to the tier 1 sell pricing on the right."
+                      style:
+                        top: 57%
+                        left: 8%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - 100%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_2
+                      title: "Tier 2: Battery percentage range that apply to the tier 2 sell pricing on the right."
+                      style:
+                        top: 61.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_3
+                      title: "Tier 3: Battery percentage range that apply to the tier 3 sell pricing on the right."
+                      style:
+                        top: 65.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_4
+                      title: "Tier 4: Battery percentage range that apply to the tier 4 sell pricing on the right."
+                      style:
+                        top: 70%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_5
+                      title: "Tier 5: Battery percentage range that apply to the tier 5 sell pricing on the right."
+                      style:
+                        top: 74.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.battery_6
+                      title: "Tier 6: Battery percentage range that apply to the tier 6 sell pricing on the right."
+                      style:
+                        top: 78.5%
+                        left: 6%
+                        color: white
+                        font-size: 24px
+                      suffix: "% - "
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_2a
+                      style:
+                        top: 61.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_3a
+                      style:
+                        top: 65.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "%"
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_4a
+                      suffix: "%"
+                      style:
+                        top: 70%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_5a
+                      suffix: "%"
+                      style:
+                        top: 74.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_6a
+                      suffix: "%"
+                      style:
+                        top: 78.5%
+                        left: 9.5%
+                        color: white
+                        font-size: 24px
+                      tap_action:
+                        action: none
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_price
+                      title: "If in High Sell mode, this is the lowest price to sell at."
+                      style:
+                        top: 62%
+                        left: 43%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 32%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.high_sell_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 43%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: number.battery_high_sell_mode_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 63%
+                        left: 32%
+                        color: white
+                        font-size: 24px
+                      suffix: "% Usable"
+                      tap_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 56%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_battery_reserve
+                      title: "During an export period, only discharge the battery to this SoC percentage."
+                      style:
+                        top: 76%
+                        left: 67.5%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.sell_buy_mode_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 63%
+                        left: 56.5%
+                        color: white
+                        font-size: 24px
+                      suffix: "% Usable"
+                      tap_action:
+                        action: none
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.sellbuy_mode_diff
+                      title: "This is the price difference between selling now and buying later that you are willing to export at. Note that this is based off the forecast as per your energy provider and forecasts can change. Example, assuming this setting is 10c, if the current sell price is 30c and the price to buy later is predicted to be 12c, then the difference is 18c and export will occur as the difference is greater than 10c."
+                      style:
+                        top: 64%
+                        left: 67%
+                        color: gray
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used. This applies to Normal Mode only."
+                      style:
+                        top: 96%
+                        left: 20%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now. This applies to Normal Mode only."
+                      style:
+                        top: 96%
+                        left: 56%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.inverter_export_limit
+                      title: "The inverter export limit, as defined on the PV Settings tab."
+                      style:
+                        left: 19%
+                        top: 13.5%
+                        font-size: 24px
+                        color: gray
+                      suffix: kW
+                      hold_action:
+                        action: none
+                      <<: *responsive_24
+          "Amber Electric": *shared_card
           "Flow Power":
-            type: custom:energy-manager-flow-power-pricing-card 
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-flowpower.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
+                      style:
+                        top: 40%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
+                      style:
+                        top: 68%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_peak_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 8.5%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_peak_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Peak export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 19%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.flowpower_peak_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported, assuming your battery is at 100% charge."
+                      style:
+                        top: 45%
+                        left: 8.5%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_select.flow_power_price_signal_charge_limit
+                      title: "This is the PEA signal that you are willing to purchase electricity UP TO. Energy Manager will not restrict to purchasing AT this price, but will still purchase at the cheapest period UP UNTIL (and including) this price, IF REQUIRED. Note that the PEA here is estimated, it may not reflect exactly what Flow Power define."
+                      style:
+                        top: 45%
+                        left: 37%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.flowpower_max_grid_soc
+                      title: "This is the maximum SOC that you are willing to charge your battery up to if electricity is required to be purchased from the grid. It will not affect the maximum SOC that natural solar generation will take your battery to. Your inverter-configured maximum SOC will override this if it is set lower than here."
+                      style:
+                        top: 80%
+                        left: 37%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
           "Globird":
-            type: custom:energy-manager-globird-pricing-card
+            type: vertical-stack
+            cards:
+              - type: custom:mod-card
+                card:
+                  type: picture-elements
+                  image: /local/energy-manager-globird.svg
+                  card_mod:
+                    style: |
+                      ha-card {
+                        @media (max-width: 768px) { --state-label-font-size: 16px; }
+                        @media (max-width: 480px) { --state-label-font-size: 12px; }
+                        @media (max-width: 360px) { --state-label-font-size: 10px; }
+                      }
+                  elements:
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_today
+                      title: "This is the definition of what bad weather for today is. If today's rain forecast is higher than this, then bad weather mode will be used."
+                      style:
+                        top: 40%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.bad_weather_rain_tomorrow
+                      title: "This is the definition of what bad weather for tomorrow is. If tomorrow's rain forecast is higher than this, then bad weather mode will be used right now."
+                      style:
+                        top: 68%
+                        left: 68%
+                        color: gray
+                        font-size: 24px
+                      suffix: mm
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_super_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 8.5%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_super_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Super export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 19%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.globird_super_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported during the Super export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount, so it will stop at the first met, either your kWh limit or your battery reserve."
+                      style:
+                        top: 45%
+                        left: 8%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_std_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 75%
+                        left: 33%
+                        color: white
+                        font-size: 24px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: input_number.globird_std_battery_reserve
+                      title: "This is the minimum SOC that you are willing to allow exports to while during the Standard (not Super) export period. Note that Energy Manager will still be limited by your configured kWh amount. This does not replace your overall minimum SOC set at your inverter."
+                      style:
+                        top: 77%
+                        left: 44%
+                        color: gray
+                        font-size: 28px
+                      <<: *responsive_24
+                    - type: state-label
+                      entity: sensor.globird_std_battery_usable
+                      title: "This is the maximum amount of usable battery capacity that can be exported during the Standard (not Super) export period, assuming your battery is at 100% charge. Note that this is still limited by your selected kWh export amount."
+                      style:
+                        top: 45%
+                        left: 33%
+                        color: white
+                        font-size: 28px
+                      suffix: "%"
+                      <<: *responsive_24
           "Other":
             type: vertical-stack
             cards:
@@ -1299,7 +2993,6 @@ views:
                   - entity: input_text.timezone
                     name: Timezone (e.g., AEST or AEDT) (Required)
                   - entity: input_select.em_update_branch
-                  - entity: input_boolean.energy_flow_visual
                   - entity: input_boolean.enable_exclusion_period
               - type: conditional
                 conditions:
@@ -1314,12 +3007,7 @@ views:
               - type: entities
                 title: Dynamic Battery Reserve
                 entities:
-                  - type: conditional
-                    conditions:
-                      - entity: input_select.electricity_provider
-                        state_not: "Other"
-                    row:
-                      entity: input_boolean.dynamic_reserve
+                  - entity: input_boolean.dynamic_reserve
                   - type: conditional
                     conditions:
                       - entity: input_boolean.dynamic_reserve
@@ -1351,7 +3039,16 @@ views:
                       margin-bottom: 20px;
                     }
 
-
+              - type: entities
+                title: PV Dashboard Configuration (front page)
+                entities:
+                  - entity: input_boolean.pv_dashboard_solar
+                  - entity: input_boolean.pv_dashboard_entities
+                  - entity: input_boolean.pv_dashboard_future
+                  - entity: input_boolean.pv_dashboard_12hrs
+                  - entity: input_boolean.pv_dashboard_profile
+                  - entity: input_boolean.pv_dashboard_pricing
+                  - entity: input_boolean.pv_dashboard_ev
 
               - type: conditional
                 conditions:
@@ -2669,21 +4366,6 @@ views:
               service: script.turn_on
               service_data:
                 entity_id: script.update_energy_manager_force
-          - type: entities
-            title: Energy Manager Update Result
-            entities:
-              - entity: sensor.energy_manager_update_result
-                name: Last Update Result
-              - type: attribute
-                entity: sensor.energy_manager_update_result
-                attribute: detail
-                name: Update Details             
-          - type: markdown
-            content: >-
-              **Important:** All Energy Manager updates will involve a forced reboot of Home Assistant without prompt. Ensure you are ok with a forced reboot before clicking on **Install Update** or **Force Reinstall**.
-
-
-              A notification will be shown on start of an update. The update and reboot will take a number of minutes and may appear like nothing is happening, but at its completion a completion confirmation notification will be displayed.
           - type: conditional
             conditions:
               - entity: input_boolean.energy_manager_update_available
