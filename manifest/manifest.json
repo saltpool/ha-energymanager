@@ -793,7 +793,13 @@
       "type": "integration",
       "action": "install",
       "version": "latest"
-    }
+    },
+    {
+      "repository": "francois-le-ko4la/lovelace-entity-progress-card",
+      "type": "plugin",
+      "action": "install",
+      "version": "latest"
+    } 
   ]
 }
                                
