@@ -80,6 +80,13 @@ input_boolean.other_shoulder_3_restrict,off
 input_boolean.other_shoulder_bat_1,off
 input_boolean.other_shoulder_bat_2,off
 input_boolean.other_shoulder_bat_3,off
+input_boolean.pv_dashboard_solar,on
+input_boolean.pv_dashboard_entities,on
+input_boolean.pv_dashboard_future,on
+input_boolean.pv_dashboard_12hr,on
+input_boolean.pv_dashboard_profile,on
+input_boolean.pv_dashboard_pricing,on
+input_boolean.pv_dashboard_ev,on
 input_boolean.restart_required,off
 input_boolean.scheduled_charge_enabled,off
 input_boolean.sellbuy_mode_enabled,off
