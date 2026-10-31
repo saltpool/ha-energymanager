@@ -210,7 +210,7 @@
     "www/energy-manager-settings.svg": {
       "action": "remove",
       "description": "Energy Manager Settings Graphic",
-      "backup_current": true,
+      "backup_current": false,
       "new_in_version": "2.0.0"
     },
     "www/energy-manager-flowpower.svg": {
@@ -222,7 +222,7 @@
     "www/energy-manager-globird.svg": {
       "action": "remove",
       "description": "Energy Manager Globird Graphic",
-      "backup_current": true,
+      "backup_current": false,
       "new_in_version": "1.2.0"
     },
     "www/energy-flow-card.js": {
