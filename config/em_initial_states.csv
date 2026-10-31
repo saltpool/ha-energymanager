@@ -208,10 +208,10 @@ input_number.globird_other_buy_price,0
 input_number.globird_other_max_export_kw_percentage,0
 input_number.globird_other_sell,0
 input_number.globird_peak_buy_price,0
-input_number.globird_std_battery_reserve,0
+input_number.globird_std_battery_reserve,70
 input_number.globird_std_max_export_kw_percentage,0
 input_number.globird_std_sell,0
-input_number.globird_super_battery_reserve,0
+input_number.globird_super_battery_reserve,40
 input_number.globird_super_max_export,0
 input_number.globird_super_max_export_kw_percentage,0
 input_number.globird_super_sell,0
