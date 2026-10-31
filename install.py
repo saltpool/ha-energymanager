@@ -164,8 +164,14 @@ def _download_text(source):
     from update_checker import manifest_source_path
     safe = manifest_source_path(source)
     url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/{safe}'
-    with urllib.request.urlopen(url, timeout=90) as response:
-        return response.read().decode('utf-8')
+    try:
+        with urllib.request.urlopen(url, timeout=90) as response:
+            return response.read().decode('utf-8')
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f'Failed to download {source}: HTTP {exc.code}\n'
+            f'URL: {url}'
+        ) from exc
 
 
 def _backup_file(path, label):
