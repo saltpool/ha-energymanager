@@ -1643,6 +1643,16 @@ try:
         local_path = filepath if filepath.startswith('/share/') else os.path.join('/config', filepath)
         print(f"Processing {filepath}...")
         update_dashboard_status(f"Updating file: {filepath}...", "info")
+        action = file_info.get('action', 'merge')
+        if action == 'remove':
+            if os.path.isfile(local_path) or os.path.islink(local_path):
+                os.unlink(local_path)
+                print(f"✓ Removed obsolete file: {filepath}")
+            elif os.path.isdir(local_path):
+                raise RuntimeError(f"Refusing to remove directory: {filepath}")
+            else:
+                print(f"✓ File already absent, skipping: {filepath}")
+            continue
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         temp_path = f"{local_path}.temp"
         if not update_checker.download_file(filepath, temp_path):
