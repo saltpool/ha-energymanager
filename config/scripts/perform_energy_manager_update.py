@@ -1660,6 +1660,29 @@ try:
             update_failures.append(f"Failed to download: {filepath}")
             continue
         try:
+            is_binary = os.path.splitext(filepath)[1].lower() in (
+                '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico'
+            )
+            if is_binary:
+                if action == 'merge':
+                    raise ValueError(
+                        f'Cannot merge binary file: {filepath}'
+                    )
+                if os.path.isdir(local_path):
+                    raise RuntimeError(
+                        f'Binary destination is a directory: {filepath}'
+                    )
+                if action == 'create' and os.path.exists(local_path):
+                    print(f"✓ Binary file already exists: {filepath}")
+                    continue
+                if os.path.exists(local_path) and file_info.get('backup_current', False):
+                    file_merger.create_backup(
+                        local_path, manifest['version']
+                    )
+                os.replace(temp_path, local_path)
+                print(f"✓ Installed binary file: {filepath}")
+                continue
+
             with open(temp_path, 'r', encoding='utf-8') as f:
                 new_content = f.read()
             action = file_info.get('action', 'merge')
