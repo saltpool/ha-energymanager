@@ -43,8 +43,18 @@ def main():
     # Keep the detached process alive after the SSH connection closes.
     log = '/config/.energy_manager/update-run.log'
 
+    # Bootstrap inside the detached SSH process, where the Supervisor token
+    # and permission to replace /config/scripts are available.
+    # Refresh before importing the locally installed updater.
+    bootstrap = '/config/scripts/em_updater_bootstrap.py'
+    refresh = (
+        f'python3 -u {shlex.quote(bootstrap)} '
+        f'--branch {shlex.quote(args.branch)} --mode update'
+    )
+    
     privileged_command = (
-        f'nohup {invocation} > {shlex.quote(log)} '
+        f'nohup bash -c {shlex.quote(refresh + " && " + invocation)} '
+        f'> {shlex.quote(log)} '
         '2>&1 < /dev/null &'
     )
 
@@ -54,6 +64,8 @@ def main():
         'test -n "$TOKEN" || { echo MISSING_SUPERVISOR_TOKEN >&2; exit 1; }; '
         f'test -f {shlex.quote(updater)} || '
         '{ echo MISSING_UPDATER >&2; exit 1; }; '
+        f'test -f {shlex.quote(bootstrap)} || '
+        '{ echo MISSING_BOOTSTRAP >&2; exit 1; }; '
         'sudo -n env SUPERVISOR_TOKEN="$TOKEN" '
         f'bash -c {shlex.quote(privileged_command)}; '
         f'sudo -n test -f {shlex.quote(log)} || '
