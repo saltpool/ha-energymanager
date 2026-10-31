@@ -141,7 +141,7 @@ class EnergyManagerUpdateChecker:
             raise ValueError('Manifest version does not match latest.txt')
         for path, info in data['files'].items():
             manifest_source_path(path)
-            if not isinstance(info, dict) or info.get('action', 'merge') not in ('merge', 'replace', 'create'):
+            if not isinstance(info, dict) or info.get('action', 'merge') not in ('merge', 'replace', 'create', 'remove'):
                 raise ValueError(f'Invalid manifest entry for {path!r}')
             version_tuple(info.get('new_in_version', ''))
         flows = data.get('nodered_flows')
