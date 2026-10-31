@@ -1,8 +1,8 @@
-# Energy Manager v1.3.0
+# Energy Manager v2.0.0
 
-Welcome to Energy Manager v1.3.0.
+Welcome to Energy Manager v2.0.0.
 
-This release contains some backend modifications to increase stability of updates and to reduce the requirements of users having to manually update configuration settings to perform an update.
+This release contains some backend modifications to increase stability of updates and to reduce the requirements of users having to manually update configuration settings to perform an update. It also contains some major user-interface (UI) updates.
 
 ## Github is now used for updates
 
@@ -24,6 +24,14 @@ You are most welcome to contribute to this project by creating a pull request ag
 - If you want a new inverter brand supported, you can follow the logic of an existing brand and port it over to the new brand. Please feel free to request help on how to do this if you are not sure.
 - If you see a bug, please create a pull request against the development branch and suggest the fix, if you can see what is wrong
 - If you want to see enhancements or improvements to a dashboard, please feel free to suggest the update through a pull request
+
+## The PV Dashboard has changed
+
+The PV Dashboard has been optimised and has brought aspects from a number of existing dashboards (plus some new stuff) to one dashboard. Information that seldom changes has been moved to another dashboard tab. It is possible, through the PV Dashboard settings, to disable or enable features of the PV Dashboard as not everyone will want all features enabled all the time.
+
+## The Price Strategy Configurator has changed
+
+The SVG images have been replaced for the **wholesale**, **Flow Power** and **GloBird** electricity providers. Now running JS with interactive sliders so that it should be much easier to navigate and configure.
 
 ## UI entities converted to YAML based
 
