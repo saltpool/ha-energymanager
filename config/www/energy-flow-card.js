@@ -410,7 +410,7 @@
       this._setFlow('ev',evWatts,Number(c.ev_max_power_w)||22080);
     }
   }
-  customElements.define('energy-flow-3d-card',EnergyFlow3DCard);
+  customElements.define('energy-flow-card',EnergyFlow3DCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'energy-flow-3d-card',name:'Energy Flow 3D (Experimental)',description:'Transparent house with live SVG particles'});
+  window.customCards.push({type:'energy-flow-card',name:'Energy Flow 3D',description:'Transparent house with live SVG particles'});
 })();
