@@ -159,19 +159,28 @@ def install_apps():
     log('App stage complete; no SSH authentication or SSH App restart requested')
 
 
-
-def _download_text(source):
+def _download_bytes(source):
     from update_checker import manifest_source_path
     safe = manifest_source_path(source)
     url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/{safe}'
     try:
         with urllib.request.urlopen(url, timeout=90) as response:
-            return response.read().decode('utf-8')
+            return response.read()
     except urllib.error.HTTPError as exc:
         raise RuntimeError(
             f'Failed to download {source}: HTTP {exc.code}\n'
             f'URL: {url}'
         ) from exc
+
+
+def _download_text(source):
+    return _download_bytes(source).decode('utf-8')
+
+
+def _is_binary_file(name):
+    return Path(name).suffix.lower() in (
+        '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico'
+    )
 
 
 def _backup_file(path, label):
@@ -188,7 +197,10 @@ def _write_atomic(path, contents):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + '.em-install-temp')
     try:
-        temp.write_text(contents, encoding='utf-8')
+        if isinstance(contents, bytes):
+            temp.write_bytes(contents)
+        else:
+            temp.write_text(contents, encoding='utf-8')
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)
@@ -359,7 +371,10 @@ def deploy():
         if not isinstance(entry, dict) or entry.get('action', 'merge') not in ('merge', 'replace', 'create', 'remove'):
             raise ValueError(f'Invalid manifest file entry: {name}')
         if entry.get('action') != 'remove':
-            downloads[name] = _download_text(name)
+            downloads[name] = (
+                _download_bytes(name) if _is_binary_file(name)
+                else _download_text(name)
+            )
     flow_config = manifest.get('nodered_flows') or {}
     if not flow_config.get('download_url'):
         raise RuntimeError('Manifest lacks Node-RED flows download URL')
@@ -386,6 +401,23 @@ def deploy():
                 continue
             destination.parent.mkdir(parents=True, exist_ok=True)
             content = downloads[name]
+            if _is_binary_file(name):
+                if action == 'merge':
+                    raise RuntimeError(
+                        f'Cannot merge binary file: {name}'
+                    )
+                if action == 'create' and destination.exists():
+                    log(f'Binary file already exists: {destination}')
+                    continue
+                if destination.is_dir():
+                    raise RuntimeError(
+                        f'Binary destination is a directory: {destination}'
+                    )
+                if destination.exists() and info.get('backup_current', False):
+                    _backup_file(destination, destination.name)
+                _write_atomic(destination, content)
+                log(f'Installed binary file: {destination}')
+                continue
             if action == 'replace':
                 result = merger.replace_file(str(destination), content, manifest['version'])
             elif action == 'create':
