@@ -768,19 +768,14 @@ views:
                   } return data;
       - type: grid
         cards:
-          - type: conditional
-            conditions:
-              - entity: input_boolean.energy_flow_visual
-                state: "on"
-            card:
-              type: custom:energy-flow-card
-              image: /local/energy-flow-house.png
-              animation_speed: 1
-              threshold_w: 100
-              show_labels: true
-              weather_effects: true
-              weather_entity: weather.home
-              weather_intensity: 1
+          - type: custom:energy-flow-card
+            image: /local/energy-flow-house.png
+            animation_speed: 1
+            threshold_w: 100
+            show_labels: true
+            weather_effects: true
+            weather_entity: weather.home
+            weather_intensity: 1
           - type: conditional
             conditions:
               - entity: sensor.demand_interval
