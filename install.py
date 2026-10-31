@@ -336,8 +336,14 @@ def deploy():
     manifest_path = STATE / 'install-manifest.json'
     log(f'Downloading current manifest from {REPO} ({BRANCH})')
     url = f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/manifest/manifest.json'
-    with urllib.request.urlopen(url, timeout=60) as response:
-        manifest = json.load(response)
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            manifest = json.load(response)
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f'Failed to download manifest: HTTP {exc.code}\n'
+            f'URL: {url}'
+        ) from exc
     if not isinstance(manifest.get('files'), dict):
         raise RuntimeError('Invalid manifest files map')
     # Download and validate all file content before changing any installed files.
