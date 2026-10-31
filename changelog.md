@@ -17,6 +17,8 @@
 * Updated Energy Flow visual
   * Includes weather animations
   * Include EV charging animations
+* Updated PV Dashboard with configurable sections
+* Updated Pricing strategy configuration pages
 * New split news page. One column version specific, one for general information, and one for changelog
 * Safe-guard added for Flow Power users if EM tag detection file not present
 * All entities now YAML based (removal of UI entities via migration script)
