@@ -39,6 +39,42 @@ def write_status(status, detail=''):
     tmp.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     os.replace(tmp, STATUS)
 
+def set_initial_default_dashboard():
+    from marketplace_manager import HAWebSocket
+
+    with HAWebSocket() as ws:
+        panels = ws.call('get_panels')
+        if 'energy-pv' not in panels:
+            raise RuntimeError(
+                'Energy Manager PV dashboard is not registered'
+            )
+
+        result = ws.call(
+            'frontend/get_system_data',
+            key='core'
+        )
+        core = (result or {}).get('value') or {}
+
+        if not isinstance(core, dict):
+            raise RuntimeError('Invalid frontend core settings')
+
+        if core.get('default_panel') == 'energy-pv':
+            print('[EM] PV dashboard already default', flush=True)
+            return
+
+        updated = dict(core)
+        updated['default_panel'] = 'energy-pv'
+
+        ws.call(
+            'frontend/set_system_data',
+            key='core',
+            value=updated
+        )
+
+        print(
+            '[EM] PV dashboard set as system default',
+            flush=True
+        )
 
 def notify_update_complete(token, reinstall=False):
     """Notify Home Assistant after successful post-update checks."""
@@ -265,6 +301,9 @@ def main():
                             pass
                     SECRETS.unlink()
                     print('[EM Post-Reboot] Onboarding helpers set; staged credentials removed', flush=True)
+
+                print('[EM Post-Reboot] Setting initial default dashboard', flush=True)
+                set_initial_default_dashboard()
                 
                 write_status('complete', 'MQTT discovery OFF; Node-RED Companion configured')
                 print('[EM Post-Reboot] Completed successfully', flush=True)
