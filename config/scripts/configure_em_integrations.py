@@ -608,6 +608,85 @@ def configure_bom(repair=False):
         raise RuntimeError('BOM recreation failed to create enabled weather.home')
     log('BOM weather.home recreated successfully')
 
+def enable_solcast_daily_forecasts(entry_id):
+    from marketplace_manager import HAWebSocket
+
+    required = {
+        f'sensor.solcast_pv_forecast_forecast_day_{day}'
+        for day in range(3, 8)
+    }
+
+    for attempt in range(30):
+        with HAWebSocket() as ws:
+            registry = ws.call('config/entity_registry/list')
+
+        found = {
+            entity['entity_id']: entity
+            for entity in registry
+            if entity.get('entity_id') in required
+            and entity.get('config_entry_id') == entry_id
+            and entity.get('platform') == 'solcast_solar'
+        }
+
+        if required.issubset(found):
+            break
+
+        time.sleep(2)
+    else:
+        missing = sorted(required - found.keys())
+        raise RuntimeError(
+            'Solcast daily forecast entities not registered: '
+            + ', '.join(missing)
+        )
+
+    disabled = [
+        entity_id for entity_id, entity in found.items()
+        if entity.get('disabled_by') is not None
+    ]
+
+    if disabled:
+        with HAWebSocket() as ws:
+            for entity_id in sorted(disabled):
+                ws.call(
+                    'config/entity_registry/update',
+                    entity_id=entity_id,
+                    disabled_by=None,
+                )
+                log(f'Enabled Solcast entity: {entity_id}')
+
+        payload = json.dumps({'entry_id': entry_id}).encode('utf-8')
+        reload_request = urllib.request.Request(
+            'http://supervisor/core/api/services/homeassistant/reload_config_entry',
+            data=payload,
+            method='POST',
+            headers={
+                'Authorization': 'Bearer ' + TOKEN,
+                'Content-Type': 'application/json',
+            },
+        )
+        with urllib.request.urlopen(reload_request, timeout=60):
+            pass
+
+    with HAWebSocket() as ws:
+        registry = ws.call('config/entity_registry/list')
+
+    enabled = {
+        entity['entity_id']
+        for entity in registry
+        if entity.get('entity_id') in required
+        and entity.get('config_entry_id') == entry_id
+        and entity.get('platform') == 'solcast_solar'
+        and entity.get('disabled_by') is None
+    }
+
+    if enabled != required:
+        raise RuntimeError(
+            'Solcast forecast entities remain missing or disabled: '
+            + ', '.join(sorted(required - enabled))
+        )
+
+    log('Solcast daily forecast entities Day 3-7 enabled successfully')
+
 
 def configure_solcast():
     domain = 'solcast_solar'
@@ -634,8 +713,10 @@ def configure_solcast():
     })
     if result.get('type') != 'create_entry':
         raise RuntimeError('Solcast onboarding failed; check integration flow errors in Home Assistant')
-    if not entries(domain):
+    configured = entries(domain)
+    if not configured:
         raise RuntimeError('Solcast config entry was not created')
+    enable_solcast_daily_forecasts(configured[0]['entry_id'])
     log('Solcast configured: daily API limit 10, automatic updates DISABLED')
 
 def main():
